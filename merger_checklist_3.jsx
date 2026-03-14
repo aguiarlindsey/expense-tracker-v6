@@ -197,6 +197,58 @@ const THE_10 = [
 
 const SESSIONS = [
   {
+    id: "s12", label: "Session 12 — Gamification & UX Polish", color: "#10b981",
+    changes: [
+      "✅ canvas-confetti@1.9.3 CDN added to <head> after lz-string script",
+      "✅ .streak-badge CSS — gradient pill (orange→amber), inline-flex, white text, 20px border-radius, non-selectable",
+      "✅ calculateSafeToSpend() pure utility — (Income − Fixed − Savings) ÷ daysRemaining; returns dailyAllowance, daysRemaining, discretionary",
+      "✅ useStreak() hook — useMemo over expenses date-set; yesterday grace period; counts consecutive days back from today/yesterday cursor",
+      "✅ stsSettings / stsSavingsGoalBase / stsSavingsGoalINR — read from data._sts.savingsGoalAmt, converted to INR via _baseRate",
+      "✅ currentMonthInc useMemo — income filtered to monthStr, summed via toINR",
+      "✅ currentMonthFixed useMemo — expenses filtered to monthStr + expenseType==='fixed', summed via toINR",
+      "✅ dailyAllowance + daysRemaining — destructured from calculateSafeToSpend(currentMonthInc, currentMonthFixed, stsSavingsGoalINR, todayStr)",
+      "✅ stsRatio / stsStatus — ratio of spentToday÷dailyAllowance; status: ok <80%, warn 80–99%, danger ≥100%",
+      "✅ streak = useStreak(expenses) — called in App body after STS block",
+      "✅ Goal milestone confetti — confetti({particleCount:150,spread:70,origin:{y:0.4}}) added inside _firedGoalMilestones useEffect when done===true",
+      "✅ noSpendWeekend useMemo — detects last Sat+Sun both absent from expense date-set; guards against data starting after that weekend",
+      "✅ No-spend weekend useEffect — fires once per session via _firedToasts key 'no-spend-weekend'; addToast + confetti({particleCount:100})",
+      "✅ Streak encouragement useEffect — fires at milestones [3,5,7,10,14,21,30] days; key streak-enc-{N}; references goals[0].name in message",
+      "✅ Streak badge in header — 🔥 {streak} pill before dark-toggle; hidden when streak=0; aria-label for screen readers",
+      "✅ Daily Allowance summary card in Overview — 5th card, visible only when dailyAllowance>0; borderTop color-coded by stsStatus; shows spentToday + daysRemaining",
+      "✅ Settings → 💡 Safe-to-Spend section — number input for monthly savings goal in baseSym; info box shows full formula breakdown when dailyAllowance>0",
+      "✅ data._sts = {savingsGoalAmt} persisted via persist() on input change — no new localStorage keys",
+      "✅ Delete button dark-mode fix — .delete-btn color changed from var(--border) to var(--text3); added .dark .delete-btn{color:var(--text2)} for clear visibility",
+      "✅ Administrative category added to VALID_CATS[], CAT_ALIASES (administrative/admin/government/legal), and CATS config",
+      "✅ CATS['Administrative'] — icon 🗂️, color #0ea5e9 (sky-blue), 10 subcategories: License Renewal, Passport Renewal, Visa Application, ID/Aadhar Update, Vehicle Registration, Property Tax, Government Fees, Notary/Legal, Stamp Duty, Other Govt Fees",
+    ],
+  },
+  {
+    id: "s11", label: "Session 11 — Local Base Currency", color: "#f59e0b",
+    changes: [
+      "✅ baseCurrency state — useState(localStorage.getItem('et_v5_base')||'INR'), persisted on change",
+      "✅ RM.fetchLive(baseCurrency) — URL now uses base param; derives INR-relative rate table from any base (inrPerBase = d.rates['INR'] when non-INR base)",
+      "✅ RM.get(baseCurrency) — passes base param to fetchLive on cache miss",
+      "✅ refreshRates() — passes baseCurrency to RM.fetchLive",
+      "✅ toBase(e) / fmtBase(n) / fmtBaseFromINR(n) — helpers defined in App using _baseRate = rateData?.rates?.[baseCurrency]||1",
+      "✅ totalExpBase, totalIncBase, allExpBase, allIncBase, netSavingsBase — display totals derived as INRTotal/_baseRate",
+      "✅ Summary cards (Overview + Income tabs) — fmtBase(totalExpBase/totalIncBase/netSavingsBase/allExpBase/allIncBase)",
+      "✅ Date group daily totals — fmtBase(items.reduce toBase)",
+      "✅ Search result count lines — fmtBase display totals",
+      "✅ Monthly comparison table (Expenses/Income/Saved columns) — fmtBaseFromINR",
+      "✅ Yearly comparison table — fmtBaseFromINR",
+      "✅ PieChart + LineChart — added fmt prop (fallback fmtINR); all instances pass fmt={fmtBaseFromINR}",
+      "✅ BarChart instances — all updated to fmt={fmtBaseFromINR}",
+      "✅ Day-of-week bar labels (Insights) — fmtBaseFromINR",
+      "✅ FilterBar — baseSym/baseCurrCode props; 'Amount (INR)' label → Amount ({baseCurrCode}); Min/Max placeholders dynamic; filter chip display dynamic",
+      "✅ ExpenseForm + IncomeForm — baseSym/baseCurrCode/baseRate props; preview '≈ ₹X INR' → '≈ {baseSym}{amount} {baseCurrCode}'",
+      "✅ ExpenseForm/IncomeForm onCC — RM.fetchLive(baseCurrCode) for live rate refresh",
+      "✅ Settings tab — new '💱 Base Currency' section with grouped optgroup dropdown + info banner for non-INR selection",
+      "✅ Factory reset — clears et_v5_base, resets baseCurrency state to 'INR'",
+      "✅ Exchange tab description — reflects dynamic base in fetch description",
+      "✅ fmtBase sign handling — negative values render as '-{sym}X' not '{sym}-X'",
+    ],
+  },
+  {
     id: "s10", label: "Session 10 — Phase 14 Complete", color: "#ec4899",
     changes: [
       "✅ 14-4: Recurring reminders — mount useEffect scans all recurring templates, toasts for ≤3 days (urgency-coded), Overview banner for ≤7 days with category icon + days-until + amount chips",
@@ -550,7 +602,7 @@ export default function App() {
             Merger Plan — Progress Tracker
           </h1>
           <p style={{ opacity:.75, fontSize:13, margin:"0 0 20px" }}>
-            v2_5_15_6 + v4-OFFLINE → v5 · Phase 14 Complete · Production Ready
+            v2_5_15_6 + v4-OFFLINE → v5 · Phase 14 Complete · Local Base Currency Added
           </p>
 
           <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>

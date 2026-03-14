@@ -8,6 +8,7 @@
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <style>
 :root{--bg:#f0f2f5;--surface:#fff;--surface2:#f8f9fa;--border:#e0e0e0;--text:#1a1a2e;--text2:#555;--text3:#888;--text4:#bbb;--primary:#667eea;--green:#10b981;--red:#ef4444;--amber:#f59e0b;--sh:rgba(0,0,0,.06);--sh2:rgba(0,0,0,.12);--sh3:rgba(0,0,0,.35)}
 .dark{--bg:#0f1117;--surface:#1a1d27;--surface2:#222636;--border:#2e3347;--text:#e8eaf6;--text2:#b0b8d1;--text3:#6b7499;--text4:#404868;--sh:rgba(0,0,0,.25);--sh2:rgba(0,0,0,.45);--sh3:rgba(0,0,0,.7)}
@@ -70,6 +71,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .form-actions .btn{flex:1}
 .currency-preview{font-size:12px;color:#10b981;margin-top:4px;padding:5px 8px;background:rgba(16,185,129,.1);border-radius:6px;font-weight:600}
 .rate-badge{font-size:11px;padding:3px 8px;border-radius:4px;margin-top:4px;display:inline-block;font-weight:600}
+.streak-badge{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#ff6b35,#f59e0b);color:#fff;padding:3px 10px;border-radius:20px;font-weight:700;font-size:14px;cursor:default;user-select:none;white-space:nowrap;}
 .rate-live{background:#d1fae5;color:#065f46}.rate-cached{background:#dbeafe;color:#1e40af}.rate-offline{background:#fee2e2;color:#991b1b}.rate-none{background:var(--surface2);color:var(--text3)}
 .dark .rate-live{background:rgba(16,185,129,.2);color:#6ee7b7}.dark .rate-cached{background:rgba(59,130,246,.2);color:#93c5fd}.dark .rate-offline{background:rgba(239,68,68,.2);color:#fca5a5}
 
@@ -92,7 +94,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .dark .type-badge{background:rgba(99,102,241,.2);color:#a5b4fc}
 .income-badge{font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(16,185,129,.15);color:#059669;font-weight:600;margin-left:4px}
 .dark .income-badge{background:rgba(16,185,129,.2);color:#6ee7b7}
-.delete-btn{background:none;border:none;cursor:pointer;color:var(--border);font-size:16px;padding:4px 6px;border-radius:4px;transition:color .2s,background .2s;flex-shrink:0}
+.delete-btn{background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:4px 6px;border-radius:4px;transition:color .2s,background .2s;flex-shrink:0}
+.dark .delete-btn{color:var(--text2)}
 .item-actions{display:flex;gap:4px;flex-shrink:0;align-items:center}
 .edit-btn{padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text3);font-size:12px;cursor:pointer;transition:all .15s;line-height:1}
 .edit-btn:hover{border-color:#667eea;color:#667eea;background:rgba(102,126,234,.08)}
@@ -452,6 +455,24 @@ td.delta-col{text-align:right}
 .dark .confirm-modal .warning-box{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:#fca5a5}
 .confirm-modal .actions{display:flex;gap:10px;margin-top:20px}
 .confirm-modal .actions button{flex:1}
+
+/* ── MISSING CSS: section-divider, palette, badges, recurring banner ── */
+.section-divider{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;padding:10px 0 6px;margin-top:4px;border-top:1px solid var(--border)}
+
+.palette-grid{display:flex;flex-wrap:wrap;gap:4px;padding:6px 0}
+.palette-swatch{width:18px;height:18px;border-radius:4px;cursor:pointer;border:2px solid transparent;transition:transform .1s,border-color .1s;flex-shrink:0}
+.palette-swatch:hover{transform:scale(1.25);border-color:var(--text)}
+.palette-swatch.active{border-color:var(--text);transform:scale(1.2);box-shadow:0 0 0 1px var(--text)}
+.palette-swatch.none{background:var(--surface2);border-color:var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text3);font-weight:700;width:auto;padding:0 6px}
+.palette-swatch.none.active{border-color:#667eea;color:#667eea}
+
+.recurring-badge{font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(245,158,11,.15);color:#b45309;font-weight:600;margin-left:4px}
+.dark .recurring-badge{background:rgba(245,158,11,.2);color:#fcd34d}
+.split-badge{font-size:10px;padding:2px 6px;border-radius:4px;background:#e0e7ff;color:#4338ca;font-weight:600;margin-left:4px}
+.dark .split-badge{background:rgba(99,102,241,.2);color:#a5b4fc}
+
+.recurring-due-banner{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;color:var(--text)}
+.dark .recurring-due-banner{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.25)}
 </style>
 </head>
 <body>
@@ -593,11 +614,23 @@ const CG = CURRENCIES.reduce((a,c)=>{if(!a[c.group])a[c.group]=[];a[c.group].pus
 // ═══ RATE MANAGER ═══
 const RM = {
   KEY:'et_v5_rates', TTL:6*3600*1000,
-  async fetchLive(){
-    const res=await fetch('https://api.exchangerate-api.com/v4/latest/INR');
+  async fetchLive(baseCurrency){
+    const base=baseCurrency||'INR';
+    const res=await fetch(`https://api.exchangerate-api.com/v4/latest/${base}`);
     if(!res.ok)throw new Error(res.status);
-    const d=await res.json(), r={INR:1};
-    for(const[c,v]of Object.entries(d.rates))if(c!=='INR'&&v>0)r[c]=1/v;
+    const d=await res.json();
+    // Always build INR-relative rate table: rates[X] = how many INR per 1 unit of X
+    const r={INR:1};
+    if(base==='INR'){
+      for(const[c,v]of Object.entries(d.rates))if(c!=='INR'&&v>0)r[c]=1/v;
+    }else{
+      // d.rates: 1 base = d.rates[X] units of X (e.g. base=USD → d.rates.INR=83.4 means 1 USD=83.4 INR)
+      const inrPerBase=d.rates['INR'];
+      if(inrPerBase&&inrPerBase>0){
+        r[base]=inrPerBase; // INR per 1 unit of base currency
+        for(const[c,v]of Object.entries(d.rates))if(c!=='INR'&&c!==base&&v>0)r[c]=inrPerBase/v;
+      }
+    }
     const p={rates:r,ts:Date.now(),source:'live'};
     try{
       // Store compressed — rate data can be large (122 currencies)
@@ -617,10 +650,10 @@ const RM = {
       return p?.rates ? p : null;
     }catch(e){return null;}
   },
-  async get(){
+  async get(baseCurrency){
     const c=this.load(),fresh=c&&(Date.now()-c.ts)<this.TTL;
     if(fresh)return{...c,source:'cached'};
-    try{return await this.fetchLive();}catch(e){if(c)return{...c,source:'offline'};return{rates:{INR:1},ts:0,source:'none'};}
+    try{return await this.fetchLive(baseCurrency);}catch(e){if(c)return{...c,source:'offline'};return{rates:{INR:1},ts:0,source:'none'};}
   },
   age(ts){if(!ts)return'';const m=Math.round((Date.now()-ts)/60000);if(m<2)return'just now';if(m<60)return m+'m ago';const h=Math.round(m/60);if(h<24)return h+'h ago';return Math.round(h/24)+'d ago';}
 };
@@ -759,7 +792,7 @@ function makeDedupContext(existingList) {
 }
 
 // ─── Normalisation helpers ────────────────────────────
-const VALID_CATS     = ['Food','Transport','Shopping','Health','Entertainment','Utilities','Housing','Education','Personal','Travel','Finance','Social','Other'];
+const VALID_CATS     = ['Food','Transport','Shopping','Health','Entertainment','Utilities','Housing','Education','Personal','Travel','Finance','Social','Administrative','Other'];
 const VALID_PAYMENTS = ['Cash','Credit Card','Debit Card','UPI/QR','Net Banking','Wallet','Cheque','EMI','Other'];
 const VALID_EXP_TYPES   = ['variable','fixed','luxury','need','want','investment'];
 const VALID_INC_SOURCES = ['Salary','Freelance','Business','Rental','Dividends','Interest','Bonus','Gift','Refund','Side Income','Other'];
@@ -776,6 +809,7 @@ const CAT_ALIASES = {
   'personal':'Personal','personal care':'Personal',
   'finance':'Finance','investment':'Finance','savings':'Finance',
   'social':'Social','gifts':'Social',
+  'administrative':'Administrative','admin':'Administrative','government':'Administrative','legal':'Administrative',
 };
 // Raw normalise (used inside fingerprint before CATS config is defined)
 function normCategoryRaw(raw) {
@@ -1014,6 +1048,7 @@ const CATS={
   'Travel':       {icon:'✈️',color:'#6366f1',subs:['Hotel','Sightseeing','Visa','Insurance','Souvenirs','Transport']},
   'Finance':      {icon:'💰',color:'#14b8a6',subs:['Insurance','Tax','Loan Payment','Investment','Bank Fees','Savings']},
   'Social':       {icon:'🎉',color:'#f43f5e',subs:['Gifts','Parties','Donations','Subscriptions','Events','Dining Out']},
+  'Administrative':{icon:'🗂️',color:'#0ea5e9',subs:['License Renewal','Passport Renewal','Visa Application','ID/Aadhar Update','Vehicle Registration','Property Tax','Government Fees','Notary/Legal','Stamp Duty','Other Govt Fees']},
   'Other':        {icon:'📌',color:'#94a3b8',subs:['Miscellaneous','Uncategorized','Refund','Transfer']},
 };
 const INC_SOURCES=['Salary','Freelance','Business','Rental','Dividends','Interest','Bonus','Gift','Refund','Side Income','Other'];
@@ -1067,6 +1102,14 @@ const RECURRING_PERIODS=[
 
 // ═══ HELPERS ═══
 function fmtINR(n){if(isNaN(n)||n==null)return'₹0';return'₹'+parseFloat(n).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:2});}
+function calculateSafeToSpend(monthIncINR,fixedExpINR,savingsGoalINR,todayStr){
+  const d=new Date(todayStr+'T12:00:00');
+  const daysInMonth=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+  const daysRemaining=daysInMonth-d.getDate()+1;
+  const discretionary=monthIncINR-fixedExpINR-savingsGoalINR;
+  if(daysRemaining<=0||discretionary<=0) return{dailyAllowance:0,daysRemaining,discretionary};
+  return{dailyAllowance:discretionary/daysRemaining,daysRemaining,discretionary};
+}
 function fmtF(e){const c=CM[e.currency];return(c?c.symbol:e.currency||'₹')+parseFloat(e.amount||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
 function toINR(e){if(!e)return 0;if(!e.currency||e.currency==='INR')return parseFloat(e.amount||0);return parseFloat(e.amountINR||e.amount||0);}
 function byDate(list){const g={};list.forEach(e=>{const d=e.date||'Unknown';(g[d]||(g[d]=[])).push(e);});return Object.entries(g).sort((a,b)=>b[0].localeCompare(a[0]));}
@@ -1099,8 +1142,25 @@ function useDebounce(value, delay=300){
   return debounced;
 }
 
+// ═══ useStreak HOOK — consecutive days logged ═══
+function useStreak(expenses){
+  return useMemo(()=>{
+    if(!expenses.length) return 0;
+    const now=new Date();now.setHours(12,0,0,0);
+    const todayStr=now.toISOString().split('T')[0];
+    const yest=new Date(now-864e5).toISOString().split('T')[0];
+    const dateSet=new Set(expenses.map(e=>e.date));
+    let cursor=dateSet.has(todayStr)?todayStr:dateSet.has(yest)?yest:null;
+    if(!cursor) return 0;
+    let streak=0,d=new Date(cursor+'T12:00:00');
+    while(dateSet.has(d.toISOString().split('T')[0])){streak++;d=new Date(d-864e5);}
+    return streak;
+  },[expenses]);
+}
+
 // ═══ CHARTS ═══
-function PieChart({data,size=220}){
+function PieChart({data,size=220,fmt}){
+  const f=fmt||(v=>fmtINR(v));
   const total=(data||[]).reduce((s,d)=>s+d.value,0);
   if(!total)return<div style={{textAlign:'center',color:'var(--text3)',padding:'28px 0',fontSize:13}}>No data</div>;
   const cx=size/2,cy=size/2,r=size*.37;let a=-90;
@@ -1114,15 +1174,16 @@ function PieChart({data,size=220}){
   });
   return(<div>
     <svg width={size} height={size} style={{display:'block',margin:'0 auto'}}>
-      {sl.map((s,i)=><path key={i} d={s.path} fill={s.color} stroke="var(--surface)" strokeWidth="2"><title>{s.label}: {fmtINR(s.value)} ({(s.value/total*100).toFixed(1)}%)</title></path>)}
+      {sl.map((s,i)=><path key={i} d={s.path} fill={s.color} stroke="var(--surface)" strokeWidth="2"><title>{s.label}: {f(s.value)} ({(s.value/total*100).toFixed(1)}%)</title></path>)}
       <circle cx={cx} cy={cy} r={r*.45} fill="var(--surface)"/>
       <text x={cx} y={cy-6} textAnchor="middle" fontSize="10" fill="var(--text3)">Total</text>
-      <text x={cx} y={cy+11} textAnchor="middle" fontSize="12" fontWeight="700" fill="var(--text)">{fmtINR(total)}</text>
+      <text x={cx} y={cy+11} textAnchor="middle" fontSize="12" fontWeight="700" fill="var(--text)">{f(total)}</text>
     </svg>
     <div className="legend">{sl.slice(0,9).map((s,i)=><div key={i} className="legend-item"><div className="legend-dot" style={{background:s.color}}/><span>{s.label} ({(s.value/total*100).toFixed(0)}%)</span></div>)}</div>
   </div>);
 }
-function LineChart({data}){
+function LineChart({data,fmt}){
+  const f=fmt||(v=>fmtINR(v));
   if(!data||data.length<2)return<div style={{textAlign:'center',color:'var(--text3)',padding:'28px 0',fontSize:13}}>Not enough data</div>;
   const W=420,H=200,P={t:20,r:20,b:40,l:60},gW=W-P.l-P.r,gH=H-P.t-P.b;
   const vals=data.map(d=>d.value),maxV=Math.max(...vals,1),minV=Math.min(...vals,0),rng=maxV-minV||1;
@@ -1134,7 +1195,7 @@ function LineChart({data}){
     {[0,.25,.5,.75,1].map((t,i)=>{const y=P.t+gH*t,v=maxV-t*rng;return<g key={i}><line x1={P.l} y1={y} x2={W-P.r} y2={y} stroke="var(--border)" strokeWidth="1"/><text x={P.l-6} y={y+4} textAnchor="end" fontSize="10" fill="var(--text3)">{v>=1000?(v/1000).toFixed(0)+'k':Math.round(v)}</text></g>;})}
     <path d={ad} fill="url(#lg)"/>
     <path d={pd} fill="none" stroke="#667eea" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-    {pts.map((p,i)=><g key={i}><circle cx={p.x} cy={p.y} r="4" fill="#667eea" stroke="var(--surface)" strokeWidth="2"/><title>{p.label}: {fmtINR(p.value)}</title>{data.length<=14&&<text x={p.x} y={H-P.b+16} textAnchor="middle" fontSize="9" fill="var(--text3)">{p.label}</text>}</g>)}
+    {pts.map((p,i)=><g key={i}><circle cx={p.x} cy={p.y} r="4" fill="#667eea" stroke="var(--surface)" strokeWidth="2"/><title>{p.label}: {f(p.value)}</title>{data.length<=14&&<text x={p.x} y={H-P.b+16} textAnchor="middle" fontSize="9" fill="var(--text3)">{p.label}</text>}</g>)}
   </svg>);
 }
 
@@ -1177,7 +1238,7 @@ function HeatmapCalendar({expenses,income}){
     for(let i=89;i>=0;i--){
       const d=new Date(today);
       d.setDate(d.getDate()-i);
-      const key=d.toISOString().split('T')[0];
+      const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
       days[key]={date:key,amount:0,count:0,income:0,topCatColor:null,_topVal:0,d};
     }
     expenses.forEach(e=>{
@@ -1211,7 +1272,7 @@ function HeatmapCalendar({expenses,income}){
   const getCellBg=d=>{
     const t=getIntensity(d);
     if(t===0) return 'var(--border)';
-    const a=Math.round(0.15+t*0.85,2);
+    const a=0.15+t*0.85;
     if(mode==='amount'){
       // Use the dominant category/custom color (v2 feature - 4-7)
       const base=d.topCatColor||'#667eea';
@@ -1576,6 +1637,7 @@ function FilterBar({
   amtMin,   onAmtMinChange,
   amtMax,   onAmtMaxChange,
   selectedCategories, onToggleCategory,
+  baseSym, baseCurrCode,
 }) {
   const [showAdv, setShowAdv] = useState(false);
   // Local raw search — actual filtering is debounced in parent
@@ -1700,14 +1762,14 @@ function FilterBar({
 
           {/* 6-9: Amount range */}
           <div className="filter-advanced-row">
-            <span className="filter-advanced-label">💰 Amount (INR)</span>
+            <span className="filter-advanced-label">💰 Amount ({baseCurrCode||'INR'})</span>
             <input type="number" min="0" className="filter-range-input"
               value={amtMin} onChange={e=>onAmtMinChange(e.target.value)}
-              placeholder="Min ₹"/>
+              placeholder={'Min '+(baseSym||'₹')}/>
             <span className="filter-range-sep">–</span>
             <input type="number" min="0" className="filter-range-input"
               value={amtMax} onChange={e=>onAmtMaxChange(e.target.value)}
-              placeholder="Max ₹"/>
+              placeholder={'Max '+(baseSym||'₹')}/>
             {(amtMin!==''||amtMax!=='')&&(
               <button style={{background:'none',border:'none',cursor:'pointer',color:'#ef4444',fontSize:13}}
                 onClick={()=>{onAmtMinChange('');onAmtMaxChange('');}}>✕</button>
@@ -1743,7 +1805,7 @@ function FilterBar({
           )}
           {(amtMin!==''||amtMax!=='')&&(
             <span className="filter-chip range-chip">
-              💰 {amtMin!==''?fmtINR(amtMin):'any'} – {amtMax!==''?fmtINR(amtMax):'any'}
+              💰 {amtMin!==''?(baseSym||'₹')+parseFloat(amtMin).toLocaleString():'any'} – {amtMax!==''?(baseSym||'₹')+parseFloat(amtMax).toLocaleString():'any'}
               <button onClick={()=>{onAmtMinChange('');onAmtMaxChange('');}}>×</button>
             </span>
           )}
@@ -1755,7 +1817,7 @@ function FilterBar({
 
 
 // ═══ EXPENSE FORM ═══
-function ExpenseForm({onSubmit,onEdit,onClose,rateData,onRateUpdate,initialData}){
+function ExpenseForm({onSubmit,onEdit,onClose,rateData,onRateUpdate,initialData,baseSym,baseCurrCode,baseRate}){
   const today=new Date().toISOString().split('T')[0];
   const EXPENSE_DEFAULTS={
     description:'',amount:'',currency:'INR',conversionRate:1,
@@ -1788,7 +1850,7 @@ function ExpenseForm({onSubmit,onEdit,onClose,rateData,onRateUpdate,initialData}
     s('currency',code);if(code==='INR'){s('conversionRate',1);return;}
     if(rateData?.rates?.[code]){s('conversionRate',parseFloat(rateData.rates[code].toFixed(6)));return;}
     setLr(true);
-    try{const f=await RM.fetchLive();if(onRateUpdate)onRateUpdate(f);if(f.rates[code])s('conversionRate',parseFloat(f.rates[code].toFixed(6)));}catch(e){}
+    try{const f=await RM.fetchLive(baseCurrCode);if(onRateUpdate)onRateUpdate(f);if(f.rates[code])s('conversionRate',parseFloat(f.rates[code].toFixed(6)));}catch(e){}
     setLr(false);
   };
   const calcNextDue=(fromDate,period)=>{
@@ -1862,7 +1924,7 @@ function ExpenseForm({onSubmit,onEdit,onClose,rateData,onRateUpdate,initialData}
             <div className="form-group">
               <label>Amount *</label>
               <input type="number" step="0.01" min="0" value={form.amount} onChange={e=>s('amount',e.target.value)} required placeholder="0.00"/>
-              {prev!==null&&<div className="currency-preview">≈ {fmtINR(prev)} INR</div>}
+              {prev!==null&&<div className="currency-preview">≈ {(baseSym||'₹')+parseFloat(prev/(baseRate||1)).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:2})} {baseCurrCode||'INR'}</div>}
             </div>
           </div>
           {iF&&<div className="form-group"><label>Rate: 1 {form.currency} = ? INR</label><input type="number" step="0.000001" min="0" value={form.conversionRate} onChange={e=>s('conversionRate',parseFloat(e.target.value)||0)}/></div>}
@@ -2007,7 +2069,7 @@ function ExpenseForm({onSubmit,onEdit,onClose,rateData,onRateUpdate,initialData}
 
 
 // ═══ INCOME FORM ═══
-function IncomeForm({onSubmit,onEdit,onClose,rateData,onRateUpdate,initialData}){
+function IncomeForm({onSubmit,onEdit,onClose,rateData,onRateUpdate,initialData,baseSym,baseCurrCode,baseRate}){
   const INC_DEFAULTS={description:'',amount:'',currency:'INR',conversionRate:1,source:'Salary',date:new Date().toISOString().split('T')[0],paymentMethod:'Net Banking',notes:'',isRecurring:false,recurringPeriod:'monthly'};
   const [form,setForm]=useState(initialData
     ?{...INC_DEFAULTS,...initialData,amount:String(initialData.amount||''),conversionRate:initialData.conversionRate||1}
@@ -2019,7 +2081,7 @@ function IncomeForm({onSubmit,onEdit,onClose,rateData,onRateUpdate,initialData})
     s('currency',code);if(code==='INR'){s('conversionRate',1);return;}
     if(rateData?.rates?.[code]){s('conversionRate',parseFloat(rateData.rates[code].toFixed(6)));return;}
     setLr(true);
-    try{const f=await RM.fetchLive();if(onRateUpdate)onRateUpdate(f);if(f.rates[code])s('conversionRate',parseFloat(f.rates[code].toFixed(6)));}catch(e){}
+    try{const f=await RM.fetchLive(baseCurrCode);if(onRateUpdate)onRateUpdate(f);if(f.rates[code])s('conversionRate',parseFloat(f.rates[code].toFixed(6)));}catch(e){}
     setLr(false);
   };
   const sub=e=>{
@@ -2054,7 +2116,7 @@ function IncomeForm({onSubmit,onEdit,onClose,rateData,onRateUpdate,initialData})
             <div className="form-group">
               <label>Amount *</label>
               <input type="number" step="0.01" min="0" value={form.amount} onChange={e=>s('amount',e.target.value)} required placeholder="0.00"/>
-              {prev!==null&&<div className="currency-preview">≈ {fmtINR(prev)} INR</div>}
+              {prev!==null&&<div className="currency-preview">≈ {(baseSym||'₹')+parseFloat(prev/(baseRate||1)).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:2})} {baseCurrCode||'INR'}</div>}
             </div>
           </div>
           {iF&&<div className="form-group"><label>Rate: 1 {form.currency} = ? INR</label><input type="number" step="0.000001" min="0" value={form.conversionRate} onChange={e=>s('conversionRate',parseFloat(e.target.value)||0)}/></div>}
@@ -2158,6 +2220,7 @@ function App(){
   const [delTarget,setDelTarget]=useState(null);
   const [dark,setDark]=useState(()=>localStorage.getItem('et_v5_dark')==='1');
   const [colorblind,setColorblind]=useState(()=>localStorage.getItem('et_v5_cb')==='1'); // 14-6
+  const [baseCurrency,setBaseCurrency]=useState(()=>localStorage.getItem('et_v5_base')||'INR');
   const [recurringAdded,setRecurringAdded]=useState(0); // count of auto-generated recurring expenses
 
   // ── Expense filters ──
@@ -2224,9 +2287,21 @@ function App(){
   const expenses=data.expenses||[];
   const income=data.income||[];
 
+  // ── Base-currency helpers ────────────────────────────────────────────
+  const baseCurrInfo = CM[baseCurrency] || CM['INR'];
+  const baseSym = baseCurrInfo.symbol;
+  const _baseRate = rateData?.rates?.[baseCurrency] || 1;
+  // Convert an expense/income object to the display base currency
+  const toBase = e => { if(!e) return 0; const inr=toINR(e); return baseCurrency==='INR'?inr:inr/_baseRate; };
+  // Format a number in base currency
+  const fmtBase = n => { if(isNaN(n)||n==null) return baseSym+'0'; const v=parseFloat(n); return (v<0?'-':'')+baseSym+Math.abs(v).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:2}); };
+  // Convenience: convert an already-computed INR amount to base and format
+  const fmtBaseFromINR = n => fmtBase(n/_baseRate);
+
   useEffect(()=>{document.documentElement.classList.toggle('dark',dark);localStorage.setItem('et_v5_dark',dark?'1':'0');},[dark]);
   useEffect(()=>{document.documentElement.classList.toggle('colorblind',colorblind);localStorage.setItem('et_v5_cb',colorblind?'1':'0');},[colorblind]); // 14-6
-  useEffect(()=>{RM.get().then(rd=>setRateData(rd));},[]);
+  useEffect(()=>{localStorage.setItem('et_v5_base',baseCurrency);},[baseCurrency]);
+  useEffect(()=>{RM.get(baseCurrency).then(rd=>setRateData(rd));},[baseCurrency]);
 
   // ── 14-4: Recurring expense reminders — fire toasts for due soon + upcoming section ──
   const [upcomingRecurring, setUpcomingRecurring] = useState([]); // for Overview banner
@@ -2318,7 +2393,7 @@ function App(){
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);  // runs once on mount — intentional
   useEffect(()=>{
-    const TABS=['overview','income','monthly','yearly','insights','budgets','goals','exchange','settings'];
+    const TABS=['overview','income','trends','insights','budgets','goals','exchange','settings'];
     const h=e=>{
       if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;
       const n=parseInt(e.key);if(n>=1&&n<=TABS.length)setTab(TABS[n-1]);
@@ -2361,7 +2436,7 @@ function App(){
     setDelTarget(null);
   },[delTarget,data,expenses,income]); // 14-9
 
-  const refreshRates=async()=>{setRateFetching(true);try{const rd=await RM.fetchLive();setRateData(rd);}catch(e){}setRateFetching(false);};
+  const refreshRates=async()=>{setRateFetching(true);try{const rd=await RM.fetchLive(baseCurrency);setRateData(rd);}catch(e){}setRateFetching(false);};
 
   // ── filter helpers ──
   const getFilter=(arr,key)=>arr.find(f=>f.key===key)?.value||'All';
@@ -2432,6 +2507,12 @@ function App(){
   const allExpINR   = useMemo(()=>expenses.reduce((s,e)=>s+toINR(e),0),[expenses]);
   const allIncINR   = useMemo(()=>income.reduce((s,i)=>s+toINR(i),0),[income]);
   const netSavings  = allIncINR - allExpINR;
+  // Base-currency display totals (re-derived whenever _baseRate/baseCurrency changes)
+  const totalExpBase = totalExpINR / _baseRate;
+  const totalIncBase = totalIncINR / _baseRate;
+  const allExpBase   = allExpINR   / _baseRate;
+  const allIncBase   = allIncINR   / _baseRate;
+  const netSavingsBase = allIncBase - allExpBase;
 
   // Currencies actually used (for filter dropdown)
   const usedExpCurrencies = useMemo(()=>[...new Set(expenses.map(e=>e.currency||'INR'))]  ,[expenses]);
@@ -2449,6 +2530,19 @@ function App(){
   const spentToday   = useMemo(()=>expenses.filter(e=>e.date===todayStr).reduce((s,e)=>s+toINR(e),0),[expenses,todayStr]);
   const spentWeek    = useMemo(()=>expenses.filter(e=>e.date>=weekStart&&e.date<=todayStr).reduce((s,e)=>s+toINR(e),0),[expenses,weekStart,todayStr]);
   const spentMonth   = useMemo(()=>expenses.filter(e=>(e.date||'').startsWith(monthStr)).reduce((s,e)=>s+toINR(e),0),[expenses,monthStr]);
+
+  // ── Safe-to-Spend ──
+  const stsSettings=useMemo(()=>data._sts||{},[data]);
+  const stsSavingsGoalBase=stsSettings.savingsGoalAmt||0;
+  const stsSavingsGoalINR=stsSavingsGoalBase*_baseRate;
+  const currentMonthInc=useMemo(()=>income.filter(i=>(i.date||'').startsWith(monthStr)).reduce((s,i)=>s+toINR(i),0),[income,monthStr]);
+  const currentMonthFixed=useMemo(()=>expenses.filter(e=>(e.date||'').startsWith(monthStr)&&e.expenseType==='fixed').reduce((s,e)=>s+toINR(e),0),[expenses,monthStr]);
+  const {dailyAllowance,daysRemaining}=calculateSafeToSpend(currentMonthInc,currentMonthFixed,stsSavingsGoalINR,todayStr);
+  const stsRatio=dailyAllowance>0?spentToday/dailyAllowance:0;
+  const stsStatus=stsRatio>=1?'danger':stsRatio>=0.8?'warn':'ok';
+  // ── Streak ──
+  const streak=useStreak(expenses);
+
   const spentByCatMonth = useMemo(()=>{
     const c={};
     expenses.filter(e=>(e.date||'').startsWith(monthStr)).forEach(e=>{
@@ -2756,9 +2850,10 @@ function App(){
     else if (confirmAction.type === 'clear-income') persist({ ...data, income: [] });
     else if (confirmAction.type === 'clear-all') persist(empty);
     else if (confirmAction.type === 'factory-reset') {
-      [SK, SK_META, 'et_v5_rates', 'et_v5_dark', 'et_v5_cb'].forEach(k => localStorage.removeItem(k));
+      [SK, SK_META, 'et_v5_rates', 'et_v5_dark', 'et_v5_cb', 'et_v5_base'].forEach(k => localStorage.removeItem(k));
       setDark(false);
       setColorblind(false);
+      setBaseCurrency('INR');
       setData(empty);
       _firedToasts.current.clear();
     }
@@ -2892,17 +2987,53 @@ function App(){
               : `${fmtINR(contributed)} of ${fmtINR(goal.target)} saved`,
             done?8000:5000
           );
+          if(done&&typeof confetti==='function') confetti({particleCount:150,spread:70,origin:{y:0.4}});
         }
       });
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[goals]);
 
+  // ── No-Spend Weekend detection ──
+  const noSpendWeekend=useMemo(()=>{
+    if(!expenses.length) return false;
+    const now=new Date();now.setHours(12,0,0,0);
+    const dow=now.getDay();
+    const daysToLastSun=dow===0?7:dow;
+    const lastSun=new Date(now);lastSun.setDate(now.getDate()-daysToLastSun);
+    const lastSat=new Date(lastSun);lastSat.setDate(lastSun.getDate()-1);
+    const satStr=lastSat.toISOString().split('T')[0];
+    const sunStr=lastSun.toISOString().split('T')[0];
+    const dateSet=new Set(expenses.map(e=>e.date));
+    const earliest=expenses.reduce((m,e)=>e.date<m?e.date:m,expenses[0].date);
+    return satStr>earliest&&!dateSet.has(satStr)&&!dateSet.has(sunStr);
+  },[expenses]);
+
+  useEffect(()=>{
+    if(!noSpendWeekend) return;
+    const key='no-spend-weekend';
+    if(_firedToasts.current.has(key)) return;
+    _firedToasts.current.add(key);
+    addToast('ok','🎉','No-Spend Weekend!','Zero expenses last weekend — amazing discipline!',7000);
+    if(typeof confetti==='function') confetti({particleCount:100,spread:60,origin:{y:0.3}});
+  },[noSpendWeekend]);
+
+  // ── Streak encouragement ──
+  useEffect(()=>{
+    if(streak<3) return;
+    const key=`streak-enc-${streak}`;
+    if(_firedToasts.current.has(key)) return;
+    if(![3,5,7,10,14,21,30].includes(streak)) return;
+    _firedToasts.current.add(key);
+    const goalName=goals.length?goals[0].name:'your financial goals';
+    addToast('ok','🔥',`${streak}-day streak!`,`You've logged expenses ${streak} days running — keep it up to reach ${goalName} faster!`,7000);
+  },[streak]);
+
     const rs=rateData?rateData.source:'none';
   const rsClass=rs==='live'?'rate-live':rs==='offline'?'rate-offline':rs==='cached'?'rate-cached':'rate-none';
   const rsLabel=rs==='live'?'🟢 Live':rs==='offline'?'🔴 Offline':rs==='cached'?'🔵 Cached '+RM.age(rateData.ts):'⚪ No rates';
 
-  const TABS=[{id:'overview',label:'📊 Overview'},{id:'income',label:'💵 Income'},{id:'monthly',label:'📅 Monthly'},{id:'yearly',label:'📆 Yearly'},{id:'insights',label:'💡 Insights'},{id:'budgets',label:'💰 Budgets'},{id:'goals',label:'🎯 Goals'},{id:'exchange',label:'💱 Exchange'},{id:'settings',label:'⚙️ Settings'}];
+  const TABS=[{id:'overview',label:'📊 Overview'},{id:'income',label:'💵 Income'},{id:'trends',label:'📈 Trends'},{id:'insights',label:'💡 Insights'},{id:'budgets',label:'💰 Budgets'},{id:'goals',label:'🎯 Goals'},{id:'exchange',label:'💱 Exchange'}];
 
   const hasExpFilters = expSearch || expMonth || expFilters.some(f=>f.value!=='All')
     || expCategories.length || expDateFrom || expDateTo || expAmtMin!=='' || expAmtMax!=='';
@@ -2923,6 +3054,9 @@ function App(){
           </div>
         </div>
         <div className="header-actions">
+          {streak>0&&(
+            <span className="streak-badge" title={`${streak}-day logging streak`} aria-label={`${streak} day logging streak`}>🔥 {streak}</span>
+          )}
           <label className="dark-toggle" onClick={()=>setDark(m=>!m)}>
             <div className={`dark-toggle-track ${dark?'on':''}`}><div className="dark-toggle-thumb"/></div>
             <span className="dark-toggle-label">{dark?'🌙 Dark':'☀️ Light'}</span>
@@ -3021,9 +3155,21 @@ function App(){
       {tab==='overview'&&(
         <main id="main-content" role="main" aria-labelledby="tab-overview">
           <div className="summary-grid" role="region" aria-label="Financial summary">
-            <div className="summary-card exp" role="status" aria-label={`Expenses: ${fmtINR(totalExpINR)}`}><label>Expenses {hasExpFilters?'(filtered)':''}</label><div className="amount" style={{color:'#ef4444'}}>{fmtINR(totalExpINR)}</div></div>
-            <div className="summary-card inc" role="status" aria-label={`Income: ${fmtINR(totalIncINR)}`}><label>Income {hasExpFilters?'(period)':''}</label><div className="amount" style={{color:'#10b981'}}>{fmtINR(totalIncINR)}</div></div>
-            <div className="summary-card sav" role="status" aria-label={`Net savings: ${netSavings>=0?'+':''}${fmtINR(netSavings)}`}><label>Net Savings</label><div className="amount" style={{color:netSavings>=0?'#f59e0b':'#ef4444'}}>{netSavings>=0?'+':''}{fmtINR(netSavings)}</div></div>
+            <div className="summary-card exp" role="status" aria-label={`Expenses: ${fmtBase(totalExpBase)}`}><label>Expenses {hasExpFilters?'(filtered)':''}</label><div className="amount" style={{color:'#ef4444'}}>{fmtBase(totalExpBase)}</div></div>
+            <div className="summary-card inc" role="status" aria-label={`Income: ${fmtBase(totalIncBase)}`}><label>Income {hasExpFilters?'(period)':''}</label><div className="amount" style={{color:'#10b981'}}>{fmtBase(totalIncBase)}</div></div>
+            <div className="summary-card sav" role="status" aria-label={`Net savings: ${netSavingsBase>=0?'+':''}${fmtBase(netSavingsBase)}`}><label>Net Savings</label><div className="amount" style={{color:netSavingsBase>=0?'#f59e0b':'#ef4444'}}>{netSavingsBase>=0?'+':''}{fmtBase(netSavingsBase)}</div></div>
+            {dailyAllowance>0&&(
+              <div className="summary-card" role="status" aria-label={`Daily allowance: ${fmtBaseFromINR(dailyAllowance)}`}
+                style={{borderTop:`3px solid ${stsStatus==='danger'?'#ef4444':stsStatus==='warn'?'#f59e0b':'#10b981'}`}}>
+                <label>Daily Allowance</label>
+                <div className="amount" style={{color:stsStatus==='danger'?'#ef4444':stsStatus==='warn'?'#f59e0b':'#10b981'}}>
+                  {fmtBaseFromINR(dailyAllowance)}
+                </div>
+                <div style={{fontSize:11,opacity:.75,marginTop:4}}>
+                  Used {fmtBaseFromINR(spentToday)} · {daysRemaining}d left
+                </div>
+              </div>
+            )}
             <div className="summary-card" role="status" aria-label={`Showing ${filteredExp.length} of ${expenses.length} expenses`}><label>Showing</label><div className="amount">{filteredExp.length} / {expenses.length}</div></div>
           </div>
 
@@ -3047,6 +3193,7 @@ function App(){
             dateTo={expDateTo}        onDateToChange={setExpDateTo}
             amtMin={expAmtMin}        onAmtMinChange={setExpAmtMin}
             amtMax={expAmtMax}        onAmtMaxChange={setExpAmtMax}
+            baseSym={baseSym}         baseCurrCode={baseCurrency}
           />
 
           {/* Result count */}
@@ -3054,14 +3201,14 @@ function App(){
             <div className="results-info">
               {filteredExp.length === 0
                 ? '⚠️ No expenses match your filters'
-                : `Showing ${filteredExp.length} of ${expenses.length} expenses · ${fmtINR(totalExpINR)} total`}
+                : `Showing ${filteredExp.length} of ${expenses.length} expenses · ${fmtBase(totalExpBase)} total`}
             </div>
           )}
 
           {filteredExp.length>0&&(
             <div className="chart-container">
-              <div className="chart-card"><div className="chart-title">By Category</div><PieChart data={catData}/></div>
-              <div className="chart-card"><div className="chart-title">By Payment Method</div><PieChart data={payData}/></div>
+              <div className="chart-card"><div className="chart-title">By Category</div><PieChart data={catData} fmt={fmtBaseFromINR}/></div>
+              <div className="chart-card"><div className="chart-title">By Payment Method</div><PieChart data={payData} fmt={fmtBaseFromINR}/></div>
             </div>
           )}
 
@@ -3075,7 +3222,7 @@ function App(){
             <div key={date} className="date-group">
               <div className="date-group-header">
                 <span>{new Date(date+'T12:00:00').toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'})}</span>
-                <span>{fmtINR(items.reduce((s,e)=>s+toINR(e),0))}</span>
+                <span>{fmtBase(items.reduce((s,e)=>s+toBase(e),0))}</span>
               </div>
               {items.map(e=><ExpItem key={e.id} item={e} onDelete={id=>setDelTarget({id,type:'expense'})} onEdit={e=>{setEditExpTarget(e);setShowEF(true);}}/>)}
             </div>
@@ -3089,9 +3236,9 @@ function App(){
       {tab==='income'&&(
         <>
           <div className="summary-grid">
-            <div className="summary-card inc"><label>Total Income (all)</label><div className="amount" style={{color:'#10b981'}}>{fmtINR(allIncINR)}</div></div>
-            <div className="summary-card exp"><label>Total Expenses (all)</label><div className="amount" style={{color:'#ef4444'}}>{fmtINR(allExpINR)}</div></div>
-            <div className="summary-card sav"><label>Net Savings</label><div className="amount" style={{color:netSavings>=0?'#f59e0b':'#ef4444'}}>{netSavings>=0?'+':''}{fmtINR(netSavings)}</div></div>
+            <div className="summary-card inc"><label>Total Income (all)</label><div className="amount" style={{color:'#10b981'}}>{fmtBase(allIncBase)}</div></div>
+            <div className="summary-card exp"><label>Total Expenses (all)</label><div className="amount" style={{color:'#ef4444'}}>{fmtBase(allExpBase)}</div></div>
+            <div className="summary-card sav"><label>Net Savings</label><div className="amount" style={{color:netSavingsBase>=0?'#f59e0b':'#ef4444'}}>{netSavingsBase>=0?'+':''}{fmtBase(netSavingsBase)}</div></div>
             <div className="summary-card"><label>Showing</label><div className="amount">{filteredInc.length} / {income.length}</div></div>
           </div>
 
@@ -3110,18 +3257,19 @@ function App(){
             dateTo={incDateTo}        onDateToChange={setIncDateTo}
             amtMin={incAmtMin}        onAmtMinChange={setIncAmtMin}
             amtMax={incAmtMax}        onAmtMaxChange={setIncAmtMax}
+            baseSym={baseSym}         baseCurrCode={baseCurrency}
           />
 
           {(incSearch||incMonth||incFilters.some(f=>f.value!=='All')||incDateFrom||incDateTo||incAmtMin!==''||incAmtMax!=='')&&(
             <div className="results-info">
-              {filteredInc.length===0?'⚠️ No income matches your filters':`Showing ${filteredInc.length} of ${income.length} · ${fmtINR(totalIncINR)} total`}
+              {filteredInc.length===0?'⚠️ No income matches your filters':`Showing ${filteredInc.length} of ${income.length} · ${fmtBase(totalIncBase)} total`}
             </div>
           )}
 
           {income.length>0&&(
             <div className="chart-container">
-              <div className="chart-card"><div className="chart-title">Income by Source</div><PieChart data={incSrcData}/></div>
-              <div className="chart-card"><div className="chart-title">Income Trend (12m)</div><LineChart data={monthlyIncData}/></div>
+              <div className="chart-card"><div className="chart-title">Income by Source</div><PieChart data={incSrcData} fmt={fmtBaseFromINR}/></div>
+              <div className="chart-card"><div className="chart-title">Income Trend (12m)</div><LineChart data={monthlyIncData} fmt={fmtBaseFromINR}/></div>
             </div>
           )}
 
@@ -3148,161 +3296,159 @@ function App(){
       )}
 
       {/* ══════════════════════════════════════════════════
-          MONTHLY TAB
+          TRENDS TAB  (monthly + yearly side-by-side)
       ══════════════════════════════════════════════════ */}
-      {tab==='monthly'&&(
-        <>
-          <div className="card"><div style={{fontWeight:600,marginBottom:12}}>Monthly Spending Trend (all data)</div><LineChart data={monthlyExpData}/></div>
-          <div className="chart-container">
-            <div className="chart-card">
-              <div className="chart-title">Category Breakdown</div>
-              <PieChart data={catData.map((d,i)=>({...d,color:CATS[d.label]?.color||CC[i%CC.length]}))}/>
+      {tab==='trends'&&(
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(500px, 1fr))',gap:20}}>
+          {/* ── LEFT: Monthly ── */}
+          <div>
+            <div className="card"><div style={{fontWeight:600,marginBottom:12}}>📅 Monthly Spending Trend</div><LineChart data={monthlyExpData} fmt={fmtBaseFromINR}/></div>
+            <div className="chart-container">
+              <div className="chart-card">
+                <div className="chart-title">Category Breakdown</div>
+                <PieChart data={catData.map((d,i)=>({...d,color:CATS[d.label]?.color||CC[i%CC.length]}))} fmt={fmtBaseFromINR}/>
+              </div>
+              <div className="chart-card">
+                <div className="chart-title">Payment Breakdown</div>
+                <PieChart data={payData} fmt={fmtBaseFromINR}/>
+              </div>
             </div>
-            <div className="chart-card">
-              <div className="chart-title">Payment Breakdown</div>
-              <PieChart data={payData}/>
-            </div>
-          </div>
-          {catData.length>0&&(
+            {catData.length>0&&(
+              <div className="card">
+                <div style={{fontWeight:600,marginBottom:12}}>📋 Category Bars</div>
+                <BarChart data={catData.map(d=>({...d,icon:CATS[d.label]?.icon||''}))} colorFn={d=>CATS[d.label]?.color||'#667eea'} fmt={fmtBaseFromINR}/>
+              </div>
+            )}
             <div className="card">
-              <div style={{fontWeight:600,marginBottom:12}}>📋 Category Bars</div>
-              <BarChart data={catData.map(d=>({...d,icon:CATS[d.label]?.icon||''}))} colorFn={d=>CATS[d.label]?.color||'#667eea'}/>
-            </div>
-          )}
-          <div className="card">
-            <div className="comparison-header">
-              <span className="comparison-header-title">📅 Month-by-Month Comparison</span>
-              <span className="comparison-legend">
-                <span><span style={{color:'#10b981'}}>↓</span> expense decrease = good</span>
-                <span><span style={{color:'#ef4444'}}>↑</span> expense increase</span>
-              </span>
-            </div>
-            <table>
-              <thead><tr>
-                <th>Month</th>
-                <th style={{textAlign:'right'}}>Expenses</th>
-                <th className="delta-col">vs Prev Mo</th>
-                <th style={{textAlign:'right'}}>Income</th>
-                <th style={{textAlign:'right'}}>Saved</th>
-                <th style={{textAlign:'right'}}>Entries</th>
-              </tr></thead>
-              <tbody>{(()=>{
-                const rows=allMonthlyExp.slice().reverse();
-                return rows.map(({fullLabel,value},i)=>{
-                  const prevVal=rows[i+1]?.value;
-                  const inc=allMonthlyInc.find(m=>m.fullLabel===fullLabel)?.value||0;
-                  const saved=inc-value;
-                  const cnt=expenses.filter(e=>e.date?.startsWith(fullLabel)).length;
-                  let delta=null;
-                  if(prevVal!=null&&prevVal>0){
-                    const pct=((value-prevVal)/prevVal*100);
-                    const cls=pct>5?'delta-up':pct<-5?'delta-down':'delta-flat';
-                    const arrow=pct>5?'↑':pct<-5?'↓':'–';
-                    delta=<span className={cls}>{arrow}{Math.abs(pct).toFixed(0)}%</span>;
-                  }
-                  const isCurrentMonth=fullLabel===new Date().toISOString().substring(0,7);
-                  return(
-                    <tr key={i} style={isCurrentMonth?{background:'rgba(102,126,234,.06)'}:{}}>
-                      <td style={{fontWeight:isCurrentMonth?700:400}}>
-                        {fullLabel}{isCurrentMonth&&<span className="insight-badge new">now</span>}
-                      </td>
-                      <td style={{textAlign:'right',color:'#ef4444',fontWeight:600}}>{fmtINR(value)}</td>
-                      <td className="delta-col">{delta||<span className="delta-flat">—</span>}</td>
-                      <td style={{textAlign:'right',color:'#10b981',fontWeight:600}}>{inc?fmtINR(inc):'—'}</td>
-                      <td style={{textAlign:'right',fontWeight:600,color:saved>=0?'#f59e0b':'#ef4444'}}>{inc?(saved>=0?'+':'')+fmtINR(saved):'—'}</td>
-                      <td style={{textAlign:'right',color:'var(--text3)'}}>{cnt}</td>
-                    </tr>
-                  );
-                });
-              })()}</tbody>
-            </table>
-          </div>
-        </>
-      )}
-
-      {/* ══════════════════════════════════════════════════
-          YEARLY TAB
-      ══════════════════════════════════════════════════ */}
-      {tab==='yearly'&&(
-        <>
-          <div className="card"><div style={{fontWeight:600,marginBottom:12}}>Year-over-Year Spending</div><LineChart data={yearlyData}/></div>
-          <div className="chart-container">
-            <div className="chart-card">
-              <div className="chart-title">All Time — Categories</div>
-              <PieChart data={catData.map((d,i)=>({...d,color:CATS[d.label]?.color||CC[i%CC.length]}))}/>
-            </div>
-            <div className="chart-card">
-              <div className="chart-title">All Time — Payments</div>
-              <PieChart data={payData}/>
+              <div className="comparison-header">
+                <span className="comparison-header-title">📅 Month-by-Month Comparison</span>
+                <span className="comparison-legend">
+                  <span><span style={{color:'#10b981'}}>↓</span> expense decrease = good</span>
+                  <span><span style={{color:'#ef4444'}}>↑</span> expense increase</span>
+                </span>
+              </div>
+              <table>
+                <thead><tr>
+                  <th>Month</th>
+                  <th style={{textAlign:'right'}}>Expenses</th>
+                  <th className="delta-col">vs Prev Mo</th>
+                  <th style={{textAlign:'right'}}>Income</th>
+                  <th style={{textAlign:'right'}}>Saved</th>
+                  <th style={{textAlign:'right'}}>Entries</th>
+                </tr></thead>
+                <tbody>{(()=>{
+                  const rows=allMonthlyExp.slice().reverse();
+                  return rows.map(({fullLabel,value},i)=>{
+                    const prevVal=rows[i+1]?.value;
+                    const inc=allMonthlyInc.find(m=>m.fullLabel===fullLabel)?.value||0;
+                    const saved=inc-value;
+                    const cnt=expenses.filter(e=>e.date?.startsWith(fullLabel)).length;
+                    let delta=null;
+                    if(prevVal!=null&&prevVal>0){
+                      const pct=((value-prevVal)/prevVal*100);
+                      const cls=pct>5?'delta-up':pct<-5?'delta-down':'delta-flat';
+                      const arrow=pct>5?'↑':pct<-5?'↓':'–';
+                      delta=<span className={cls}>{arrow}{Math.abs(pct).toFixed(0)}%</span>;
+                    }
+                    const isCurrentMonth=fullLabel===new Date().toISOString().substring(0,7);
+                    return(
+                      <tr key={i} style={isCurrentMonth?{background:'rgba(102,126,234,.06)'}:{}}>
+                        <td style={{fontWeight:isCurrentMonth?700:400}}>
+                          {fullLabel}{isCurrentMonth&&<span className="insight-badge new">now</span>}
+                        </td>
+                        <td style={{textAlign:'right',color:'#ef4444',fontWeight:600}}>{fmtBaseFromINR(value)}</td>
+                        <td className="delta-col">{delta||<span className="delta-flat">—</span>}</td>
+                        <td style={{textAlign:'right',color:'#10b981',fontWeight:600}}>{inc?fmtBaseFromINR(inc):'—'}</td>
+                        <td style={{textAlign:'right',fontWeight:600,color:saved>=0?'#f59e0b':'#ef4444'}}>{inc?(saved>=0?'+':'')+fmtBaseFromINR(saved):'—'}</td>
+                        <td style={{textAlign:'right',color:'var(--text3)'}}>{cnt}</td>
+                      </tr>
+                    );
+                  });
+                })()}</tbody>
+              </table>
             </div>
           </div>
-          {catData.length>0&&(
+          {/* ── RIGHT: Yearly ── */}
+          <div>
+            <div className="card"><div style={{fontWeight:600,marginBottom:12}}>📆 Year-over-Year Spending</div><LineChart data={yearlyData} fmt={fmtBaseFromINR}/></div>
+            <div className="chart-container">
+              <div className="chart-card">
+                <div className="chart-title">All Time — Categories</div>
+                <PieChart data={catData.map((d,i)=>({...d,color:CATS[d.label]?.color||CC[i%CC.length]}))} fmt={fmtBaseFromINR}/>
+              </div>
+              <div className="chart-card">
+                <div className="chart-title">All Time — Payments</div>
+                <PieChart data={payData} fmt={fmtBaseFromINR}/>
+              </div>
+            </div>
+            {catData.length>0&&(
+              <div className="card">
+                <div style={{fontWeight:600,marginBottom:12}}>📋 All-Time Category Bars</div>
+                <BarChart data={catData.map(d=>({...d,icon:CATS[d.label]?.icon||''}))} colorFn={d=>CATS[d.label]?.color||'#667eea'} fmt={fmtBaseFromINR}/>
+              </div>
+            )}
             <div className="card">
-              <div style={{fontWeight:600,marginBottom:12}}>📋 All-Time Category Bars</div>
-              <BarChart data={catData.map(d=>({...d,icon:CATS[d.label]?.icon||''}))} colorFn={d=>CATS[d.label]?.color||'#667eea'}/>
+              <div className="comparison-header">
+                <span className="comparison-header-title">📆 Year-over-Year Comparison</span>
+                <span className="comparison-legend">
+                  <span><span style={{color:'#10b981'}}>↓</span> expense decrease = good</span>
+                  <span><span style={{color:'#ef4444'}}>↑</span> expense increase</span>
+                </span>
+              </div>
+              <table>
+                <thead><tr>
+                  <th>Year</th>
+                  <th style={{textAlign:'right'}}>Expenses</th>
+                  <th className="delta-col">vs Prev Year</th>
+                  <th style={{textAlign:'right'}}>Exp Growth</th>
+                  <th style={{textAlign:'right'}}>Income</th>
+                  <th style={{textAlign:'right'}}>Saved</th>
+                  <th style={{textAlign:'right'}}>Entries</th>
+                </tr></thead>
+                <tbody>{(()=>{
+                  const rows=yearlyData.slice().reverse();
+                  return rows.map(({label,value},i)=>{
+                    const prevVal=rows[i+1]?.value;
+                    const inc=income.filter(x=>x.date?.startsWith(label)).reduce((s,x)=>s+toINR(x),0);
+                    const prevInc=rows[i+1]?income.filter(x=>x.date?.startsWith(rows[i+1].label)).reduce((s,x)=>s+toINR(x),0):null;
+                    const cnt=expenses.filter(e=>e.date?.startsWith(label)).length;
+                    const saved=inc-value;
+                    const isCurrentYear=label===new Date().getFullYear().toString();
+
+                    let expDelta=null;
+                    if(prevVal!=null&&prevVal>0){
+                      const pct=((value-prevVal)/prevVal*100);
+                      const cls=pct>5?'delta-up':pct<-5?'delta-down':'delta-flat';
+                      const arrow=pct>5?'↑':pct<-5?'↓':'–';
+                      expDelta=<span className={cls}>{arrow}{Math.abs(pct).toFixed(0)}%</span>;
+                    }
+
+                    let incDelta=null;
+                    if(prevInc!=null&&prevInc>0&&inc>0){
+                      const pct=((inc-prevInc)/prevInc*100);
+                      const cls=pct>0?'delta-down':'delta-up';
+                      incDelta=<span className={cls} style={{fontSize:11}}>{pct>0?'↑':'↓'}{Math.abs(pct).toFixed(0)}% inc</span>;
+                    }
+
+                    return(
+                      <tr key={i} style={isCurrentYear?{background:'rgba(102,126,234,.06)'}:{}}>
+                        <td style={{fontWeight:700}}>
+                          {label}{isCurrentYear&&<span className="insight-badge new">now</span>}
+                        </td>
+                        <td style={{textAlign:'right',color:'#ef4444',fontWeight:600}}>{fmtBaseFromINR(value)}</td>
+                        <td className="delta-col">{expDelta||<span className="delta-flat">—</span>}</td>
+                        <td style={{textAlign:'right'}}>{incDelta||<span className="delta-flat" style={{fontSize:11}}>—</span>}</td>
+                        <td style={{textAlign:'right',color:'#10b981',fontWeight:600}}>{inc?fmtBaseFromINR(inc):'—'}</td>
+                        <td style={{textAlign:'right',fontWeight:600,color:saved>=0?'#f59e0b':'#ef4444'}}>{inc?(saved>=0?'+':'')+fmtBaseFromINR(saved):'—'}</td>
+                        <td style={{textAlign:'right',color:'var(--text3)'}}>{cnt}</td>
+                      </tr>
+                    );
+                  });
+                })()}</tbody>
+              </table>
             </div>
-          )}
-          <div className="card">
-            <div className="comparison-header">
-              <span className="comparison-header-title">📆 Year-over-Year Comparison</span>
-              <span className="comparison-legend">
-                <span><span style={{color:'#10b981'}}>↓</span> expense decrease = good</span>
-                <span><span style={{color:'#ef4444'}}>↑</span> expense increase</span>
-              </span>
-            </div>
-            <table>
-              <thead><tr>
-                <th>Year</th>
-                <th style={{textAlign:'right'}}>Expenses</th>
-                <th className="delta-col">vs Prev Year</th>
-                <th style={{textAlign:'right'}}>Exp Growth</th>
-                <th style={{textAlign:'right'}}>Income</th>
-                <th style={{textAlign:'right'}}>Saved</th>
-                <th style={{textAlign:'right'}}>Entries</th>
-              </tr></thead>
-              <tbody>{(()=>{
-                const rows=yearlyData.slice().reverse();
-                return rows.map(({label,value},i)=>{
-                  const prevVal=rows[i+1]?.value;
-                  const inc=income.filter(x=>x.date?.startsWith(label)).reduce((s,x)=>s+toINR(x),0);
-                  const prevInc=rows[i+1]?income.filter(x=>x.date?.startsWith(rows[i+1].label)).reduce((s,x)=>s+toINR(x),0):null;
-                  const cnt=expenses.filter(e=>e.date?.startsWith(label)).length;
-                  const saved=inc-value;
-                  const isCurrentYear=label===new Date().getFullYear().toString();
-
-                  let expDelta=null;
-                  if(prevVal!=null&&prevVal>0){
-                    const pct=((value-prevVal)/prevVal*100);
-                    const cls=pct>5?'delta-up':pct<-5?'delta-down':'delta-flat';
-                    const arrow=pct>5?'↑':pct<-5?'↓':'–';
-                    expDelta=<span className={cls}>{arrow}{Math.abs(pct).toFixed(0)}%</span>;
-                  }
-
-                  let incDelta=null;
-                  if(prevInc!=null&&prevInc>0&&inc>0){
-                    const pct=((inc-prevInc)/prevInc*100);
-                    const cls=pct>0?'delta-down':'delta-up'; // income growth is good (green)
-                    incDelta=<span className={cls} style={{fontSize:11}}>{pct>0?'↑':'↓'}{Math.abs(pct).toFixed(0)}% inc</span>;
-                  }
-
-                  return(
-                    <tr key={i} style={isCurrentYear?{background:'rgba(102,126,234,.06)'}:{}}>
-                      <td style={{fontWeight:700}}>
-                        {label}{isCurrentYear&&<span className="insight-badge new">now</span>}
-                      </td>
-                      <td style={{textAlign:'right',color:'#ef4444',fontWeight:600}}>{fmtINR(value)}</td>
-                      <td className="delta-col">{expDelta||<span className="delta-flat">—</span>}</td>
-                      <td style={{textAlign:'right'}}>{incDelta||<span className="delta-flat" style={{fontSize:11}}>—</span>}</td>
-                      <td style={{textAlign:'right',color:'#10b981',fontWeight:600}}>{inc?fmtINR(inc):'—'}</td>
-                      <td style={{textAlign:'right',fontWeight:600,color:saved>=0?'#f59e0b':'#ef4444'}}>{inc?(saved>=0?'+':'')+fmtINR(saved):'—'}</td>
-                      <td style={{textAlign:'right',color:'var(--text3)'}}>{cnt}</td>
-                    </tr>
-                  );
-                });
-              })()}</tbody>
-            </table>
           </div>
-        </>
+        </div>
       )}
 
       {/* ══════════════════════════════════════════════════
@@ -3333,11 +3479,11 @@ function App(){
             <div className="chart-container">
               <div className="chart-card">
                 <div className="chart-title">By Category</div>
-                <PieChart data={catData.map((d,i)=>({...d,color:CATS[d.label]?.color||CC[i%CC.length]}))}/>
+                <PieChart data={catData.map((d,i)=>({...d,color:CATS[d.label]?.color||CC[i%CC.length]}))} fmt={fmtBaseFromINR}/>
               </div>
               <div className="chart-card">
                 <div className="chart-title">By Payment Method</div>
-                <PieChart data={payData}/>
+                <PieChart data={payData} fmt={fmtBaseFromINR}/>
               </div>
             </div>
           )}
@@ -3349,7 +3495,7 @@ function App(){
               <BarChart
                 data={catData.map(d=>({...d,icon:CATS[d.label]?.icon||''}))}
                 colorFn={(d)=>CATS[d.label]?.color||'#667eea'}
-                fmt={v=>fmtINR(v)}
+                fmt={fmtBaseFromINR}
               />
             </div>
           )}
@@ -3361,7 +3507,7 @@ function App(){
               <BarChart
                 data={expTypeData}
                 colorFn={(_,i)=>['#667eea','#10b981','#ef4444','#f59e0b','#8b5cf6','#ec4899'][i%6]}
-                fmt={v=>fmtINR(v)}
+                fmt={fmtBaseFromINR}
               />
             </div>
           )}
@@ -3373,7 +3519,7 @@ function App(){
               <BarChart
                 data={diningData}
                 colorFn={(_,i)=>CC[(i*7)%CC.length]}
-                fmt={v=>fmtINR(v)}
+                fmt={fmtBaseFromINR}
               />
             </div>
           )}
@@ -3385,7 +3531,7 @@ function App(){
               <BarChart
                 data={tagsData}
                 colorFn={(_,i)=>CC[(i*11)%CC.length]}
-                fmt={v=>fmtINR(v)}
+                fmt={fmtBaseFromINR}
               />
             </div>
           )}
@@ -3399,13 +3545,12 @@ function App(){
                 expenses.forEach(e=>{const d=new Date(e.date);if(!isNaN(d))dow[d.getDay()]+=toINR(e);});
                 const mx=Math.max(...dow,1);
                 const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-                const dowData=days.map((label,i)=>({label,value:dow[i]}));
                 return(
                   <>
                     <div className="dow-grid">{days.map((d,i)=>(
                       <div key={d} className="dow-cell">
                         <div className="dow-bar" style={{background:`rgba(102,126,234,${0.08+0.92*(dow[i]/mx)})`,height:Math.max(28,56*(dow[i]/mx))}}>
-                          {dow[i]>0&&<span style={{fontSize:9}}>{fmtINR(dow[i]).replace('₹','').split('.')[0]}</span>}
+                          {dow[i]>0&&<span style={{fontSize:9}}>{fmtBaseFromINR(dow[i]).replace(/[^0-9.,]/g,'').split('.')[0]}</span>}
                         </div>
                         <div style={{fontSize:11,color:'var(--text3)'}}>{d}</div>
                       </div>
@@ -3732,7 +3877,7 @@ function App(){
               <div><strong>Live Exchange Rates</strong>{rateData&&<span className={`rate-badge ${rsClass}`} style={{marginLeft:10}}>{rsLabel}</span>}</div>
               <button className="btn btn-primary btn-sm" onClick={refreshRates} disabled={rateFetching}>{rateFetching?'Fetching...':'🔄 Refresh'}</button>
             </div>
-            <p style={{fontSize:13,color:'var(--text3)',marginBottom:16,lineHeight:1.6}}>Rates from <strong>exchangerate-api.com</strong> (INR base). Cached 6h. <strong>Works fully offline</strong> using last saved rates.</p>
+            <p style={{fontSize:13,color:'var(--text3)',marginBottom:16,lineHeight:1.6}}>Rates from <strong>exchangerate-api.com</strong> (fetched with {baseCurrency} base, stored as INR-relative). Cached 6h. <strong>Works fully offline</strong> using last saved rates.</p>
             {rateData?.rates?(
               <div style={{maxHeight:500,overflowY:'auto',border:'1px solid var(--border)',borderRadius:8}}>
                 <table className="exchange-table">
@@ -3796,6 +3941,64 @@ function App(){
                 <div className="cb-switch-thumb"/>
               </label>
             </div>
+          </div>
+
+          {/* ── Base Currency ── */}
+          <div className="settings-section" style={{marginBottom:12}}>
+            <h3>💱 Base Currency</h3>
+            <div className="settings-row">
+              <div className="settings-row-label">
+                <strong>Display Currency</strong>
+                <span>All totals, charts, and summaries are shown in this currency. Exchange rates are fetched relative to this base.</span>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:10}}>
+                <span style={{fontSize:20}}>{baseCurrInfo.flag||''}</span>
+                <select
+                  value={baseCurrency}
+                  onChange={e=>{
+                    setBaseCurrency(e.target.value);
+                    // Invalidate cached rates so next fetch uses new base
+                    try{localStorage.removeItem(RM.KEY);}catch(ex){}
+                  }}
+                  className="filter-input"
+                  style={{width:'auto',minWidth:200}}
+                  aria-label="Select base currency"
+                >
+                  {Object.entries(CG).map(([group,list])=>(
+                    <optgroup key={group} label={group}>
+                      {list.map(c=>(
+                        <option key={c.code} value={c.code}>{c.flag} {c.code} — {c.name}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {baseCurrency!=='INR'&&(
+              <div style={{marginTop:8,padding:'8px 12px',borderRadius:8,background:'rgba(102,126,234,.08)',border:'1px solid rgba(102,126,234,.2)',fontSize:12,color:'var(--text2)'}}>
+                ℹ️ Stored expense data uses INR as the internal reference. Totals are converted using live exchange rates. Historical amounts may vary slightly from original entry values due to rate fluctuations.
+              </div>
+            )}
+          </div>
+
+          {/* ── Safe-to-Spend ── */}
+          <div className="settings-section" style={{marginBottom:12}}>
+            <h3>💡 Safe-to-Spend</h3>
+            <div className="settings-row">
+              <div className="settings-row-label">
+                <strong>Monthly Savings Goal ({baseSym})</strong>
+                <span>Reserved each month before calculating your daily allowance. Formula: (Income − Fixed − Savings) ÷ Days Remaining.</span>
+              </div>
+              <input type="number" className="filter-input" style={{width:130}} min="0" placeholder="0"
+                value={stsSavingsGoalBase||''}
+                onChange={e=>{const v=parseFloat(e.target.value)||0;persist({...data,_sts:{...(data._sts||{}),savingsGoalAmt:v}});}}
+              />
+            </div>
+            {dailyAllowance>0&&(
+              <div style={{marginTop:8,padding:'8px 12px',borderRadius:8,background:'rgba(16,185,129,.08)',border:'1px solid rgba(16,185,129,.2)',fontSize:12,color:'var(--text2)'}}>
+                📅 This month: {fmtBaseFromINR(currentMonthInc)} income · {fmtBaseFromINR(currentMonthFixed)} fixed · {fmtBase(stsSavingsGoalBase)} saved aside → <strong>{fmtBaseFromINR(dailyAllowance)}/day</strong> for {daysRemaining} days
+              </div>
+            )}
           </div>
 
           {/* ── Storage Overview ── */}
@@ -3896,6 +4099,7 @@ function App(){
         rateData={rateData}
         onRateUpdate={rd=>setRateData(rd)}
         initialData={editExpTarget||null}
+        baseSym={baseSym} baseCurrCode={baseCurrency} baseRate={_baseRate}
       />}
       {showIF&&<IncomeForm
         onSubmit={addIncome}
@@ -3904,6 +4108,7 @@ function App(){
         rateData={rateData}
         onRateUpdate={rd=>setRateData(rd)}
         initialData={editIncTarget||null}
+        baseSym={baseSym} baseCurrCode={baseCurrency} baseRate={_baseRate}
       />}
 
       {confirmAction&&(
