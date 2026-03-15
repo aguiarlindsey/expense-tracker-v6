@@ -197,6 +197,69 @@ const THE_10 = [
 
 const SESSIONS = [
   {
+    id: "s14", label: "Session 14 — Phase 15: Integrity, Performance & Power-User Features", color: "#667eea",
+    changes: [
+      "✅ Exchange tab removed from tab bar — tab render block preserved; now accessed via '💱 Exchange' header button (setTab, not modal)",
+      "✅ Settings button moved to header alongside Exchange button — same pattern as existing header controls",
+      "✅ btn-exchange CSS — sky-blue rgba(14,165,233,.85), hover #0284c7, white text, 1px rgba border",
+      "✅ btn-settings CSS — slate rgba(148,163,184,.7), hover rgba(100,116,139,.85), white text",
+      "✅ btn-primary (Add Expense) — changed to red rgba(239,68,68,.85) / hover #dc2626 for visual distinction",
+      "✅ btn-income (Add Income) — green rgba(16,185,129,.85) retained",
+      "✅ 15.1: validateImportPayload() — pre-import structural guard: type check, 50k record cap, non-object row detection, bad amounts, bad/future dates; hard errors abort import, warnings prepended to report",
+      "✅ 15.1: validateSchema(records, recordType) — per-record post-adapter sanitisation: amount NaN fix, amountINR default, date format check, currency 3-letter CURRENCIES set check (→ INR fallback), category VALID_CATS check (→ Other fallback); returns { sanitized[], failed[] }",
+      "✅ 15.1: validateSchema wired into runMigration as Step 1.5 between adapters and dedup — failed records populate report.failedRecords; import banner shows amber '⚠️ Import Partial' when any records rejected",
+      "✅ 15.2: _pendingData useRef + _saveTimer useRef — debounced persistence collapses rapid-fire writes into single LZ-compress call after 1000ms idle",
+      "✅ 15.2: flushSave useCallback — clears timer, runs immediate Store.save(); called in beforeunload + effect cleanup",
+      "✅ 15.2: persist(nd) helper replaces all direct saveData() calls — setData + schedule debounced flush",
+      "✅ 15.2: factory reset cancels pending timer + nulls _pendingData before wiping localStorage",
+      "✅ 15.3: useCurrency(baseCurrency, rateData) hook — useMemo([baseCurrency, rateData]); returns { convert, toINR, toBase, formatBase, formatForeign, formatBaseFromINR, baseSym, baseRate }",
+      "✅ 15.3: convert(amt, from, to) bridges via INR; toINR(e) prefers stored amountINR; toBase(e) = INR/baseRate; formatBase uses locale en-IN with baseSym prefix",
+      "✅ 15.3: App 6-line inline currency block replaced with single destructure — aliased to fmtBase, fmtBaseFromINR, _baseRate, baseSym to preserve all downstream call sites",
+      "✅ 15.3: ExpItem + IncItem accept toBase/fmtBase props; amount display uses fmtBase(toBase(item)) for consistent base-currency rendering",
+      "✅ 15.4: matchesSearch() rewritten — tokenises query on whitespace (AND logic); each token is key:value or plain text",
+      "✅ 15.4: Supported keys — amount/amt (>, <, >=, <=, range N-M), category/cat, date (prefix), tag/tags, method/payment, type, currency/cur, notes/note, source, desc/description, sub/subcategory, recurring/recur (true/false/yes/no/1)",
+      "✅ 15.4: Range guard uses /^\\d[\\d.]*-\\d[\\d.]*$/ regex to distinguish 500-1000 from negative -100",
+      "✅ 15.4: Unknown key falls back to full-field plain-text search on the whole token; empty val after colon silently ignored",
+      "✅ 15.4: Search placeholders updated — '🔍 Search or use amount:>500 category:food date:2026-03 tag:swiggy'",
+      "✅ 15.5: bulkModeExp state (boolean) + selectedExpIds state (plain object id→true)",
+      "✅ 15.5: toggleSelectExp useCallback — Object.assign shallow copy + delete/add; exitBulkMode resets both states",
+      "✅ 15.5: selectAllVisible useCallback([filteredExp]) — bulk-adds all currently visible expenses to selectedExpIds",
+      "✅ 15.5: '☑ Select' toggle button appears when filteredExp.length > 0; turns red-tinted '✕ Cancel Select' when active",
+      "✅ 15.5: Bulk action bar (bulk-action-bar CSS) — shows selected count, 'Select all visible (N)', 'Deselect all', '🗑️ Delete N' button",
+      "✅ 15.5: Bulk delete routed through existing confirmAction modal — type:'bulk-delete-exp' with ids object; executeConfirmedAction filters expenses and resets bulk state",
+      "✅ 15.5: ExpItem gains bulkMode/isSelected/onToggleSelect props — shows checkbox, highlights selected rows, hides edit/delete buttons; .bulk-selectable cursor class applied via CSS class (not attribute selector)",
+      "✅ 15.5: Charts hidden while bulk mode active; Esc key exits bulk mode",
+      "✅ 15.6: monthForecast useMemo — calculates: spentSoFar, dailyRate, projected month-end, daysRemaining, trend vs prev month (%), projectedInc, projectedSavings",
+      "✅ 15.6: Jan edge case — new Date(year, -1, 1) correctly rolls to Dec of prior year via JS Date arithmetic",
+      "✅ 15.6: Forecast card (.forecast-card) in Overview tab — progress bar for % of month elapsed, 2-3 stat tiles: spent/projected/projected savings; hidden when any filter is active",
+      "✅ 15.6: Projected savings tile only shown when current-month income > 0; trend arrow (↑↓ %) colored red/green vs prev month",
+      "🐛 amount: range regex — replaced val.includes('-') with /^\\d[\\d.]*-\\d[\\d.]*$/ to prevent negative numbers being parsed as ranges",
+      "🐛 bulk-selectable cursor — replaced CSS attribute selector .expense-item[onClick] (never matches in React) with class-based .expense-item.bulk-selectable",
+    ],
+  },
+  {
+    id: "s13", label: "Session 13 — Subscription Zombie & Growth Detector + Bug Fixes", color: "#f59e0b",
+    changes: [
+      "🐛 _fp fingerprint stale on edit — expense & income onEdit() now pass _fp:fingerprint(payload); prevents duplicates on re-import after editing",
+      "🐛 Month-end rollover in recurring dates — calcNextDue() and advanceDue() now clamp to last day of target month (Jan 31 +1mo → Feb 28, not Mar 2)",
+      "🐛 Goal daysLeft timezone fix — uses T12:00:00 noon normalisation on both sides so day count is correct in all timezones",
+      "🐛 subZombieData today normalised — today.setHours(12,0,0,0) prevents half-day error in zombie threshold calculation",
+      "🐛 Expense form missing amount guard — added if(!amt||amt<=0) return; matching the existing guard in AddContributionModal",
+      "✅ subZombieData useMemo — subscription detector scanning expenses for recurring patterns; groups by normalised description",
+      "✅ Subscription candidate detection — includes isRecurring templates + subcategory set (OTT/Streaming, Subscriptions, Internet, Phone, Gaming, Cable)",
+      "✅ Auto-pattern detection — any description appearing in ≥3 distinct months with amounts within 40% of each other is treated as a subscription",
+      "✅ Price Creep algorithm — flags if recentAvg (last 3 months) > earlyAvg (first 3 months) by >10%, or YoY 12-month spend up >10%",
+      "✅ Zombie detection — isRecurring template present but last charge >45 days ago; sorted by annual savings potential",
+      "✅ annualSavings per flagged item = (recentMonthly − earlyMonthly) × 12; potentialSavings = sum across flagged + zombies",
+      "✅ CSS: .sub-item, .sub-badge-creep, .sub-badge-zombie, .cancel-btn-sub — all with .dark overrides",
+      "✅ Insights tab panel — '🧟 Subscriptions at Risk' card with amber border; hidden when no issues detected",
+      "✅ Price Creep section — rows showing icon + name + ↑X% badge + now/was/excess detail line",
+      "✅ Zombie section — rows with 😴 Xd since last charge badge + last charged date",
+      "✅ Cancel button — fires addToast(warn) with actionable advice + exact savings amount per item",
+      "✅ Summary pill — gradient orange→red '💰 Save ₹X/year' badge in card header",
+    ],
+  },
+  {
     id: "s12", label: "Session 12 — Gamification & UX Polish", color: "#10b981",
     changes: [
       "✅ canvas-confetti@1.9.3 CDN added to <head> after lz-string script",
@@ -596,13 +659,13 @@ export default function App() {
         <div style={{ background:"linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4338ca 100%)",
           borderRadius:16, padding:"24px 28px", marginBottom:20, color:"#fff" }}>
           <div style={{ fontSize:11, fontWeight:700, letterSpacing:2, opacity:.7, marginBottom:6 }}>
-            EXPENSE TRACKER v5 · 10 SESSIONS COMPLETE
+            EXPENSE TRACKER v5 · 14 SESSIONS COMPLETE
           </div>
           <h1 style={{ fontSize:24, fontWeight:800, margin:"0 0 4px" }}>
             Merger Plan — Progress Tracker
           </h1>
           <p style={{ opacity:.75, fontSize:13, margin:"0 0 20px" }}>
-            v2_5_15_6 + v4-OFFLINE → v5 · Phase 14 Complete · Local Base Currency Added
+            v2_5_15_6 + v4-OFFLINE → v5 · Phase 15 Complete · Integrity, Performance & Power-User Features
           </p>
 
           <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>

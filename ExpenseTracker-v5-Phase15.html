@@ -19,11 +19,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .header h1{font-size:1.4rem;font-weight:700}
 .header-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .btn{padding:8px 16px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;transition:all .2s}
-.btn-primary{background:#fff;color:#667eea}.btn-primary:hover{background:#f0f0f0}
+.btn-primary{background:rgba(239,68,68,.85);color:#fff;border:1px solid rgba(255,255,255,.3)}.btn-primary:hover{background:#dc2626}
 .btn-income{background:rgba(16,185,129,.85);color:#fff;border:1px solid rgba(255,255,255,.3)}.btn-income:hover{background:#059669}
 .btn-sm{padding:6px 12px;font-size:13px}
 .btn-icon{background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.3);padding:6px 10px;border-radius:8px;cursor:pointer;font-size:16px;line-height:1;transition:all .2s}
 .btn-icon:hover{background:rgba(255,255,255,.35)}
+.btn-exchange{background:rgba(14,165,233,.85);color:#fff;border:1px solid rgba(255,255,255,.3)}.btn-exchange:hover{background:#0284c7}
+.btn-settings{background:rgba(148,163,184,.7);color:#fff;border:1px solid rgba(255,255,255,.3)}.btn-settings:hover{background:rgba(100,116,139,.85)}
 .btn-danger{background:#ef4444;color:#fff}.btn-danger:hover{background:#dc2626}
 .btn-success{background:#10b981;color:#fff}.btn-success:hover{background:#059669}
 .dark-toggle{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
@@ -58,6 +60,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .filter-chip button{background:none;border:none;cursor:pointer;color:#667eea;font-size:14px;line-height:1;padding:0 0 0 2px}
 .filter-chip button:hover{color:#ef4444}
 .results-info{font-size:13px;color:var(--text3);margin-bottom:10px;padding:6px 0}
+/* 15.6 Forecast card */
+.forecast-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.forecast-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:4px}
+.forecast-title{font-size:14px;font-weight:700;color:var(--text)}
+.forecast-sub{font-size:11px;color:var(--text3)}
+.forecast-progress-wrap{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.forecast-progress-track{flex:1;height:6px;background:var(--border);border-radius:99px;overflow:hidden}
+.forecast-progress-bar{height:100%;background:linear-gradient(90deg,#667eea,#764ba2);border-radius:99px;transition:width .4s ease}
+.forecast-pct{font-size:11px;color:var(--text3);min-width:28px;text-align:right}
+.forecast-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+.forecast-stat{padding:8px 12px;background:var(--surface);border-radius:8px;border:1px solid var(--border)}
+.forecast-stat-label{font-size:11px;color:var(--text3);margin-bottom:4px}
+.forecast-stat-value{font-size:18px;font-weight:700;line-height:1.2}
+.forecast-stat-sub{font-size:11px;color:var(--text3);margin-top:3px}
 
 .form-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px}
 .form-modal{background:var(--surface);border-radius:16px;padding:24px;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px var(--sh3)}
@@ -94,12 +110,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .dark .type-badge{background:rgba(99,102,241,.2);color:#a5b4fc}
 .income-badge{font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(16,185,129,.15);color:#059669;font-weight:600;margin-left:4px}
 .dark .income-badge{background:rgba(16,185,129,.2);color:#6ee7b7}
-.delete-btn{background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:4px 6px;border-radius:4px;transition:color .2s,background .2s;flex-shrink:0}
-.dark .delete-btn{color:var(--text2)}
+.delete-btn{background:rgba(239,68,68,.1);border:1.5px solid rgba(239,68,68,.35);cursor:pointer;color:#ef4444;font-size:13px;font-weight:700;padding:4px 9px;border-radius:6px;transition:background .15s,border-color .15s,transform .1s;flex-shrink:0}
 .item-actions{display:flex;gap:4px;flex-shrink:0;align-items:center}
 .edit-btn{padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text3);font-size:12px;cursor:pointer;transition:all .15s;line-height:1}
 .edit-btn:hover{border-color:#667eea;color:#667eea;background:rgba(102,126,234,.08)}
-.delete-btn:hover{color:#ef4444;background:rgba(239,68,68,.1)}
+.delete-btn:hover{background:#ef4444;border-color:#ef4444;color:#fff;transform:scale(1.08)}
+/* 15.5 Bulk select */
+.bulk-checkbox{display:flex;align-items:center;padding:0 6px 0 0;flex-shrink:0}
+.bulk-checkbox input{width:16px;height:16px;cursor:pointer;accent-color:#ef4444}
+.expense-item.bulk-selected{background:rgba(239,68,68,.07);border-color:rgba(239,68,68,.35)}
+.dark .expense-item.bulk-selected{background:rgba(239,68,68,.12)}
+.expense-item.bulk-selectable{cursor:pointer}
+.bulk-action-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:8px;margin-bottom:10px;flex-wrap:wrap}
+.bulk-count{font-size:13px;font-weight:600;color:var(--text);margin-right:4px}
 
 .chart-container{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:16px}
 .chart-card{background:var(--surface);border-radius:12px;padding:20px;box-shadow:0 2px 8px var(--sh)}
@@ -112,6 +135,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .insight-card{background:var(--surface);border-radius:12px;padding:16px;box-shadow:0 2px 8px var(--sh);border-top:3px solid #667eea}
 .insight-card h3{font-size:14px;font-weight:700;margin-bottom:8px;color:var(--text)}
 .insight-card p{font-size:13px;color:var(--text2);line-height:1.55}
+
+.sub-item{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.sub-item:last-child{border-bottom:none;padding-bottom:0}
+.sub-badge-creep{background:#fef3c7;color:#b45309;border:1px solid #fcd34d;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap}
+.dark .sub-badge-creep{background:#451a03;color:#fcd34d;border-color:#78350f}
+.sub-badge-zombie{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap}
+.dark .sub-badge-zombie{background:#052e16;color:#86efac;border-color:#14532d}
+.cancel-btn-sub{background:none;border:1.5px solid #ef4444;color:#ef4444;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0}
+.cancel-btn-sub:hover{background:#ef4444;color:#fff}
+.dark .cancel-btn-sub{border-color:#f87171;color:#f87171}
+.dark .cancel-btn-sub:hover{background:#ef4444;color:#fff}
 
 .empty-state{text-align:center;padding:60px 20px;color:var(--text3)}
 .empty-state .icon{font-size:56px;margin-bottom:16px}
@@ -168,8 +202,18 @@ tr:last-child td{border-bottom:none}
 .multi-cat-chip.all-chip.active{background:var(--surface2);border-color:#667eea;color:#667eea;border-style:solid}
 /* Debounce spinner in search */
 .search-wrap{position:relative;flex:1;min-width:180px}
-.search-debounce-dot{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:6px;height:6px;border-radius:50%;background:#667eea;opacity:0;transition:opacity .15s}
+.search-debounce-dot{position:absolute;right:32px;top:50%;transform:translateY(-50%);width:6px;height:6px;border-radius:50%;background:#667eea;opacity:0;transition:opacity .15s}
 .search-debounce-dot.active{opacity:1;animation:pulse .6s infinite}
+.search-help-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);color:var(--text3);font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;transition:border-color .15s,color .15s}
+.search-help-btn:hover{border-color:#667eea;color:#667eea}
+.search-cheatsheet{position:absolute;top:calc(100% + 6px);right:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;width:310px;box-shadow:0 8px 24px rgba(0,0,0,.18);font-size:12px;color:var(--text2)}
+.dark .search-cheatsheet{box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.search-cheatsheet h4{margin:0 0 8px;font-size:12px;font-weight:700;color:var(--text)}
+.search-cheatsheet table{width:100%;border-collapse:collapse}
+.search-cheatsheet td{padding:3px 6px 3px 0;vertical-align:top;line-height:1.5}
+.search-cheatsheet td:first-child{white-space:nowrap}
+.search-cheatsheet code{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-family:monospace;font-size:11px;color:#667eea}
+.search-cheatsheet .cs-note{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);color:var(--text3);font-size:11px}
 @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
 /* Active filter chip extras */
 .filter-chip.range-chip{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.35);color:#b45309}
@@ -1007,6 +1051,32 @@ function runMigration(raw, existingExpenses, existingIncome) {
     report.warnings.push('Source version undetermined — generic migration applied.');
   }
 
+  // Step 1.5: per-record schema validation + sanitisation
+  // validateSchema runs on already-migrated v5 records and either fixes bad
+  // fields in-place (sanitized) or drops records that are irrecoverable (failed).
+  const expValidation = validateSchema(candidates.expenses || [], 'expense');
+  const incValidation = validateSchema(candidates.income   || [], 'income');
+
+  candidates.expenses = expValidation.sanitized;
+  candidates.income   = incValidation.sanitized;
+
+  // Collect failed records into the report
+  const allFailed = [...expValidation.failed, ...incValidation.failed];
+  if (allFailed.length > 0) {
+    report.failedRecords = allFailed;
+    report.warnings.push(
+      `⚠️ ${allFailed.length} record(s) were rejected due to irrecoverable field errors and were NOT imported.`
+    );
+  }
+
+  // Collect sanitised-but-fixed records count
+  const sanitisedCount = [...candidates.expenses, ...candidates.income].filter(r => r._sanitized).length;
+  if (sanitisedCount > 0) {
+    report.warnings.push(
+      `🔧 ${sanitisedCount} record(s) had field issues that were auto-corrected before import.`
+    );
+  }
+
   // Step 2: two-layer dedup:
   //   Layer A — against existing stored data (id OR fingerprint)
   //   Layer B — intra-batch (prevents duplicates inside the import file itself)
@@ -1029,10 +1099,234 @@ function runMigration(raw, existingExpenses, existingIncome) {
   return { result: { ...candidates, expenses: newExps, income: newInc }, report };
 }
 
+// ═══════════════════════════════════════════════════════
+// 15.1 — PRE-IMPORT SCHEMA VALIDATION
+// Runs before runMigration. Returns { ok, errors[], warnings[], stats }.
+// Hard errors abort the import. Warnings are surfaced in the report banner.
+// ═══════════════════════════════════════════════════════
+function validateImportPayload(raw) {
+  const errors   = [];
+  const warnings = [];
+
+  // ── 1. Top-level type ────────────────────────────────
+  if (raw === null || raw === undefined) {
+    errors.push('File is empty or could not be parsed.');
+    return { ok: false, errors, warnings };
+  }
+  if (typeof raw !== 'object') {
+    errors.push('File root must be a JSON object or array, got ' + typeof raw + '.');
+    return { ok: false, errors, warnings };
+  }
+
+  // ── 2. Extract candidate record lists ────────────────
+  const expList = Array.isArray(raw) ? raw : (Array.isArray(raw.expenses) ? raw.expenses : []);
+  const incList = Array.isArray(raw) ? []  : (Array.isArray(raw.income)   ? raw.income   : []);
+  const total   = expList.length + incList.length;
+
+  // ── 3. Recognisability check ─────────────────────────
+  // An empty import that carries no known structural keys is almost certainly
+  // the wrong file (e.g. a config JSON or a package.json dropped by mistake).
+  if (total === 0) {
+    const KNOWN = ['expenses','income','schemaVersion','version','dailyBudget',
+                   'heatmapData','budgetSettings','customColors','palette','_budgets','_goals'];
+    const hasKnown = !Array.isArray(raw) && KNOWN.some(k => k in raw);
+    if (!hasKnown) {
+      errors.push('No recognizable expense or income records found. This does not appear to be an Expense Tracker backup file.');
+      return { ok: false, errors, warnings };
+    }
+    // Known keys present but both arrays empty — warn, not error (valid empty export)
+    warnings.push('Backup file contains 0 records — nothing will be added.');
+  }
+
+  // ── 4. Size guard ────────────────────────────────────
+  if (total > 50000) {
+    errors.push(`Import contains ${total.toLocaleString()} records, which exceeds the 50,000-record safety limit. Split the file and import in batches.`);
+    return { ok: false, errors, warnings };
+  }
+  if (total > 10000) {
+    warnings.push(`Large import: ${total.toLocaleString()} records. Performance may be affected.`);
+  }
+
+  // ── 5. Per-record sanity checks ───────────────────────
+  const allRecords = [...expList, ...incList];
+  const todayStr   = new Date().toISOString().split('T')[0];
+  const farFuture  = new Date(); farFuture.setFullYear(farFuture.getFullYear() + 2);
+  const farFutureStr = farFuture.toISOString().split('T')[0];
+  const DATE_RE    = /^\d{4}-\d{2}-\d{2}$/;
+
+  let badAmounts = 0, badDates = 0, futureDates = 0, zeroAmounts = 0, nonObjects = 0;
+
+  allRecords.forEach(r => {
+    if (!r || typeof r !== 'object' || Array.isArray(r)) { nonObjects++; return; }
+
+    // Amount
+    const rawAmt = r.amount ?? r.price ?? r.cost ?? r.value ?? 0;
+    const amt    = parseFloat(rawAmt);
+    if (isNaN(amt) || !isFinite(amt) || amt < 0) badAmounts++;
+    else if (amt === 0) zeroAmounts++;
+
+    // Date
+    const d = (r.date || r.createdDate || '').trim();
+    if (d) {
+      if (!DATE_RE.test(d)) badDates++;
+      else if (d < '1990-01-01') badDates++;
+      else if (d > farFutureStr) futureDates++;
+    }
+  });
+
+  // Non-object records (nulls, primitives inside array) — hard error if majority
+  if (nonObjects > 0) {
+    if (nonObjects === allRecords.length) {
+      errors.push('All records in the file are non-objects. The file may be corrupted.');
+      return { ok: false, errors, warnings };
+    }
+    warnings.push(`${nonObjects} record(s) are not valid objects and will be skipped.`);
+  }
+
+  // Bad amounts — hard error if >50% of records affected
+  if (badAmounts > 0) {
+    const pct = badAmounts / Math.max(allRecords.length, 1);
+    if (pct > 0.5) {
+      errors.push(`${badAmounts} of ${allRecords.length} records have invalid amounts (negative, NaN, or non-numeric). The file may be corrupted or in an unsupported format.`);
+      return { ok: false, errors, warnings };
+    }
+    warnings.push(`${badAmounts} record(s) have invalid amounts and will be imported as ₹0.`);
+  }
+
+  // Zero-amount records — soft warning only
+  if (zeroAmounts > 0 && zeroAmounts === allRecords.length - badAmounts) {
+    warnings.push(`All ${zeroAmounts} records have a ₹0 amount — verify the file uses the correct field name for amounts.`);
+  }
+
+  // Bad/old dates
+  if (badDates > 0) {
+    warnings.push(`${badDates} record(s) have unrecognized or out-of-range dates — today's date will be used as fallback.`);
+  }
+
+  // Future-dated records
+  if (futureDates > 0) {
+    warnings.push(`${futureDates} record(s) have dates more than 2 years in the future — please verify these are intentional (e.g. recurring templates).`);
+  }
+
+  return {
+    ok: errors.length === 0,
+    errors,
+    warnings,
+    stats: { expenses: expList.length, income: incList.length, total },
+  };
+}
+
 // ─── Convenience wrappers (drop-in replacements) ──────
 
 function loadData() { return Store.load(); }
 function saveData(d) { Store.save(d); }
+
+// ═══════════════════════════════════════════════════════
+// 15.1 — PER-RECORD SCHEMA VALIDATOR (used inside runMigration)
+// Runs on already-migrated v5 records (output of makeV5Expense / makeV5Income).
+// Returns { sanitized[], failed[] }.
+//   sanitized — records that passed or were safely auto-corrected; these get imported.
+//   failed    — records whose core fields were irrecoverable; logged in importReport,
+//               NOT imported, so bad data never enters the store.
+// ═══════════════════════════════════════════════════════
+function validateSchema(records, recordType) {
+  const VALID_CURRENCY_SET = new Set(CURRENCIES.map(c => c.code));
+  const DATE_RE   = /^\d{4}-\d{2}-\d{2}$/;
+  const todayStr  = new Date().toISOString().split('T')[0];
+  const isExpense = recordType !== 'income';
+
+  const sanitized = [];
+  const failed    = [];
+
+  records.forEach((rec, idx) => {
+    // ── Guard: must be a plain object ─────────────────
+    if (!rec || typeof rec !== 'object' || Array.isArray(rec)) {
+      failed.push({ index: idx, description: '(non-object record)', issues: ['Record is not a valid object.'] });
+      return;
+    }
+
+    const fix    = { ...rec };
+    const issues = [];   // field-level problems that were auto-corrected
+    let   fatal  = false; // true → record cannot be salvaged
+
+    // ── 1. amount ─────────────────────────────────────
+    // Must be a finite number ≥ 0. Non-numeric strings like "abc" are fatal.
+    const rawAmt = fix.amount;
+    const amt    = parseFloat(rawAmt);
+    if (rawAmt !== undefined && rawAmt !== null && typeof rawAmt === 'object') {
+      // e.g. amount: { value: 50 } — cannot safely guess intent → fatal
+      issues.push(`amount is an object, not a number`);
+      fatal = true;
+    } else if (isNaN(amt) || !isFinite(amt)) {
+      issues.push(`amount "${rawAmt}" is not a valid number`);
+      fatal = true;
+    } else if (amt < 0) {
+      // Negative amounts are auto-corrected to 0 (e.g. a refund logged as -200)
+      issues.push(`amount ${amt} is negative — corrected to 0`);
+      fix.amount = 0;
+      fix.amountINR = 0;
+    } else {
+      fix.amount = amt;
+    }
+
+    // ── 2. amountINR ──────────────────────────────────
+    if (!fatal) {
+      const aINR = parseFloat(fix.amountINR);
+      if (isNaN(aINR) || !isFinite(aINR)) {
+        // Safe default: use amount if currency is INR, otherwise use amount as proxy
+        issues.push(`amountINR "${fix.amountINR}" is invalid — recalculated from amount`);
+        fix.amountINR = fix.currency === 'INR' ? fix.amount : fix.amount * (parseFloat(fix.conversionRate) || 1);
+      }
+    }
+
+    // ── 3. date ───────────────────────────────────────
+    // Must match YYYY-MM-DD. Missing or malformed → corrected to today.
+    if (!fix.date || !DATE_RE.test(fix.date)) {
+      issues.push(`date "${fix.date}" does not match YYYY-MM-DD — set to today (${todayStr})`);
+      fix.date = todayStr;
+    }
+
+    // ── 4. currency ───────────────────────────────────
+    // Must be a 3-letter code present in the CURRENCIES list.
+    const cur = (fix.currency || '').toString().trim().toUpperCase();
+    if (!cur || cur.length !== 3 || !VALID_CURRENCY_SET.has(cur)) {
+      issues.push(`currency "${fix.currency}" is not a recognised 3-letter code — defaulted to INR`);
+      fix.currency  = 'INR';
+      fix.amountINR = fix.amount; // now same currency, no conversion needed
+    } else {
+      fix.currency = cur; // normalise to uppercase
+    }
+
+    // ── 5. category (expenses only) ───────────────────
+    // Income records use 'source' not 'category', so skip for income.
+    if (isExpense) {
+      if (!fix.category || !VALID_CATS.includes(fix.category)) {
+        const normalised = normCategoryRaw(fix.category || '');
+        issues.push(`category "${fix.category}" is not valid — normalised to "${normalised}"`);
+        fix.category = normalised;
+      }
+    }
+
+    // ── Route record ──────────────────────────────────
+    if (fatal) {
+      failed.push({
+        index: idx,
+        description: rec.description || rec.item || rec.name || '(unnamed)',
+        date:        rec.date   || '(no date)',
+        amount:      rec.amount,
+        issues,
+      });
+    } else {
+      if (issues.length > 0) {
+        // Mark that this record was auto-corrected so the report can say so
+        fix._sanitized = issues;
+      }
+      sanitized.push(fix);
+    }
+  });
+
+  return { sanitized, failed };
+}
 
 // ═══ CATEGORIES / CONFIG ═══
 const CATS={
@@ -1114,19 +1408,183 @@ function fmtF(e){const c=CM[e.currency];return(c?c.symbol:e.currency||'₹')+par
 function toINR(e){if(!e)return 0;if(!e.currency||e.currency==='INR')return parseFloat(e.amount||0);return parseFloat(e.amountINR||e.amount||0);}
 function byDate(list){const g={};list.forEach(e=>{const d=e.date||'Unknown';(g[d]||(g[d]=[])).push(e);});return Object.entries(g).sort((a,b)=>b[0].localeCompare(a[0]));}
 
+// ═══════════════════════════════════════════════════════
+// 15.3 — useCurrency hook
+// Single source of truth for all currency math.
+// All returned functions are stable references (useMemo on [baseCurrency, rateData]).
+// ═══════════════════════════════════════════════════════
+function useCurrency(baseCurrency, rateData) {
+  return useMemo(() => {
+    const rates       = rateData?.rates || {};
+    const baseCurrInfo = CM[baseCurrency] || CM['INR'];
+    const baseSym     = baseCurrInfo.symbol;
+    // baseRate: how many INR equal 1 unit of baseCurrency
+    // (rates are stored as "INR per 1 unit of currencyCode")
+    const baseRate    = rates[baseCurrency] || 1;
+
+    // ── 1. convert(amt, from, to) ─────────────────────
+    // General-purpose conversion between any two currencies via INR bridge.
+    const convert = (amt, from, to) => {
+      const a = parseFloat(amt);
+      if (!a || !isFinite(a)) return 0;
+      if (from === to) return a;
+      const inr = (from === 'INR') ? a : a * (rates[from] || 1);
+      return (to === 'INR') ? inr : inr / (rates[to] || 1);
+    };
+
+    // ── 2. toINR(item) ────────────────────────────────
+    // Returns the INR value of any expense/income object.
+    // Prefers the stored amountINR (locked at entry time) over live rate conversion.
+    const toINRh = (e) => {
+      if (!e) return 0;
+      const amt = parseFloat(e.amount) || 0;
+      if (!e.currency || e.currency === 'INR') return amt;
+      const stored = parseFloat(e.amountINR);
+      if (isFinite(stored) && stored > 0) return stored;
+      return convert(amt, e.currency, 'INR');
+    };
+
+    // ── 3. toBase(item) ───────────────────────────────
+    // Converts any entry's value directly to the user's display base currency.
+    const toBase = (e) => {
+      if (!e) return 0;
+      const inr = toINRh(e);
+      return baseCurrency === 'INR' ? inr : inr / baseRate;
+    };
+
+    // ── 4. formatBase(amount) ─────────────────────────
+    // Formats a raw number using the base currency symbol and en-IN locale.
+    const formatBase = (n) => {
+      const v = parseFloat(n);
+      if (isNaN(v) || n == null) return baseSym + '0';
+      return (v < 0 ? '-' : '') + baseSym +
+        Math.abs(v).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    };
+
+    // ── 5. formatForeign(item) ────────────────────────
+    // Formats an entry in its original (foreign) currency.
+    const formatForeign = (e) => {
+      if (!e) return '';
+      const c   = CM[e.currency];
+      const sym = c ? c.symbol : (e.currency || '₹');
+      return sym + parseFloat(e.amount || 0)
+        .toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+    // ── Convenience: INR amount → base currency string ─
+    const formatBaseFromINR = (n) => formatBase((parseFloat(n) || 0) / baseRate);
+
+    return { convert, toINR: toINRh, toBase, formatBase, formatForeign, formatBaseFromINR, baseSym, baseRate };
+  }, [baseCurrency, rateData]);
+}
+
 // ─── TEXT SEARCH: searches description, category, subcategory, notes, paymentMethod, tags, diningApp, source ───
+// ═══ ADVANCED SEARCH — 15.4 ═══
+// Supports plain text AND key:value operators (all tokens AND-combined).
+// Keys: amount/amt (> < >= <= range), category/cat, date, tag/tags,
+//       method/payment, type, currency/cur, notes/note, source,
+//       desc/description, sub/subcategory, recurring/recur
+// Example: "amount:>500 category:food tag:swiggy"
 function matchesSearch(item, q) {
   if (!q) return true;
-  const lq = q.toLowerCase().trim();
-  if (!lq) return true;
-  const fields = [
+  const raw = q.trim();
+  if (!raw) return true;
+  const tokens = raw.split(/\s+/);
+  const _fields = () => [
     item.description, item.category, item.subcategory,
     item.notes, item.paymentMethod, item.paymentDescription,
     item.diningApp, item.source, item.expenseType,
     item.currency, item.receiptRef, item.splitWith,
     ...(item.tags||[])
   ];
-  return fields.some(f => f && String(f).toLowerCase().includes(lq));
+  for (let ti = 0; ti < tokens.length; ti++) {
+    // Normalise shorthand operators: amt>500 → amount:>500, cat:Food already works as-is
+    // Handles: amt>N  amt<N  amt>=N  amt<=N  (no colon required)
+    let token = tokens[ti];
+    const shortAmt = token.match(/^(amt|amount)(>=|<=|>|<)(.+)$/i);
+    if (shortAmt) token = 'amount:' + shortAmt[2] + shortAmt[3];
+    const ci = token.indexOf(':');
+    if (ci > 0) {
+      const key = token.slice(0, ci).toLowerCase();
+      const val = token.slice(ci + 1).toLowerCase();
+      if (!val) continue;
+      switch (key) {
+        case 'amount': case 'amt': {
+          const n = item.amountINR != null ? parseFloat(item.amountINR) : parseFloat(item.amount) || 0;
+          if (val.startsWith('>='))      { if (n < parseFloat(val.slice(2)))  return false; }
+          else if (val.startsWith('<=')) { if (n > parseFloat(val.slice(2)))  return false; }
+          else if (val.startsWith('>'))  { if (n <= parseFloat(val.slice(1))) return false; }
+          else if (val.startsWith('<'))  { if (n >= parseFloat(val.slice(1))) return false; }
+          else if (/^\d[\d.]*-\d[\d.]*$/.test(val)) {
+            // Range: digits-digits only (e.g. 500-1000). Excludes negative numbers like -100.
+            const parts = val.split('-'); const lo = parseFloat(parts[0]); const hi = parseFloat(parts[1]);
+            if (!isNaN(lo) && !isNaN(hi) && (n < lo || n > hi)) return false;
+          } else {
+            const exact = parseFloat(val);
+            if (!isNaN(exact) && n !== exact) return false;
+          }
+          break;
+        }
+        case 'category': case 'cat': {
+          const cats = [item.category, ...Object.keys(item.categoryAllocations||{})];
+          if (!cats.some(c => c && c.toLowerCase().includes(val))) return false;
+          break;
+        }
+        case 'date': {
+          if (!(item.date||'').startsWith(val)) return false;
+          break;
+        }
+        case 'tag': case 'tags': {
+          const tags = (item.tags||[]).map(t => t.toLowerCase());
+          if (!tags.some(t => t.includes(val))) return false;
+          break;
+        }
+        case 'method': case 'payment': case 'meth': {
+          if (!(item.paymentMethod||'').toLowerCase().includes(val)) return false;
+          break;
+        }
+        case 'type': {
+          if (!(item.expenseType||'').toLowerCase().includes(val)) return false;
+          break;
+        }
+        case 'currency': case 'cur': {
+          if (!(item.currency||'').toLowerCase().includes(val)) return false;
+          break;
+        }
+        case 'notes': case 'note': {
+          if (!(item.notes||'').toLowerCase().includes(val)) return false;
+          break;
+        }
+        case 'source': {
+          if (!(item.source||'').toLowerCase().includes(val)) return false;
+          break;
+        }
+        case 'desc': case 'description': {
+          if (!(item.description||'').toLowerCase().includes(val)) return false;
+          break;
+        }
+        case 'sub': case 'subcategory': {
+          if (!(item.subcategory||'').toLowerCase().includes(val)) return false;
+          break;
+        }
+        case 'recurring': case 'recur': {
+          const want = val === 'true' || val === 'yes' || val === '1';
+          if (!!item.isRecurring !== want) return false;
+          break;
+        }
+        default: {
+          // Unknown key — treat whole token as plain text
+          const lq = token.toLowerCase();
+          if (!_fields().some(f => f && String(f).toLowerCase().includes(lq))) return false;
+        }
+      }
+    } else {
+      // Plain text token — full-field search
+      const lq = token.toLowerCase();
+      if (!_fields().some(f => f && String(f).toLowerCase().includes(lq))) return false;
+    }
+  }
+  return true;
 }
 
 
@@ -1638,8 +2096,11 @@ function FilterBar({
   amtMax,   onAmtMaxChange,
   selectedCategories, onToggleCategory,
   baseSym, baseCurrCode,
+  // 15.5 bulk select
+  showBulk, bulkMode, onBulkToggle,
 }) {
   const [showAdv, setShowAdv] = useState(false);
+  const [showCS, setShowCS] = useState(false);
   // Local raw search — actual filtering is debounced in parent
   const [rawSearch, setRawSearch] = useState(search);
   // Keep rawSearch in sync when parent clears it
@@ -1657,7 +2118,7 @@ function FilterBar({
       {/* ── Row 1: search + quick dropdowns + advanced toggle ── */}
       <div className="filter-bar">
 
-        {/* Search with debounce indicator */}
+        {/* Search with debounce indicator + cheat sheet help */}
         <div className="search-wrap">
           <input
             className="filter-input"
@@ -1668,6 +2129,31 @@ function FilterBar({
             role="searchbox"
           />
           {rawSearch!==search&&<div className="search-debounce-dot active"/>}
+          <button
+            className="search-help-btn"
+            onClick={()=>setShowCS(v=>!v)}
+            title="Search operator cheat sheet"
+            aria-label="Search help">?</button>
+          {showCS&&(
+            <div className="search-cheatsheet" role="tooltip">
+              <h4>🔍 Search Operators</h4>
+              <table>
+                <tbody>
+                  <tr><td><code>cat:Food</code></td><td>Filter by category</td></tr>
+                  <tr><td><code>amt&gt;500</code></td><td>Amount greater than</td></tr>
+                  <tr><td><code>amt&lt;200</code></td><td>Amount less than</td></tr>
+                  <tr><td><code>amt:500-2000</code></td><td>Amount in range</td></tr>
+                  <tr><td><code>meth:UPI</code></td><td>Payment method</td></tr>
+                  <tr><td><code>tag:Beverages</code></td><td>Has tag</td></tr>
+                  <tr><td><code>date:2026-03</code></td><td>By month / date prefix</td></tr>
+                  <tr><td><code>notes:gym</code></td><td>Search notes field</td></tr>
+                  <tr><td><code>type:fixed</code></td><td>Expense type</td></tr>
+                  <tr><td><code>recurring:true</code></td><td>Recurring only</td></tr>
+                </tbody>
+              </table>
+              <div className="cs-note">Mix freely: <code>Starbucks cat:Food amt&gt;200</code> — all tokens AND-combined.</div>
+            </div>
+          )}
         </div>
 
         {/* Payment method (quick) */}
@@ -1709,6 +2195,16 @@ function FilterBar({
           title="Date range, amount range, multi-category">
           ⚙️ Advanced{advCount>0?` (${advCount})`:''} {showAdv?'▲':'▼'}
         </button>
+
+        {/* 15.5 Bulk select toggle — same style as Advanced */}
+        {showBulk&&(
+          <button
+            className={'filter-advanced-toggle'+(bulkMode?' open':'')}
+            onClick={onBulkToggle}
+            title={bulkMode?'Exit selection mode':'Select multiple to delete'}>
+            ☑ Select{bulkMode?' ▲':' ▼'}
+          </button>
+        )}
 
         {/* Clear all */}
         {(search||activeChips.length>0||month||hasAdvanced)&&(
@@ -1854,18 +2350,26 @@ function ExpenseForm({onSubmit,onEdit,onClose,rateData,onRateUpdate,initialData,
     setLr(false);
   };
   const calcNextDue=(fromDate,period)=>{
-    const d=new Date(fromDate||today);
-    if(period==='daily')    d.setDate(d.getDate()+1);
-    else if(period==='weekly')   d.setDate(d.getDate()+7);
-    else if(period==='biweekly') d.setDate(d.getDate()+14);
-    else if(period==='monthly')  d.setMonth(d.getMonth()+1);
-    else if(period==='quarterly')d.setMonth(d.getMonth()+3);
+    const d=new Date((fromDate||today)+'T12:00:00');
+    const origDay=d.getDate();
+    if(period==='daily')    d.setDate(origDay+1);
+    else if(period==='weekly')   d.setDate(origDay+7);
+    else if(period==='biweekly') d.setDate(origDay+14);
+    else if(period==='monthly'){
+      const nm=d.getMonth()+1,ny=d.getFullYear()+(nm>11?1:0);
+      d.setFullYear(ny,nm%12,Math.min(origDay,new Date(ny,nm%12+1,0).getDate()));
+    }
+    else if(period==='quarterly'){
+      const nm=d.getMonth()+3,ny=d.getFullYear()+Math.floor((d.getMonth()+3)/12);
+      d.setFullYear(ny,nm%12,Math.min(origDay,new Date(ny,nm%12+1,0).getDate()));
+    }
     else if(period==='yearly')   d.setFullYear(d.getFullYear()+1);
     return d.toISOString().split('T')[0];
   };
   const sub=e=>{
     e.preventDefault();
     const amt=parseFloat(form.amount),rate=parseFloat(form.conversionRate)||1;
+    if(!amt||amt<=0) return;
     const payload={
       ...form,
       id:Date.now(),timestamp:Date.now(),
@@ -1887,7 +2391,7 @@ function ExpenseForm({onSubmit,onEdit,onClose,rateData,onRateUpdate,initialData,
       if(dom) payload.category=dom[0];
     }
     if(initialData&&onEdit){
-      onEdit({...payload, id:initialData.id, timestamp:initialData.timestamp||Date.now()});
+      onEdit({...payload, id:initialData.id, timestamp:initialData.timestamp||Date.now(), _fp:fingerprint(payload)});
     } else {
       onSubmit(payload);
     }
@@ -2088,7 +2592,7 @@ function IncomeForm({onSubmit,onEdit,onClose,rateData,onRateUpdate,initialData,b
     e.preventDefault();const amt=parseFloat(form.amount),rate=parseFloat(form.conversionRate)||1;
     const payload={...form,amount:amt,conversionRate:rate,amountINR:form.currency==='INR'?amt:amt*rate,type:'income',version:5};
     if(initialData&&onEdit){
-      onEdit({...payload,id:initialData.id,timestamp:initialData.timestamp||Date.now()});
+      onEdit({...payload,id:initialData.id,timestamp:initialData.timestamp||Date.now(),_fp:fingerprint(payload)});
     } else {
       onSubmit({...payload,id:Date.now(),timestamp:Date.now()});
     }
@@ -2140,18 +2644,26 @@ function IncomeForm({onSubmit,onEdit,onClose,rateData,onRateUpdate,initialData,b
 }
 
 // ═══ EXPENSE ITEM ═══
-const ExpItem=React.memo(function ExpItem({item,onDelete,onEdit}){
+const ExpItem=React.memo(function ExpItem({item,onDelete,onEdit,toBase,fmtBase,bulkMode,isSelected,onToggleSelect}){
   const cat=CATS[item.category]||CATS['Other'];
   const iF=item.currency&&item.currency!=='INR';
   const aINR=toINR(item);
+  const baseAmt=toBase?toBase(item):aINR;
   const accent=item.customColor||cat.color;
   const iconBg=accent+'22';
   const isSplit=item.splitWith&&item.splitParts>1;
-  const shareAmt=isSplit?(item.currency==='INR'?item.amount:aINR)/item.splitParts:null;
+  const shareAmt=isSplit?aINR/item.splitParts:null;
+  const fmt=fmtBase||fmtINR;
   const amtColor=item.customColor||'var(--text)';
   return(
-    <div className={"expense-item"+(item.customColor?' has-custom-color':'')}
-      style={item.customColor?{'--item-accent':item.customColor}:{}}>
+    <div className={"expense-item"+(item.customColor?' has-custom-color':'')+(isSelected?' bulk-selected':'')+(bulkMode?' bulk-selectable':'')}
+      style={item.customColor?{'--item-accent':item.customColor}:{}}
+      onClick={bulkMode?()=>onToggleSelect(item.id):undefined}>
+      {bulkMode&&(
+        <div className="bulk-checkbox" onClick={e=>{e.stopPropagation();onToggleSelect(item.id);}}>
+          <input type="checkbox" readOnly checked={!!isSelected} aria-label={"Select "+item.description}/>
+        </div>
+      )}
       <div className="expense-cat-icon" style={{background:iconBg}}>{cat.icon}</div>
       <div className="expense-info">
         <div className="expense-desc">
@@ -2164,29 +2676,34 @@ const ExpItem=React.memo(function ExpItem({item,onDelete,onEdit}){
         <div className="expense-meta">
           {item.category}{item.subcategory?' › '+item.subcategory:''} · {item.paymentMethod||'Cash'}
           {item.diningApp?' · '+item.diningApp:''}
-          {item.tags?.length?' · '+item.tags.slice(0,2).join(', '):''}
+          {item.tags&&item.tags.length?' · '+item.tags.slice(0,2).join(', '):''}
           {iF?' · '+item.currency:''}
-          {isSplit?<span style={{color:'var(--amber)'}}> · your share: {fmtINR(shareAmt)}</span>:''}
+          {isSplit?<span style={{color:'var(--amber)'}}> · split ÷{item.splitParts}</span>:''}
           {item.notes?<span style={{fontStyle:'italic'}}> · {item.notes.substring(0,40)}</span>:''}
         </div>
       </div>
       <div className="expense-amount-block">
         {iF
-          ?<><div className="amt-primary foreign" style={{color:amtColor}}>{fmtF(item)}</div><div className="amt-secondary">≈ {fmtINR(aINR)}</div></>
-          :<div className="amt-primary" style={{color:amtColor}}>{fmtINR(item.amount)}</div>
+          ?<><div className="amt-primary foreign" style={{color:amtColor}}>{fmtF(item)}</div><div className="amt-secondary">≈ {fmt(baseAmt)}</div></>
+          :<div className="amt-primary" style={{color:amtColor}}>{fmt(baseAmt)}</div>
         }
+        {isSplit&&shareAmt!==null&&<div className="amt-secondary">{fmt(fmtBase?baseAmt/item.splitParts:shareAmt)} your share</div>}
       </div>
-      <div className="item-actions">
-        <button className="edit-btn" onClick={()=>onEdit(item)} title="Edit expense" aria-label={"Edit "+item.description}>✏️</button>
-        <button className="delete-btn" onClick={()=>onDelete(item.id)} title="Delete expense" aria-label={"Delete "+item.description}>✕</button>
-      </div>
+      {!bulkMode&&(
+        <div className="item-actions">
+          <button className="edit-btn" onClick={()=>onEdit(item)} title="Edit expense" aria-label={"Edit "+item.description}>✏️</button>
+          <button className="delete-btn" onClick={()=>onDelete(item.id)} title="Delete expense" aria-label={"Delete "+item.description}>✕</button>
+        </div>
+      )}
     </div>
   );
 });
 
 // ═══ INCOME ITEM ═══
-const IncItem=React.memo(function IncItem({item,onDelete,onEdit}){
+const IncItem=React.memo(function IncItem({item,onDelete,onEdit,toBase,fmtBase}){
   const iF=item.currency&&item.currency!=='INR',aINR=toINR(item);
+  const baseAmt=toBase?toBase(item):aINR;
+  const fmt=fmtBase||fmtINR;
   return(
     <div className="expense-item income-item">
       <div className="expense-cat-icon" style={{background:'rgba(16,185,129,.15)'}}>💵</div>
@@ -2195,7 +2712,7 @@ const IncItem=React.memo(function IncItem({item,onDelete,onEdit}){
         <div className="expense-meta">{item.source||'Income'} · {item.paymentMethod||'Bank'}{iF?' · '+item.currency:''}{item.notes?' · '+item.notes.substring(0,30):''}</div>
       </div>
       <div className="expense-amount-block">
-        {iF?<><div className="amt-primary foreign">{fmtF(item)}</div><div className="amt-secondary">≈ {fmtINR(aINR)}</div></>:<div className="amt-primary income-amt">+{fmtINR(item.amount)}</div>}
+        {iF?<><div className="amt-primary foreign">{fmtF(item)}</div><div className="amt-secondary">≈ {fmt(baseAmt)}</div></>:<div className="amt-primary income-amt">+{fmt(baseAmt)}</div>}
       </div>
       <div className="item-actions">
         <button className="edit-btn" onClick={()=>onEdit(item)} title="Edit income" aria-label={"Edit "+item.description}>✏️</button>
@@ -2236,6 +2753,9 @@ function App(){
   const [expDateTo,setExpDateTo]=useState('');
   const [expAmtMin,setExpAmtMin]=useState('');
   const [expAmtMax,setExpAmtMax]=useState('');
+  // 15.5 bulk select
+  const [bulkModeExp,setBulkModeExp]=useState(false);
+  const [selectedExpIds,setSelectedExpIds]=useState({}); // plain object id→true
 
   // ── Income filters ──
   const [incSearch,setIncSearch]=useState('');
@@ -2265,7 +2785,9 @@ function App(){
 
   // ── Toast state (Phase 7-6/7/8) ──────────────────────────────────────
   const [toasts, setToasts] = useState([]);
-  const _firedToasts = useRef(new Set()); // tracks threshold keys already fired this session
+  const _firedToasts  = useRef(new Set()); // tracks threshold keys already fired this session
+  const _pendingData  = useRef(null);       // 15.2: latest data awaiting debounced write
+  const _saveTimer    = useRef(null);       // 15.2: debounce timer id
 
   const addToast = (kind, icon, title, msg, duration=6000) => {
     const id = Date.now() + Math.random();
@@ -2287,16 +2809,18 @@ function App(){
   const expenses=data.expenses||[];
   const income=data.income||[];
 
-  // ── Base-currency helpers ────────────────────────────────────────────
-  const baseCurrInfo = CM[baseCurrency] || CM['INR'];
-  const baseSym = baseCurrInfo.symbol;
-  const _baseRate = rateData?.rates?.[baseCurrency] || 1;
-  // Convert an expense/income object to the display base currency
-  const toBase = e => { if(!e) return 0; const inr=toINR(e); return baseCurrency==='INR'?inr:inr/_baseRate; };
-  // Format a number in base currency
-  const fmtBase = n => { if(isNaN(n)||n==null) return baseSym+'0'; const v=parseFloat(n); return (v<0?'-':'')+baseSym+Math.abs(v).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:2}); };
-  // Convenience: convert an already-computed INR amount to base and format
-  const fmtBaseFromINR = n => fmtBase(n/_baseRate);
+  // ── 15.3: All currency math via useCurrency hook ────────────────────
+  // Alias to existing names so all downstream usages are unchanged.
+  const {
+    convert,
+    toINR:          _toINRh,        // hook version (unused alias — global toINR still used below)
+    toBase,
+    formatBase:     fmtBase,
+    formatForeign:  fmtForeign,
+    formatBaseFromINR: fmtBaseFromINR,
+    baseSym,
+    baseRate:       _baseRate,
+  } = useCurrency(baseCurrency, rateData);
 
   useEffect(()=>{document.documentElement.classList.toggle('dark',dark);localStorage.setItem('et_v5_dark',dark?'1':'0');},[dark]);
   useEffect(()=>{document.documentElement.classList.toggle('colorblind',colorblind);localStorage.setItem('et_v5_cb',colorblind?'1':'0');},[colorblind]); // 14-6
@@ -2345,12 +2869,19 @@ function App(){
 
     // Build a helper to advance nextDueDate by one period
     const advanceDue=(date,period)=>{
-      const d=new Date(date);
-      if(period==='daily')    d.setDate(d.getDate()+1);
-      else if(period==='weekly')   d.setDate(d.getDate()+7);
-      else if(period==='biweekly') d.setDate(d.getDate()+14);
-      else if(period==='monthly')  d.setMonth(d.getMonth()+1);
-      else if(period==='quarterly')d.setMonth(d.getMonth()+3);
+      const d=new Date(date+'T12:00:00');
+      const origDay=d.getDate();
+      if(period==='daily')    d.setDate(origDay+1);
+      else if(period==='weekly')   d.setDate(origDay+7);
+      else if(period==='biweekly') d.setDate(origDay+14);
+      else if(period==='monthly'){
+        const nm=d.getMonth()+1,ny=d.getFullYear()+(nm>11?1:0);
+        d.setFullYear(ny,nm%12,Math.min(origDay,new Date(ny,nm%12+1,0).getDate()));
+      }
+      else if(period==='quarterly'){
+        const nm=d.getMonth()+3,ny=d.getFullYear()+Math.floor((d.getMonth()+3)/12);
+        d.setFullYear(ny,nm%12,Math.min(origDay,new Date(ny,nm%12+1,0).getDate()));
+      }
       else if(period==='yearly')   d.setFullYear(d.getFullYear()+1);
       return d.toISOString().split('T')[0];
     };
@@ -2393,19 +2924,44 @@ function App(){
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);  // runs once on mount — intentional
   useEffect(()=>{
-    const TABS=['overview','income','trends','insights','budgets','goals','exchange','settings'];
+    const TABS=['overview','income','trends','insights','budgets','goals','settings'];
     const h=e=>{
       if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;
       const n=parseInt(e.key);if(n>=1&&n<=TABS.length)setTab(TABS[n-1]);
       if(e.key==='n'||e.key==='N')setShowEF(true);
       if(e.key==='i'||e.key==='I')setShowIF(true);
       if(e.key==='d'||e.key==='D')setDark(m=>!m);
-      if(e.key==='Escape'){setShowEF(false);setShowIF(false);setDelTarget(null);setConfirmAction(null);setToasts([]);setEditExpTarget(null);setEditIncTarget(null);}
+      if(e.key==='Escape'){setShowEF(false);setShowIF(false);setDelTarget(null);setConfirmAction(null);setToasts([]);setEditExpTarget(null);setEditIncTarget(null);setBulkModeExp(false);setSelectedExpIds({});}
     };
     window.addEventListener('keydown',h);return()=>window.removeEventListener('keydown',h);
   },[]);
 
-  const persist=nd=>{setData(nd);saveData(nd);};
+  // ── 15.2: Debounced persistence ─────────────────────────────────────────────
+  // flushSave writes whatever is staged in _pendingData immediately.
+  // Stable reference (no deps) because it only reads a ref, never state.
+  const flushSave = useCallback(() => {
+    if (_saveTimer.current)  { clearTimeout(_saveTimer.current); _saveTimer.current = null; }
+    if (_pendingData.current !== null) { saveData(_pendingData.current); _pendingData.current = null; }
+  }, []);
+
+  // Flush on tab close / page unload so in-flight writes are never lost.
+  useEffect(() => {
+    window.addEventListener('beforeunload', flushSave);
+    return () => {
+      flushSave(); // also flush on component unmount (hot-reload, SPA nav)
+      window.removeEventListener('beforeunload', flushSave);
+    };
+  }, [flushSave]);
+
+  // persist: update React state instantly, defer the expensive Store.save by 1000 ms.
+  // Re-declaring on every render is intentional — it closes over the current `data`
+  // reference via the callers, not here.
+  const persist = nd => {
+    setData(nd);                                        // immediate UI update
+    _pendingData.current = nd;                          // stage for deferred write
+    if (_saveTimer.current) clearTimeout(_saveTimer.current);
+    _saveTimer.current = setTimeout(flushSave, 1000);  // write after 1 s of inactivity
+  };
 
   // ── Dedup guard: never add an entry that already exists (by id or fingerprint) ──
   // ── Edit functions ──────────────────────────────────────
@@ -2839,6 +3395,146 @@ function App(){
     return res;
   },[catData,expenses,monthlyExpData,allMonthlyExp,allMonthlyInc,allIncINR,allExpINR]);
 
+  // ── Subscription Zombie & Growth Detector ──────────────
+  const subZombieData = useMemo(()=>{
+    if(expenses.length<3) return{flagged:[],zombies:[],potentialSavings:0};
+    const today=new Date(); today.setHours(12,0,0,0);
+    const SUB_SUBS=new Set(['OTT/Streaming','Subscriptions','Internet','Phone','Gaming','Streaming','Cable']);
+
+    // Step 1: collect subscription-like expenses
+    const subSet=new Set();
+    expenses.forEach(e=>{
+      if(e.isRecurring||SUB_SUBS.has(e.subcategory)) subSet.add(e);
+    });
+
+    // Step 2: detect recurring patterns by description — same desc in ≥3 distinct months,
+    // amounts within 40% of each other (catches price-crept subs not tagged as recurring)
+    const descBuckets={};
+    expenses.forEach(e=>{
+      const k=(e.description||'').toLowerCase().trim();
+      if(!k) return;
+      if(!descBuckets[k]) descBuckets[k]=[];
+      descBuckets[k].push(e);
+    });
+    Object.values(descBuckets).forEach(grp=>{
+      const months=new Set(grp.map(e=>(e.date||'').substring(0,7)));
+      if(months.size<3) return;
+      const amts=grp.map(e=>toINR(e));
+      const avg=amts.reduce((a,b)=>a+b,0)/amts.length;
+      if(avg<=0) return;
+      if(amts.every(a=>Math.abs(a-avg)/avg<0.4)) grp.forEach(e=>subSet.add(e));
+    });
+
+    // Step 3: group by normalised description and analyse
+    const groups={};
+    subSet.forEach(e=>{
+      const k=(e.description||'').toLowerCase().trim();
+      if(!k) return;
+      if(!groups[k]) groups[k]=[];
+      groups[k].push(e);
+    });
+
+    const t12mo=new Date(today); t12mo.setFullYear(t12mo.getFullYear()-1);
+    const p12mo=new Date(t12mo);  p12mo.setFullYear(p12mo.getFullYear()-1);
+    const t12str=t12mo.toISOString().substring(0,7);
+    const p12str=p12mo.toISOString().substring(0,7);
+
+    const flagged=[],zombies=[];
+
+    Object.entries(groups).forEach(([,grp])=>{
+      if(grp.length<2) return;
+      const sorted=[...grp].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+      const uniqMonths=[...new Set(sorted.map(e=>(e.date||'').substring(0,7)))];
+      if(uniqMonths.length<2) return;
+
+      const last=sorted[sorted.length-1];
+      const name=last.description||'';
+      const icon=CATS[last.category]?.icon||'📱';
+
+      // Build monthly totals map
+      const mo={};
+      sorted.forEach(e=>{const m=(e.date||'').substring(0,7);mo[m]=(mo[m]||0)+toINR(e);});
+      const moList=Object.entries(mo).sort((a,b)=>a[0].localeCompare(b[0]));
+
+      const earlyMonths=moList.slice(0,3);
+      const recentMonths=moList.slice(-3);
+      const earlyAvg=earlyMonths.reduce((s,[,v])=>s+v,0)/earlyMonths.length;
+      const recentAvg=recentMonths.reduce((s,[,v])=>s+v,0)/recentMonths.length;
+
+      const last12=moList.filter(([m])=>m>=t12str).reduce((s,[,v])=>s+v,0);
+      const prev12=moList.filter(([m])=>m>=p12str&&m<t12str).reduce((s,[,v])=>s+v,0);
+
+      const creepPct=earlyAvg>0?(recentAvg-earlyAvg)/earlyAvg*100:0;
+      const yoyPct=prev12>0?(last12-prev12)/prev12*100:0;
+
+      if(creepPct>10||yoyPct>10){
+        flagged.push({
+          name,icon,
+          recentMonthly:recentAvg,
+          earlyMonthly:earlyAvg,
+          creepPct,yoyPct,
+          annualSavings:Math.max((recentAvg-earlyAvg)*12,0),
+          months:moList.length,
+        });
+      }
+
+      // Zombie: isRecurring template present but no charge in last 45 days
+      if(grp.some(e=>e.isRecurring)){
+        const days=Math.round((today-new Date((last.date||'2000-01-01')+'T12:00:00'))/864e5);
+        if(days>45){
+          const monthly=recentAvg||(last12/Math.max(moList.length,1));
+          zombies.push({name,icon,lastDate:last.date,days,monthly,annualSavings:monthly*12});
+        }
+      }
+    });
+
+    flagged.sort((a,b)=>b.annualSavings-a.annualSavings);
+    zombies.sort((a,b)=>b.annualSavings-a.annualSavings);
+    const potentialSavings=[...flagged,...zombies].reduce((s,x)=>s+x.annualSavings,0);
+    return{flagged,zombies,potentialSavings};
+  },[expenses]);
+
+  // ═══ 15.6 Month-End Financial Forecast ═══
+  const monthForecast = useMemo(()=>{
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const curYM = todayStr.slice(0,7);                // YYYY-MM
+    const dayOfMonth = now.getDate();                 // 1-based
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+    const daysRemaining = daysInMonth - dayOfMonth;
+
+    // Current month expenses
+    const curMonthExp = expenses.filter(e=>(e.date||'').startsWith(curYM));
+    if(curMonthExp.length===0) return null;
+    const spentSoFar = curMonthExp.reduce((s,e)=>s+toINR(e),0);
+    const dailyRate = dayOfMonth > 0 ? spentSoFar / dayOfMonth : 0;
+    const projected = dailyRate * daysInMonth;
+    const projectedRemaining = projected - spentSoFar;
+
+    // Previous month total for comparison
+    const prevDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    const prevYM = prevDate.getFullYear()+'-'+(String(prevDate.getMonth()+1).padStart(2,'0'));
+    const prevTotal = expenses.filter(e=>(e.date||'').startsWith(prevYM)).reduce((s,e)=>s+toINR(e),0);
+
+    // Current month income so far
+    const curMonthInc = income.filter(i=>(i.date||'').startsWith(curYM));
+    const incSoFar = curMonthInc.reduce((s,i)=>s+toINR(i),0);
+    // Project income if recurring income exists, else use current
+    const incDailyRate = dayOfMonth > 0 ? incSoFar / dayOfMonth : 0;
+    const projectedInc = incDailyRate * daysInMonth;
+
+    // Pct through month
+    const pctElapsed = (dayOfMonth / daysInMonth * 100).toFixed(0);
+    const trend = prevTotal > 0 ? ((projected - prevTotal) / prevTotal * 100) : null;
+
+    return {
+      curYM, dayOfMonth, daysInMonth, daysRemaining, pctElapsed: parseFloat(pctElapsed),
+      spentSoFar, dailyRate, projected, projectedRemaining,
+      prevTotal, trend,
+      projectedInc, projectedSavings: projectedInc - projected,
+    };
+  },[expenses, income]);
+
   const [importReport, setImportReport] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null); // {type:'clear-expenses'|'clear-income'|'clear-all'|'factory-reset', label, detail}
 
@@ -2846,10 +3542,19 @@ function App(){
   const executeConfirmedAction = () => {
     if (!confirmAction) return;
     const empty = { expenses: [], income: [] };
-    if (confirmAction.type === 'clear-expenses') persist({ ...data, expenses: [] });
+    if (confirmAction.type === 'bulk-delete-exp') {
+      const ids = confirmAction.ids;
+      persist({...data, expenses: expenses.filter(e => !ids[e.id])});
+      setSelectedExpIds({});
+      setBulkModeExp(false);
+    }
+    else if (confirmAction.type === 'clear-expenses') persist({ ...data, expenses: [] });
     else if (confirmAction.type === 'clear-income') persist({ ...data, income: [] });
     else if (confirmAction.type === 'clear-all') persist(empty);
     else if (confirmAction.type === 'factory-reset') {
+      // Cancel any pending debounced write — we are about to wipe localStorage.
+      if (_saveTimer.current)  { clearTimeout(_saveTimer.current); _saveTimer.current = null; }
+      _pendingData.current = null;
       [SK, SK_META, 'et_v5_rates', 'et_v5_dark', 'et_v5_cb', 'et_v5_base'].forEach(k => localStorage.removeItem(k));
       setDark(false);
       setColorblind(false);
@@ -2887,8 +3592,21 @@ function App(){
       try{
         const raw=JSON.parse(ev.target.result);
 
+        // ── 15.1: Pre-import schema validation ───────────
+        const validation = validateImportPayload(raw);
+        if (!validation.ok) {
+          setImportReport({
+            details: validation.errors.map(e=>`❌ ${e}`).join('\n'),
+            error: true,
+          });
+          setTimeout(()=>setImportReport(null), 7000);
+          return;
+        }
+
         // ── Run migration engine ──────────────────────────
         const { result, report } = runMigration(raw, expenses, income);
+        // Prepend any validation warnings to the migration report
+        report.warnings = [...validation.warnings, ...(report.warnings||[])];
 
         // ── Merge (already deduped by runMigration) ──────
         const merged = {
@@ -2903,6 +3621,9 @@ function App(){
         persist(merged);
 
         // ── Show detailed report ──────────────────────────
+        const failedLines = (report.failedRecords||[]).map(f=>
+          `   • "${f.description}" (${f.date}, amt=${f.amount}): ${f.issues.join('; ')}`
+        );
         const details = [
           `✅ Detected format: ${report.version}`,
           `📦 ${result.expenses.length} expenses + ${result.income.length} income entries added`,
@@ -2911,10 +3632,17 @@ function App(){
           result._v4Settings?.heatmapData ? `🗓️ v4 heatmap data preserved (Phase 4)` : null,
           result._v2Palette ? `🎨 v2 colour palette preserved (Phase 3)` : null,
           ...(report.warnings||[]),
-        ].filter(Boolean).join('\n');
+          ...(failedLines.length ? ['', '🚫 Failed entries (not imported):', ...failedLines] : []),
+        ].filter(s=>s!==null&&s!==undefined).join('\n');
 
-        setImportReport({ details, version: report.version, count: result.expenses.length + result.income.length, skipped: report.skipped });
-        setTimeout(()=>setImportReport(null), 8000);
+        const hasFailed = (report.failedRecords||[]).length > 0;
+        setImportReport({
+          details, version: report.version,
+          count: result.expenses.length + result.income.length,
+          skipped: report.skipped,
+          hasFailed,
+        });
+        setTimeout(()=>setImportReport(null), hasFailed ? 12000 : 8000);
       }catch(err){
         setImportReport({ details:`❌ Import failed: ${err.message}`, error:true });
         setTimeout(()=>setImportReport(null), 5000);
@@ -2938,6 +3666,25 @@ function App(){
     setIncDateFrom('');setIncDateTo('');
     setIncAmtMin('');setIncAmtMax('');
   };
+  // 15.5 bulk select helpers
+  const toggleSelectExp = useCallback(id => {
+    setSelectedExpIds(prev => {
+      const next = Object.assign({}, prev);
+      if (next[id]) delete next[id]; else next[id] = true;
+      return next;
+    });
+  }, []);
+  const selectAllVisible = useCallback(() => {
+    setSelectedExpIds(prev => {
+      const next = Object.assign({}, prev);
+      filteredExp.forEach(e => { next[e.id] = true; });
+      return next;
+    });
+  }, [filteredExp]);
+  const deselectAll = useCallback(() => setSelectedExpIds({}), []);
+  const exitBulkMode = useCallback(() => { setBulkModeExp(false); setSelectedExpIds({}); }, []);
+  const selectedCount = Object.keys(selectedExpIds).length;
+
   // Multi-category toggle (Phase 6-10)
   const toggleExpCategory=cat=>{
     setExpCategories(prev=>prev.includes(cat)?prev.filter(c=>c!==cat):[...prev,cat]);
@@ -3033,7 +3780,7 @@ function App(){
   const rsClass=rs==='live'?'rate-live':rs==='offline'?'rate-offline':rs==='cached'?'rate-cached':'rate-none';
   const rsLabel=rs==='live'?'🟢 Live':rs==='offline'?'🔴 Offline':rs==='cached'?'🔵 Cached '+RM.age(rateData.ts):'⚪ No rates';
 
-  const TABS=[{id:'overview',label:'📊 Overview'},{id:'income',label:'💵 Income'},{id:'trends',label:'📈 Trends'},{id:'insights',label:'💡 Insights'},{id:'budgets',label:'💰 Budgets'},{id:'goals',label:'🎯 Goals'},{id:'exchange',label:'💱 Exchange'}];
+  const TABS=[{id:'overview',label:'📊 Overview'},{id:'income',label:'💵 Income'},{id:'trends',label:'📈 Trends'},{id:'insights',label:'💡 Insights'},{id:'budgets',label:'💰 Budgets'},{id:'goals',label:'🎯 Goals'}];
 
   const hasExpFilters = expSearch || expMonth || expFilters.some(f=>f.value!=='All')
     || expCategories.length || expDateFrom || expDateTo || expAmtMin!=='' || expAmtMax!=='';
@@ -3063,8 +3810,8 @@ function App(){
           </label>
           <button className="btn btn-primary btn-sm" onClick={()=>setShowEF(true)} aria-label="Add new expense">➕ Expense</button>
           <button className="btn btn-income btn-sm" onClick={()=>setShowIF(true)} aria-label="Add new income">💵 Income</button>
-          <button className="btn-icon" onClick={refreshRates} title="Refresh rates" aria-label="Refresh exchange rates" aria-busy={rateFetching}>{rateFetching?<span className="spinner" aria-hidden="true"/>:'🔄'}</button>
-          <button className="btn-icon" onClick={()=>setTab('settings')} title="Settings" aria-label="Open settings">⚙️</button>
+          <button className="btn btn-exchange btn-sm" onClick={()=>setTab('exchange')} aria-label="Open exchange rates">💱 Exchange</button>
+          <button className="btn btn-settings btn-sm" onClick={()=>setTab('settings')} aria-label="Open settings">⚙️ Settings</button>
         </div>
       </div>
 
@@ -3118,14 +3865,18 @@ function App(){
       {/* ── IMPORT REPORT BANNER ── */}
       {importReport&&(
         <div style={{
-          background: importReport.error ? '#fee2e2' : '#f0fdf4',
-          border: `1px solid ${importReport.error ? '#fca5a5' : '#86efac'}`,
+          background: importReport.error ? '#fee2e2' : importReport.hasFailed ? '#fffbeb' : '#f0fdf4',
+          border: `1px solid ${importReport.error ? '#fca5a5' : importReport.hasFailed ? '#fcd34d' : '#86efac'}`,
           borderRadius: 10, padding: '12px 16px', marginBottom: 12,
           display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12,
         }}>
           <div>
-            <div style={{fontWeight:700,fontSize:13,color: importReport.error?'#991b1b':'#15803d',marginBottom:4}}>
-              {importReport.error ? '❌ Import Failed' : `✅ Import Complete — ${importReport.count} added${importReport.skipped ? `, ${importReport.skipped} duplicate${importReport.skipped>1?'s':''} skipped` : ''}`}
+            <div style={{fontWeight:700,fontSize:13,color: importReport.error?'#991b1b':importReport.hasFailed?'#92400e':'#15803d',marginBottom:4}}>
+              {importReport.error
+                ? '❌ Import Failed'
+                : importReport.hasFailed
+                  ? `⚠️ Import Partial — ${importReport.count} added, some records rejected`
+                  : `✅ Import Complete — ${importReport.count} added${importReport.skipped ? `, ${importReport.skipped} duplicate${importReport.skipped>1?'s':''} skipped` : ''}`}
             </div>
             <pre style={{fontSize:11,color:'#374151',margin:0,whiteSpace:'pre-wrap',lineHeight:1.6}}>{importReport.details}</pre>
           </div>
@@ -3173,6 +3924,49 @@ function App(){
             <div className="summary-card" role="status" aria-label={`Showing ${filteredExp.length} of ${expenses.length} expenses`}><label>Showing</label><div className="amount">{filteredExp.length} / {expenses.length}</div></div>
           </div>
 
+          {/* ── 15.6 Month-End Forecast panel ── */}
+          {monthForecast&&!hasExpFilters&&(
+            <div className="forecast-card" role="region" aria-label="Month-end forecast">
+              <div className="forecast-header">
+                <span className="forecast-title">📈 Month-End Forecast</span>
+                <span className="forecast-sub">{monthForecast.dayOfMonth} of {monthForecast.daysInMonth} days elapsed · {monthForecast.daysRemaining}d remaining</span>
+              </div>
+              <div className="forecast-progress-wrap" title={`${monthForecast.pctElapsed}% through month`}>
+                <div className="forecast-progress-track">
+                  <div className="forecast-progress-bar" style={{width:monthForecast.pctElapsed+'%'}}/>
+                </div>
+                <span className="forecast-pct">{monthForecast.pctElapsed}%</span>
+              </div>
+              <div className="forecast-grid">
+                <div className="forecast-stat">
+                  <div className="forecast-stat-label">Spent so far</div>
+                  <div className="forecast-stat-value" style={{color:'#ef4444'}}>{fmtBaseFromINR(monthForecast.spentSoFar)}</div>
+                  <div className="forecast-stat-sub">{fmtBaseFromINR(monthForecast.dailyRate)}/day avg</div>
+                </div>
+                <div className="forecast-stat">
+                  <div className="forecast-stat-label">Projected month-end</div>
+                  <div className="forecast-stat-value" style={{color: monthForecast.prevTotal>0&&monthForecast.projected>monthForecast.prevTotal?'#ef4444':'#f59e0b'}}>
+                    {fmtBaseFromINR(monthForecast.projected)}
+                  </div>
+                  {monthForecast.trend!==null&&(
+                    <div className="forecast-stat-sub" style={{color:monthForecast.trend>0?'#ef4444':'#10b981'}}>
+                      {monthForecast.trend>0?'↑':'↓'} {Math.abs(monthForecast.trend).toFixed(0)}% vs last month
+                    </div>
+                  )}
+                </div>
+                {monthForecast.projectedInc>0&&(
+                  <div className="forecast-stat">
+                    <div className="forecast-stat-label">Projected savings</div>
+                    <div className="forecast-stat-value" style={{color:monthForecast.projectedSavings>=0?'#10b981':'#ef4444'}}>
+                      {monthForecast.projectedSavings>=0?'+':''}{fmtBaseFromINR(monthForecast.projectedSavings)}
+                    </div>
+                    <div className="forecast-stat-sub">of {fmtBaseFromINR(monthForecast.projectedInc)} projected income</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* FILTER BAR — Phase 6 complete */}
           <FilterBar
             search={expSearch}
@@ -3186,7 +3980,7 @@ function App(){
             showMonth={true}
             month={expMonth}
             onMonthChange={setExpMonth}
-            placeholder="🔍 Search description, category, notes, tags, payment..."
+            placeholder="🔍 Search or use amount:>500 category:food date:2026-03 tag:swiggy"
             selectedCategories={expCategories}
             onToggleCategory={toggleExpCategory}
             dateFrom={expDateFrom}    onDateFromChange={setExpDateFrom}
@@ -3194,18 +3988,39 @@ function App(){
             amtMin={expAmtMin}        onAmtMinChange={setExpAmtMin}
             amtMax={expAmtMax}        onAmtMaxChange={setExpAmtMax}
             baseSym={baseSym}         baseCurrCode={baseCurrency}
+            showBulk={filteredExp.length>0}
+            bulkMode={bulkModeExp}
+            onBulkToggle={()=>{ if(bulkModeExp) exitBulkMode(); else setBulkModeExp(true); }}
           />
 
           {/* Result count */}
-          {hasExpFilters && (
+          {hasExpFilters&&(
             <div className="results-info">
-              {filteredExp.length === 0
+              {filteredExp.length===0
                 ? '⚠️ No expenses match your filters'
                 : `Showing ${filteredExp.length} of ${expenses.length} expenses · ${fmtBase(totalExpBase)} total`}
             </div>
           )}
 
-          {filteredExp.length>0&&(
+          {/* 15.5 Bulk action bar */}
+          {bulkModeExp&&(
+            <div className="bulk-action-bar" role="toolbar" aria-label="Bulk actions">
+              <span className="bulk-count">{selectedCount>0?`${selectedCount} selected`:'None selected'}</span>
+              <button className="btn btn-sm" style={{background:'var(--surface2)',color:'var(--text2)',fontSize:12}} onClick={selectAllVisible}>Select all visible ({filteredExp.length})</button>
+              {selectedCount>0&&<button className="btn btn-sm" style={{background:'var(--surface2)',color:'var(--text2)',fontSize:12}} onClick={deselectAll}>Deselect all</button>}
+              {selectedCount>0&&(
+                <button className="btn btn-danger btn-sm" style={{fontSize:12}}
+                  onClick={()=>setConfirmAction({
+                    type:'bulk-delete-exp',
+                    ids: selectedExpIds,
+                    label:`Delete ${selectedCount} Expense${selectedCount>1?'s':''}`,
+                    detail:`Permanently delete ${selectedCount} selected expense${selectedCount>1?'s':''}. This cannot be undone.`
+                  })}>🗑️ Delete {selectedCount}</button>
+              )}
+            </div>
+          )}
+
+          {filteredExp.length>0&&!bulkModeExp&&(
             <div className="chart-container">
               <div className="chart-card"><div className="chart-title">By Category</div><PieChart data={catData} fmt={fmtBaseFromINR}/></div>
               <div className="chart-card"><div className="chart-title">By Payment Method</div><PieChart data={payData} fmt={fmtBaseFromINR}/></div>
@@ -3224,7 +4039,14 @@ function App(){
                 <span>{new Date(date+'T12:00:00').toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'})}</span>
                 <span>{fmtBase(items.reduce((s,e)=>s+toBase(e),0))}</span>
               </div>
-              {items.map(e=><ExpItem key={e.id} item={e} onDelete={id=>setDelTarget({id,type:'expense'})} onEdit={e=>{setEditExpTarget(e);setShowEF(true);}}/>)}
+              {items.map(e=><ExpItem key={e.id} item={e}
+                onDelete={id=>setDelTarget({id,type:'expense'})}
+                onEdit={e=>{setEditExpTarget(e);setShowEF(true);}}
+                toBase={toBase} fmtBase={fmtBase}
+                bulkMode={bulkModeExp}
+                isSelected={!!selectedExpIds[e.id]}
+                onToggleSelect={toggleSelectExp}
+              />)}
             </div>
           ))}
         </main>
@@ -3252,7 +4074,7 @@ function App(){
             showMonth={true}
             month={incMonth}
             onMonthChange={setIncMonth}
-            placeholder="🔍 Search income description, source, notes..."
+            placeholder="🔍 Search or use amount:>500 source:salary date:2026-03"
             dateFrom={incDateFrom}    onDateFromChange={setIncDateFrom}
             dateTo={incDateTo}        onDateToChange={setIncDateTo}
             amtMin={incAmtMin}        onAmtMinChange={setIncAmtMin}
@@ -3289,7 +4111,7 @@ function App(){
                 <span>{new Date(date+'T12:00:00').toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'})}</span>
                 <span style={{color:'#10b981'}}>+{fmtINR(items.reduce((s,i)=>s+toINR(i),0))}</span>
               </div>
-              {items.map(i=><IncItem key={i.id} item={i} onDelete={id=>setDelTarget({id,type:'income'})} onEdit={i=>{setEditIncTarget(i);setShowIF(true);}}/>)}
+              {items.map(i=><IncItem key={i.id} item={i} onDelete={id=>setDelTarget({id,type:'income'})} onEdit={i=>{setEditIncTarget(i);setShowIF(true);}} toBase={toBase} fmtBase={fmtBase}/>)}
             </div>
           ))}
         </>
@@ -3456,6 +4278,74 @@ function App(){
       ══════════════════════════════════════════════════ */}
       {tab==='insights'&&(
         <>
+          {/* ── Subscription Zombies & Growth Detector ── */}
+          {(subZombieData.flagged.length>0||subZombieData.zombies.length>0)&&(
+            <div className="card" style={{borderColor:'#f59e0b',borderWidth:1.5,marginBottom:16}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14,flexWrap:'wrap',gap:8}}>
+                <div style={{fontWeight:700,fontSize:16}}>🧟 Subscriptions at Risk</div>
+                {subZombieData.potentialSavings>0&&(
+                  <div style={{background:'linear-gradient(135deg,#f59e0b,#ef4444)',color:'#fff',borderRadius:20,padding:'4px 14px',fontSize:13,fontWeight:700}}>
+                    💰 Save {fmtBaseFromINR(subZombieData.potentialSavings)}/year
+                  </div>
+                )}
+              </div>
+
+              {subZombieData.flagged.length>0&&(
+                <>
+                  <div style={{fontWeight:600,fontSize:12,color:'var(--text3)',marginBottom:8,textTransform:'uppercase',letterSpacing:'0.06em'}}>
+                    📈 Price Creep Detected
+                  </div>
+                  {subZombieData.flagged.map((f,i)=>(
+                    <div key={i} className="sub-item">
+                      <span style={{fontSize:22,lineHeight:1}}>{f.icon}</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                          <span style={{fontWeight:600,fontSize:14}}>{f.name}</span>
+                          <span className="sub-badge-creep">↑ {(f.creepPct>0?f.creepPct:f.yoyPct).toFixed(0)}% higher</span>
+                        </div>
+                        <div style={{fontSize:12,color:'var(--text3)',marginTop:3}}>
+                          Now {fmtBaseFromINR(f.recentMonthly)}/mo &nbsp;·&nbsp; was {fmtBaseFromINR(f.earlyMonthly)}/mo &nbsp;·&nbsp; excess <strong>{fmtBaseFromINR(f.annualSavings)}/yr</strong>
+                        </div>
+                      </div>
+                      <button className="cancel-btn-sub" onClick={()=>addToast('warn','✂️','Cancel Reminder',`Go to ${f.name} settings and cancel or downgrade to save ${fmtBaseFromINR(f.annualSavings)}/year.`,8000)}>
+                        Cancel
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {subZombieData.flagged.length>0&&subZombieData.zombies.length>0&&(
+                <div style={{height:1,background:'var(--border)',margin:'12px 0'}}/>
+              )}
+
+              {subZombieData.zombies.length>0&&(
+                <>
+                  <div style={{fontWeight:600,fontSize:12,color:'var(--text3)',marginBottom:8,textTransform:'uppercase',letterSpacing:'0.06em'}}>
+                    😴 Zombie Subscriptions (forgotten)
+                  </div>
+                  {subZombieData.zombies.map((z,i)=>(
+                    <div key={i} className="sub-item">
+                      <span style={{fontSize:22,lineHeight:1}}>{z.icon}</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                          <span style={{fontWeight:600,fontSize:14}}>{z.name}</span>
+                          <span className="sub-badge-zombie">😴 {z.days}d since last charge</span>
+                        </div>
+                        <div style={{fontSize:12,color:'var(--text3)',marginTop:3}}>
+                          {fmtBaseFromINR(z.monthly)}/mo template active &nbsp;·&nbsp; last charged {z.lastDate}
+                        </div>
+                      </div>
+                      <button className="cancel-btn-sub" onClick={()=>addToast('warn','🧟','Zombie Alert',`"${z.name}" hasn't been charged in ${z.days} days but is still marked recurring. Cancel it to save ${fmtBaseFromINR(z.annualSavings)}/year.`,8000)}>
+                        Cancel
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+
           {/* ── Insight cards ── */}
           {insights.length===0?(
             <div className="empty-state"><div className="icon">💡</div><h3>Add more data for insights</h3><p>A few entries are needed to detect patterns</p></div>
@@ -3771,7 +4661,7 @@ function App(){
               const done=contributed>=goal.target;
               const level=done?'ok':pct>=75?'warn':pct>=50?'info':'info';
               const barColor=done?'#10b981':pct>=75?'#f59e0b':'#667eea';
-              const daysLeft=goal.targetDate?(Math.ceil((new Date(goal.targetDate)-new Date())/864e5)):null;
+              const daysLeft=goal.targetDate?(Math.ceil((new Date(goal.targetDate+'T12:00:00')-new Date(new Date().toISOString().split('T')[0]+'T12:00:00'))/864e5)):null;
 
               return(
                 <div key={goal.id} className="goal-card" style={{'--goal-accent':barColor}}>
@@ -3870,6 +4760,10 @@ function App(){
       {/* ══════════════════════════════════════════════════
           EXCHANGE TAB
       ══════════════════════════════════════════════════ */}
+
+      {/* ══════════════════════════════════════════════════
+          EXCHANGE TAB
+      ══════════════════════════════════════════════════ */}
       {tab==='exchange'&&(
         <>
           <div className="card">
@@ -3952,7 +4846,7 @@ function App(){
                 <span>All totals, charts, and summaries are shown in this currency. Exchange rates are fetched relative to this base.</span>
               </div>
               <div style={{display:'flex',alignItems:'center',gap:10}}>
-                <span style={{fontSize:20}}>{baseCurrInfo.flag||''}</span>
+                <span style={{fontSize:20}}>{(CM[baseCurrency]||CM['INR']).flag||''}</span>
                 <select
                   value={baseCurrency}
                   onChange={e=>{
@@ -4085,6 +4979,37 @@ function App(){
                 <span>Deletes everything — all data, rates cache, and settings. Fresh start.</span>
               </div>
               <button className="settings-btn settings-btn-danger-solid" onClick={()=>setConfirmAction({type:'factory-reset',label:'Factory Reset',detail:`This will delete ALL data: ${expenses.length} expenses, ${income.length} income records, exchange rate cache, and all settings including dark mode. The app will return to its initial state.`})}>Factory Reset</button>
+            </div>
+          </div>
+
+          {/* ── About / Version ── */}
+          <div style={{
+            marginTop:16,borderRadius:12,border:'1px solid var(--border)',
+            background:'var(--surface)',padding:'16px 20px',
+            display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12,
+          }}>
+            <div style={{display:'flex',alignItems:'center',gap:14}}>
+              <div style={{
+                width:40,height:40,borderRadius:10,flexShrink:0,
+                background:'linear-gradient(135deg,#667eea,#764ba2)',
+                display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,
+              }}>💸</div>
+              <div>
+                <div style={{fontWeight:700,fontSize:14,color:'var(--text)'}}>
+                  Expense Tracker v5
+                </div>
+                <div style={{fontSize:12,color:'var(--text3)',marginTop:2}}>
+                  Phase 15 · Last updated <strong style={{color:'var(--text2)'}}>2026-03-15</strong>
+                </div>
+              </div>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4}}>
+              <span style={{
+                fontSize:11,fontWeight:700,letterSpacing:.5,
+                background:'linear-gradient(135deg,#667eea,#764ba2)',
+                WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',
+              }}>v5.15.0</span>
+              <span style={{fontSize:11,color:'var(--text3)'}}>Single-file · No build step · CDN deps</span>
             </div>
           </div>
         </>
