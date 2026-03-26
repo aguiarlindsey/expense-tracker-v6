@@ -1,6 +1,7 @@
 import { supabase } from './utils/supabase'
 import { useAuth } from './hooks/useAuth'
 import Auth from './components/Auth'
+import Tracker from './components/Tracker'
 
 export default function App() {
   const { session, loading } = useAuth()
@@ -31,9 +32,7 @@ export default function App() {
         </div>
       </header>
       <main className="app-main">
-        <p style={{ textAlign: 'center', opacity: 0.5, marginTop: '4rem' }}>
-          Phase 1 complete — expense UI coming in Phase 2.
-        </p>
+        <Tracker session={session} />
       </main>
     </div>
   )
