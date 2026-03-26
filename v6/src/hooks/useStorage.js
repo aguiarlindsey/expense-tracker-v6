@@ -209,11 +209,88 @@ export function useStorage(userId) {
     if (err) setError(err.message)
   }, [userId])
 
+  // ── Goals ─────────────────────────────────────────────
+  const [goals,         setGoals]         = useState([])
+  const [contributions, setContributions] = useState([]) // all contributions flat
+
+  useEffect(() => {
+    if (!userId) return
+    Promise.all([
+      supabase.from('goals').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+      supabase.from('goal_contributions').select('*').eq('user_id', userId).order('date', { ascending: false }),
+    ]).then(([gRes, cRes]) => {
+      if (gRes.error) setError(gRes.error.message)
+      if (cRes.error) setError(cRes.error.message)
+      setGoals((gRes.data || []).map(g => ({
+        id:         g.id,
+        name:       g.name,
+        target:     parseFloat(g.target),
+        targetDate: g.target_date || '',
+        icon:       g.icon || '🎯',
+        note:       g.note || '',
+        createdAt:  g.created_at || '',
+      })))
+      setContributions((cRes.data || []).map(c => ({
+        id:     c.id,
+        goalId: c.goal_id,
+        date:   c.date,
+        amount: parseFloat(c.amount),
+        note:   c.note || '',
+      })))
+    })
+  }, [userId])
+
+  const addGoal = useCallback(async (goal) => {
+    const { data, error: err } = await supabase.from('goals').insert({
+      id:          goal.id,
+      user_id:     userId,
+      name:        goal.name,
+      target:      goal.target,
+      target_date: goal.targetDate || null,
+      icon:        goal.icon || '🎯',
+      note:        goal.note || null,
+    }).select().single()
+    if (err) { setError(err.message); return }
+    setGoals(prev => [{
+      id: data.id, name: data.name, target: parseFloat(data.target),
+      targetDate: data.target_date || '', icon: data.icon || '🎯',
+      note: data.note || '', createdAt: data.created_at || '',
+    }, ...prev])
+  }, [userId])
+
+  const deleteGoal = useCallback(async (id) => {
+    const { error: err } = await supabase.from('goals').delete().eq('id', id)
+    if (err) { setError(err.message); return }
+    setGoals(prev => prev.filter(g => g.id !== id))
+    setContributions(prev => prev.filter(c => c.goalId !== id))
+  }, [])
+
+  const addContribution = useCallback(async (goalId, contrib) => {
+    const { data, error: err } = await supabase.from('goal_contributions').insert({
+      id:      contrib.id,
+      goal_id: goalId,
+      user_id: userId,
+      date:    contrib.date,
+      amount:  contrib.amount,
+      note:    contrib.note || null,
+    }).select().single()
+    if (err) { setError(err.message); return }
+    setContributions(prev => [{ id: data.id, goalId: data.goal_id, date: data.date, amount: parseFloat(data.amount), note: data.note || '' }, ...prev])
+  }, [userId])
+
+  const deleteContribution = useCallback(async (contribId) => {
+    const { error: err } = await supabase.from('goal_contributions').delete().eq('id', contribId)
+    if (err) { setError(err.message); return }
+    setContributions(prev => prev.filter(c => c.id !== contribId))
+  }, [])
+
   return {
     expenses, income, budgets,
+    goals, contributions,
     loading, error,
     addExpense, editExpense, deleteExpense, deleteManyExpenses,
     addIncome,  editIncome,  deleteIncome,
     saveBudgets,
+    addGoal, deleteGoal, addContribution, deleteContribution,
   }
 }
