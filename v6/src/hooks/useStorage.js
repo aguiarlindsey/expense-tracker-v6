@@ -284,6 +284,65 @@ export function useStorage(userId) {
     setContributions(prev => prev.filter(c => c.id !== contribId))
   }, [])
 
+  // ── Bulk import ──────────────────────────────────────
+  const bulkAddExpenses = useCallback(async (exps) => {
+    if (!exps.length) return { added: 0, errors: 0 }
+    const rows = exps.map(e => expenseToDb(e, userId))
+    const { data, error: err } = await supabase.from('expenses').insert(rows).select()
+    if (err) { setError(err.message); return { added: 0, errors: exps.length } }
+    setExpenses(prev => [...(data || []).map(expenseFromDb), ...prev])
+    return { added: (data || []).length, errors: 0 }
+  }, [userId])
+
+  const bulkAddIncome = useCallback(async (incs) => {
+    if (!incs.length) return { added: 0, errors: 0 }
+    const rows = incs.map(i => incomeToDb(i, userId))
+    const { data, error: err } = await supabase.from('income').insert(rows).select()
+    if (err) { setError(err.message); return { added: 0, errors: incs.length } }
+    setIncome(prev => [...(data || []).map(incomeFromDb), ...prev])
+    return { added: (data || []).length, errors: 0 }
+  }, [userId])
+
+  // ── Clear / danger zone ──────────────────────────────
+  const clearExpenses = useCallback(async () => {
+    const { error: err } = await supabase.from('expenses').delete().eq('user_id', userId)
+    if (err) { setError(err.message); return }
+    setExpenses([])
+  }, [userId])
+
+  const clearIncome = useCallback(async () => {
+    const { error: err } = await supabase.from('income').delete().eq('user_id', userId)
+    if (err) { setError(err.message); return }
+    setIncome([])
+  }, [userId])
+
+  const clearAll = useCallback(async () => {
+    await Promise.all([
+      supabase.from('expenses').delete().eq('user_id', userId),
+      supabase.from('income').delete().eq('user_id', userId),
+    ])
+    setExpenses([])
+    setIncome([])
+  }, [userId])
+
+  const factoryReset = useCallback(async () => {
+    await Promise.all([
+      supabase.from('expenses').delete().eq('user_id', userId),
+      supabase.from('income').delete().eq('user_id', userId),
+      supabase.from('budgets').delete().eq('user_id', userId),
+      supabase.from('goals').delete().eq('user_id', userId),
+      supabase.from('goal_contributions').delete().eq('user_id', userId),
+    ])
+    setExpenses([])
+    setIncome([])
+    setBudgets({ daily: 0, weekly: 0, monthly: 0, categories: {} })
+    setGoals([])
+    setContributions([])
+    try {
+      ['et_v6_rates', 'et_v6_dark', 'et_v6_cb', 'et_v6_base'].forEach(k => localStorage.removeItem(k))
+    } catch {}
+  }, [userId])
+
   return {
     expenses, income, budgets,
     goals, contributions,
@@ -292,5 +351,7 @@ export function useStorage(userId) {
     addIncome,  editIncome,  deleteIncome,
     saveBudgets,
     addGoal, deleteGoal, addContribution, deleteContribution,
+    bulkAddExpenses, bulkAddIncome,
+    clearExpenses, clearIncome, clearAll, factoryReset,
   }
 }
