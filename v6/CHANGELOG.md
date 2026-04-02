@@ -1,5 +1,65 @@
 # Expense Tracker V6 Changelog
 
+---
+
+## Hours Log
+
+> All times are estimates. Sessions tracked from 2026-04-02 onward are logged precisely at session end.
+> Sessions 1–17 are retrospective estimates based on scope and complexity.
+
+| Session | Date | Description | Est. Hours |
+|---------|------|-------------|------------|
+| 1 | ~2026-02 | v5 Phase 1–2: Foundation, storage, migration adapters | 3.0 |
+| 2 | ~2026-02 | v5 Dedup engine (djb2, fingerprint, makeDedupContext) | 2.5 |
+| 3 | ~2026-02 | v5 Settings tab, CSV export, import hub, danger zone | 2.5 |
+| 4 | ~2026-02 | v5 Phase 3: Recurring, split expense, receipt ref, 50-colour palette | 3.0 |
+| 5 | ~2026-02 | v5 Phase 4–5: Heatmap, BarChart, 259-colour palette, Insights | 3.0 |
+| 6 | ~2026-02 | v5 Phase 6: Advanced filters, date/amount range, multi-category chips | 2.5 |
+| 7 | ~2026-02 | v5 Phase 7: Budget system (daily/weekly/monthly/per-cat), toast alerts | 3.0 |
+| 8 | ~2026-02 | v5 Phase 8–11: Goals tab, contributions, category allocation split | 3.0 |
+| 9 | ~2026-03 | v5 Phase 13: MoM/YoY comparison tables, 6 new insight cards | 2.5 |
+| 10 | ~2026-03 | v5 Phase 14: Recurring reminders, colorblind mode, ARIA, perf | 3.0 |
+| 11 | ~2026-03 | v5 Local base currency, useCurrency hook, full display refactor | 3.0 |
+| 12 | 2026-03-14 | v5 Gamification: streaks, confetti, safe-to-spend, no-spend weekend | 2.5 |
+| 13 | 2026-03-15 | v6 Baseline: Supabase planning, schema design, V6 roadmap | 1.5 |
+| 14 | 2026-03-26 | v6 Phase 1: Vite scaffold, Auth gate, supabase.js, useAuth | 2.0 |
+| 15 | 2026-03-27 | v6 Phase 2: DB schema, RLS, useStorage CRUD, core 2-tab UI | 3.0 |
+| 16 | 2026-03-27 | v6 Phase 3 initial: 6-tab UI, goals, dark/colorblind, toasts, heatmap | 3.5 |
+| 17 | 2026-03-31 | v6 Phase 3 parity: 9 tabs, exchange, settings, export/import, forecast, subs | 4.0 |
+| 18 | 2026-04-02 | v6 Phase 3 close: audit, heatmap fixes, bug fixes (5 items), hours log | 2.0 |
+| 19 | 2026-04-02 | v6 Phase 4: GitHub + Vercel deploy, TDZ fixes, Chrome Auto Dark Mode fix, PWA | 3.5 |
+| **Total** | | | **~54.0 h** |
+
+---
+
+## [v6.3.0] — Phase 4: Deployment + PWA
+_2026-04-02_
+
+**GitHub → Vercel pipeline live.** App deployed at `https://expense-tracker-v6.vercel.app`. Supabase auth redirect URLs configured.
+
+- Created GitHub repo `aguiarlindsey/expense-tracker-v6`, pushed v6 subfolder as root via `git subtree`
+- Vercel project configured: Root Directory `v6`, env vars `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`
+- Fixed Vite 8 / Rolldown TDZ crash — downgraded to Vite 6.4.1 + @vitejs/plugin-react@4.5.0 (Rolldown is still experimental; Rollup is stable)
+- Fixed Rollup TDZ error (`Cannot access 'allMonthlyExp' before initialization`) — moved `allMonthlyExp` / `allMonthlyInc` useMemos earlier in `Tracker.jsx` to before the `insights` useMemo that captures them
+- Added `ErrorBoundary` class component to `main.jsx` — surfaces runtime crashes that previously showed as a blank black page
+- Fixed Chrome Auto Dark Mode — added `color-scheme: light` to `:root` and `color-scheme: dark` to `.dark {}` in `index.css`; without this Chrome applies its own dark filter when the OS is in dark mode, mangling CSS custom property colors to white
+- Configured Supabase auth redirect URLs: Site URL `https://expense-tracker-v6.vercel.app`, additional `http://localhost:5173`
+- PWA setup: installed `vite-plugin-pwa` v1.2.0, configured `manifest.webmanifest` (standalone display, theme `#863bff`), added `pwa-192.svg` + `pwa-512.svg` brand icons, Workbox service worker with autoUpdate + precache
+
+---
+
+## [v6.2.0] — Phase 3 Complete
+_2026-04-02_
+
+**Tab layout (final):** 9 tabs — Overview · Income · Trends · Budgets · Goals · Insights · Recurring · Exchange · Settings.
+Heatmap lives inside Trends; Category Split lives inside Insights. This is the canonical V6 layout.
+
+- `src/components/Tracker.jsx` — Added 🔄 Recurring tab (9th tab): lists all recurring expenses + income with next-due-date badges and overdue warnings; keyboard shortcut `7` (Exchange→`8`, Settings→`9`)
+- `src/styles/index.css` — Removed `@media (prefers-color-scheme: dark)` (was overriding toggle); added `--color-exp` / `--color-inc` CSS vars to `:root`; `.colorblind` now overrides both vars (blue/orange); `.colorblind` overrides added for budget bars, goal bars, toasts, delta indicators; added `.rec-section`, `.rec-item`, `.rec-period-badge` and related Recurring tab styles
+- `src/components/Tracker.jsx` — Dark mode: initialiser now falls back to `window.matchMedia` on first visit; toggle is now the sole controller. Colorblind: all 20+ hardcoded `#ef4444`/`#10b981` inline styles replaced with `var(--color-exp)`/`var(--color-inc)` so `.colorblind` overrides can reach them
+
+---
+
 ## Phase 3 — Integrity Patch (Form Fields + Analytics Charts)
 _2026-03-31_
 
