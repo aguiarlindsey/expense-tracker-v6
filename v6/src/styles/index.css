@@ -1,6 +1,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
+  color-scheme: light;
   --bg: #f5f5f5;
   --surface: #ffffff;
   --text: #1a1a1a;
@@ -10,16 +11,8 @@
   --primary-hover: #1d4ed8;
   --radius: 12px;
   --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f0f0f;
-    --surface: #1a1a1a;
-    --text: #f0f0f0;
-    --text-muted: #999;
-    --border: #2a2a2a;
-  }
+  --color-exp: #ef4444;
+  --color-inc: #10b981;
 }
 
 body {
@@ -283,6 +276,7 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 
 /* ─── Dark mode ───────────────────────────────────────── */
 .dark {
+  color-scheme: dark;
   --bg: #0f0f0f;
   --surface: #1a1a1a;
   --text: #f0f0f0;
@@ -294,13 +288,16 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 
 /* ─── Colorblind mode ─────────────────────────────────── */
 .colorblind {
-  --cb-exp: #0071e3;
-  --cb-inc: #e07b00;
+  --color-exp: #0071e3;
+  --color-inc: #e07b00;
 }
-.colorblind .item-amount.exp { color: var(--cb-exp); }
-.colorblind .item-amount.inc { color: var(--cb-inc); }
-.colorblind .summary-amount.exp { color: var(--cb-exp); }
-.colorblind .summary-amount.inc { color: var(--cb-inc); }
+.colorblind .delta-up   { color: var(--color-exp) !important; }
+.colorblind .delta-dn   { color: var(--color-inc) !important; }
+.colorblind .bbar-fill-ok     { background: var(--color-inc) !important; }
+.colorblind .bbar-fill-danger { background: var(--color-exp) !important; }
+.colorblind .goal-bar-done    { background: var(--color-inc) !important; }
+.colorblind .toast-success    { border-left-color: var(--color-inc) !important; }
+.colorblind .toast-danger     { border-left-color: var(--color-exp) !important; }
 
 /* ─── Toasts ──────────────────────────────────────────── */
 .toast-stack {
@@ -497,9 +494,16 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 }
 .heatmap-btn:hover { border-color: var(--primary); color: var(--primary); }
 .heatmap-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-.heatmap-grid { display: flex; flex-direction: column; gap: 2px; }
-.heatmap-dow-row { display: flex; gap: 2px; align-items: center; }
-.heatmap-dow { font-size: 0.68rem; color: var(--text-muted); width: 20px; text-align: right; padding-right: 4px; flex-shrink: 0; }
+.heatmap-grid {
+  display: grid;
+  grid-template-rows: repeat(7, 14px);
+  grid-template-columns: 18px;
+  grid-auto-flow: column;
+  grid-auto-columns: 14px;
+  gap: 2px;
+  overflow-x: auto;
+}
+.heatmap-dow { font-size: 0.65rem; color: var(--text-muted); text-align: center; line-height: 14px; }
 .heatmap-cell {
   width: 14px; height: 14px;
   border-radius: 2px;
@@ -744,6 +748,20 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 .sub-table th { text-align: left; color: var(--text-muted); font-weight: 500; padding: 4px 8px; border-bottom: 1px solid var(--border); }
 .sub-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
 .sub-table tr:last-child td { border-bottom: none; }
+
+/* ─── Recurring tab ───────────────────────────────────── */
+.rec-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.rec-section-title { padding: 0.75rem 1rem; font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); border-bottom: 1px solid var(--border); background: var(--bg); }
+.rec-item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); }
+.rec-item:last-of-type { border-bottom: none; }
+.rec-item-left { flex: 1; min-width: 0; }
+.rec-item-right { text-align: right; flex-shrink: 0; }
+.rec-desc { font-weight: 500; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rec-meta { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.rec-period-badge { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-size: 0.72rem; font-weight: 600; text-transform: capitalize; }
+.rec-amount { font-size: 0.92rem; font-weight: 600; }
+.rec-due { font-size: 0.75rem; margin-top: 2px; }
+.rec-total { padding: 0.6rem 1rem; font-size: 0.82rem; color: var(--text-muted); border-top: 1px solid var(--border); background: var(--bg); }
 
 @media (max-width: 600px) {
   .toast-stack { right: 0.75rem; bottom: 0.75rem; }

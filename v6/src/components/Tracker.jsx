@@ -1579,7 +1579,7 @@ export default function Tracker({ session }) {
           <span className="tracker-stats">{expenses.length} expenses · {income.length} income</span>
         </div>
         <div className="tracker-header-right">
-          <button className="btn-ghost btn-sm" title="D" onClick={() => { console.log('dark toggle clicked, current dark=', dark); setDark(m => !m); console.log('setDark called'); }}>{dark ? '🌙' : '☀️'}</button>
+          <button className="btn-ghost btn-sm" title="D" onClick={() => setDark(m => !m)}>{dark ? '🌙' : '☀️'}</button>
           <button className="btn-ghost btn-sm" title="Colorblind mode" onClick={() => setColorblind(m => !m)} style={{ opacity: colorblind ? 1 : 0.5 }}>👁️</button>
           <button className="btn-primary btn-sm" onClick={() => setShowEF(true)} title="N">➕ Expense</button>
           <button className="btn-income  btn-sm" onClick={() => setShowIF(true)} title="I">💵 Income</button>
