@@ -32,8 +32,24 @@
 
 ---
 
-## [v6.3.0] — Phase 4: Deployment + PWA
+## [v6.3.0] — Phase 4: Deployment + PWA (Launch)
 _2026-04-02_
+
+**Production URL:** `https://expense-tracker-v6.vercel.app`
+
+Every request hits Vercel's CDN edge → serves the Vite-built static bundle → React boots → `useAuth` checks Supabase session → if authed, `useStorage` fetches live data from Supabase Postgres via RLS-enforced queries. No server-side rendering. Auth is magic-link email via Supabase Auth; session persisted in `localStorage` by the Supabase JS client.
+
+**Final audit results (all pass):**
+- ✅ All source files committed to GitHub (`aguiarlindsey/expense-tracker-v6`)
+- ✅ `.env` blocked by `.gitignore` — confirmed not tracked; secrets live only in Vercel environment variables
+- ✅ `supabase.js` uses `import.meta.env.VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` — no hardcoded keys
+- ✅ `manifest.webmanifest` injected into built `index.html` by vite-plugin-pwa
+- ✅ `registerSW.js` service worker registration injected at build time
+- ✅ `theme_color: #863bff` set in PWA manifest
+- ✅ `<meta name="theme-color" content="#863bff">` added to `index.html` for status bar before manifest parses
+- ✅ Page title corrected from "v6" → "Expense Tracker"
+- ✅ `useStorage` hook is pure Supabase — no hardcoded test/seed data anywhere in src/
+- ✅ Supabase redirect URLs: Site URL `https://expense-tracker-v6.vercel.app`, dev `http://localhost:5173`
 
 **GitHub → Vercel pipeline live.** App deployed at `https://expense-tracker-v6.vercel.app`. Supabase auth redirect URLs configured.
 
