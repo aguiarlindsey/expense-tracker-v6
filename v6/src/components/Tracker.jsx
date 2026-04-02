@@ -143,39 +143,92 @@ function BarChart({ data }) {
 
 function HeatmapCalendar({ expenses, income }) {
   const [mode, setMode] = useState('amount')
-  const today = new Date(); today.setHours(0, 0, 0, 0)
+
   const dayData = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0]
     const days = {}
     for (let i = 89; i >= 0; i--) {
-      const d = new Date(today); d.setDate(d.getDate() - i)
+      const d = new Date(todayStr + 'T12:00:00Z')
+      d.setUTCDate(d.getUTCDate() - i)
       const key = d.toISOString().split('T')[0]
-      days[key] = { date: key, amount: 0, count: 0, income: 0, topColor: null, _topVal: 0 }
+      days[key] = { date: key, amount: 0, count: 0, income: 0, incomeCount: 0, topColor: null, topCat: null, topDesc: null, _topVal: 0 }
     }
     expenses.forEach(e => {
       if (!days[e.date]) return
-      const v = toINR(e); days[e.date].amount += v; days[e.date].count++
-      if (v > days[e.date]._topVal) { days[e.date]._topVal = v; days[e.date].topColor = e.customColor || CATS[e.category]?.color || '#667eea' }
+      const v = toINR(e)
+      days[e.date].amount += v
+      days[e.date].count++
+      if (v > days[e.date]._topVal) {
+        days[e.date]._topVal = v
+        days[e.date].topColor = (e.customColor && e.customColor.startsWith('#')) ? e.customColor : (CATS[e.category]?.color || '#667eea')
+        days[e.date].topCat  = e.category || 'Other'
+        days[e.date].topDesc = e.description || ''
+      }
     })
-    income.forEach(i => { if (days[i.date]) days[i.date].income += toINR(i) })
+    income.forEach(inc => {
+      if (!days[inc.date]) return
+      days[inc.date].income += toINR(inc)
+      days[inc.date].incomeCount++
+    })
     return Object.values(days)
   }, [expenses, income])
 
-  const maxA = Math.max(...dayData.map(d => d.amount), 1)
-  const maxC = Math.max(...dayData.map(d => d.count), 1)
-  const maxI = Math.max(...dayData.map(d => d.income), 1)
+  // Recompute every time mode OR dayData changes — explicit deps prevent stale colours
+  const { cellMap, tipMap } = useMemo(() => {
+    const maxA = Math.max(...dayData.map(d => d.amount), 1)
+    const maxC = Math.max(...dayData.map(d => d.count),  1)
+    const maxI = Math.max(...dayData.map(d => d.income), 1)
 
-  const getCellBg = d => {
-    const t = mode === 'amount' ? d.amount / maxA : mode === 'count' ? d.count / maxC : d.income / maxI
-    if (t === 0) return 'var(--border)'
-    const a = (0.15 + t * 0.85).toFixed(2)
-    if (mode === 'amount') {
-      const base = d.topColor || '#667eea'
-      const r = parseInt(base.slice(1, 3), 16), g = parseInt(base.slice(3, 5), 16), b = parseInt(base.slice(5, 7), 16)
-      return `rgba(${r},${g},${b},${a})`
-    }
-    if (mode === 'count') return `rgba(99,102,241,${a})`
-    return `rgba(16,185,129,${a})`
-  }
+    const cellMap = new Map()
+    const tipMap  = new Map()
+
+    dayData.forEach(d => {
+      // ── background colour ──────────────────────────────
+      let bg
+      if (mode === 'amount') {
+        const t = d.amount / maxA
+        if (t > 0) {
+          const a    = (0.15 + t * 0.85).toFixed(2)
+          const base = d.topColor || '#667eea'
+          const r    = parseInt(base.slice(1, 3), 16)
+          const g    = parseInt(base.slice(3, 5), 16)
+          const b    = parseInt(base.slice(5, 7), 16)
+          bg = isNaN(r) ? `rgba(102,126,234,${a})` : `rgba(${r},${g},${b},${a})`
+        }
+      } else if (mode === 'count') {
+        const t = d.count / maxC
+        if (t > 0) bg = `rgba(99,102,241,${(0.15 + t * 0.85).toFixed(2)})`
+      } else {
+        const t = d.income / maxI
+        if (t > 0) bg = `rgba(16,185,129,${(0.15 + t * 0.85).toFixed(2)})`
+      }
+      cellMap.set(d.date, bg) // undefined = no activity → CSS default
+
+      // ── tooltip ────────────────────────────────────────
+      let tip = d.date
+      if (mode === 'income') {
+        tip += d.income > 0
+          ? `\n+${fmtINR(d.income)} income · ${d.incomeCount} entr${d.incomeCount > 1 ? 'ies' : 'y'}`
+          : '\nNo income recorded'
+      } else if (mode === 'count') {
+        tip += d.count > 0
+          ? `\n${d.count} txn${d.count > 1 ? 's' : ''} · ${fmtINR(d.amount)} total`
+          : '\nNo expenses'
+      } else {
+        if (d.count > 0) {
+          const icon = CATS[d.topCat]?.icon || ''
+          tip += `\n${icon} ${d.topCat}: ${fmtINR(d._topVal)}`
+          if (d.topDesc) tip += `\n"${d.topDesc}"`
+          tip += `\n${d.count} txn${d.count > 1 ? 's' : ''} · Total ${fmtINR(d.amount)}`
+        } else {
+          tip += '\nNo expenses'
+        }
+      }
+      tipMap.set(d.date, tip)
+    })
+
+    return { cellMap, tipMap }
+  }, [dayData, mode])
 
   const startDow = new Date(dayData[0].date + 'T12:00:00').getDay()
   const padded = [...Array(startDow).fill(null), ...dayData]
@@ -196,8 +249,8 @@ function HeatmapCalendar({ expenses, income }) {
           week.map((d, di) => (
             <div key={`${wi}-${di}`}
               className="heatmap-cell"
-              style={{ background: d ? getCellBg(d) : 'transparent' }}
-              title={d ? `${d.date}: ${mode === 'amount' ? fmtINR(d.amount) + ' spent' : mode === 'count' ? d.count + ' txns' : fmtINR(d.income) + ' income'}` : ''}
+              style={{ background: d ? cellMap.get(d.date) : 'transparent', border: d ? undefined : 'none' }}
+              title={d ? tipMap.get(d.date) : ''}
             />
           ))
         )}
@@ -227,7 +280,7 @@ const BudgetBar = memo(function BudgetBar({ icon, label, spent, budget }) {
   )
   const pct = Math.min((spent / budget) * 100, 100)
   const over = spent > budget
-  const level = over || pct >= 100 ? 'danger' : pct >= 80 ? 'danger' : pct >= 50 ? 'warn' : 'ok'
+  const level = over || pct >= 100 ? 'danger' : pct >= 80 ? 'warn' : pct >= 50 ? 'warn' : 'ok'
   return (
     <div className="bbar-wrap">
       <div className="bbar-header">
@@ -775,7 +828,7 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
 
 const IncItem = memo(function IncItem({ item, onDelete, onEdit }) {
   return (
-    <div className="item" style={{ borderLeft: '3px solid #10b981' }}>
+    <div className="item" style={{ borderLeft: '3px solid var(--color-inc)' }}>
       <div className="item-icon">💵</div>
       <div className="item-body">
         <div className="item-desc">{item.description}</div>
@@ -787,7 +840,7 @@ const IncItem = memo(function IncItem({ item, onDelete, onEdit }) {
         {item.notes && <div className="item-notes">{item.notes}</div>}
       </div>
       <div className="item-right">
-        <div className="item-amount" style={{ color: '#10b981' }}>+{fmtINR(toINR(item))}</div>
+        <div className="item-amount" style={{ color: 'var(--color-inc)' }}>+{fmtINR(toINR(item))}</div>
         {item.currency !== 'INR' && <div className="item-foreign">{CM[item.currency]?.symbol || item.currency}{item.amount}</div>}
         <div className="item-actions">
           <button className="item-btn" onClick={() => onEdit(item)}>✏️</button>
@@ -830,7 +883,7 @@ export default function Tracker({ session }) {
 
   // ── UI state ─────────────────────────────────────────
   const [tab, setTab]                     = useState('overview')
-  const [dark, setDark]                   = useState(() => localStorage.getItem('et_v6_dark') === '1')
+  const [dark, setDark]                   = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s !== null ? s === '1' : window.matchMedia('(prefers-color-scheme: dark)').matches })
   const [colorblind, setColorblind]       = useState(() => localStorage.getItem('et_v6_cb') === '1')
   const [showEF, setShowEF]               = useState(false)
   const [showIF, setShowIF]               = useState(false)
@@ -1059,7 +1112,7 @@ export default function Tracker({ session }) {
 
   // ── Keyboard shortcuts ───────────────────────────────
   useEffect(() => {
-    const TABS = ['overview', 'income', 'trends', 'budgets', 'goals', 'insights', 'exchange', 'settings']
+    const TABS = ['overview', 'income', 'trends', 'budgets', 'goals', 'insights', 'recurring', 'exchange', 'settings']
     const h = e => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
       const n = parseInt(e.key); if (n >= 1 && n <= TABS.length) setTab(TABS[n - 1])
@@ -1110,6 +1163,18 @@ export default function Tracker({ session }) {
   const allExpINR  = useMemo(() => expenses.reduce((s, e) => s + toINR(e), 0), [expenses])
   const allIncINR  = useMemo(() => income.reduce((s, i)   => s + toINR(i), 0), [income])
   const netSavings = allIncINR - allExpINR
+
+  // ── Month comparison table data (declared early to avoid Rollup TDZ) ──
+  const allMonthlyExp = useMemo(() => {
+    const m = {}
+    expenses.forEach(e => { const k = (e.date || '').substring(0, 7); if (k) m[k] = (m[k] || 0) + toINR(e) })
+    return Object.entries(m).sort((a, b) => a[0].localeCompare(b[0])).map(([k, v]) => ({ label: k.substring(5), fullLabel: k, value: v }))
+  }, [expenses])
+  const allMonthlyInc = useMemo(() => {
+    const m = {}
+    income.forEach(i => { const k = (i.date || '').substring(0, 7); if (k) m[k] = (m[k] || 0) + toINR(i) })
+    return m
+  }, [income])
 
   const todayStr   = new Date().toISOString().split('T')[0]
   const monthStr   = todayStr.substring(0, 7)
@@ -1239,6 +1304,7 @@ export default function Tracker({ session }) {
     filteredExp.filter(e => e.tags && e.tags.length).forEach(e => { e.tags.forEach(tag => { t[tag] = (t[tag] || 0) + toINR(e) }) })
     return Object.entries(t).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value)
   }, [filteredExp])
+
 
   // ── Insights ─────────────────────────────────────────
   const insights = useMemo(() => {
@@ -1417,26 +1483,13 @@ export default function Tracker({ session }) {
   const usedExpCurrs   = useMemo(() => [...new Set(expenses.map(e => e.currency || 'INR'))], [expenses])
   const usedIncSources = useMemo(() => [...new Set(income.map(i => i.source || 'Other'))], [income])
 
-  // ── Month comparison table data ───────────────────────
-  const allMonthlyExp = useMemo(() => {
-    const m = {}
-    expenses.forEach(e => { const k = (e.date || '').substring(0, 7); if (k) m[k] = (m[k] || 0) + toINR(e) })
-    return Object.entries(m).sort((a, b) => a[0].localeCompare(b[0])).map(([k, v]) => ({ label: k.substring(5), fullLabel: k, value: v }))
-  }, [expenses])
-
-  const allMonthlyInc = useMemo(() => {
-    const m = {}
-    income.forEach(i => { const k = (i.date || '').substring(0, 7); if (k) m[k] = (m[k] || 0) + toINR(i) })
-    return m
-  }, [income])
-
   // ── Safe-to-Spend computed ────────────────────────────
   const currentMonthInc   = useMemo(() => income.filter(i => (i.date || '').startsWith(monthStr)).reduce((s, i) => s + toINR(i), 0), [income, monthStr])
   const currentMonthFixed = useMemo(() => expenses.filter(e => (e.date || '').startsWith(monthStr) && e.expenseType === 'fixed').reduce((s, e) => s + toINR(e), 0), [expenses, monthStr])
   const { dailyAllowance, daysRemaining } = useMemo(() => calculateSafeToSpend(currentMonthInc, currentMonthFixed, savingsGoal, todayStr), [currentMonthInc, currentMonthFixed, savingsGoal, todayStr])
   const stsRatio = dailyAllowance > 0 ? spentToday / dailyAllowance : 0
   const stsStatus = stsRatio >= 1 ? 'danger' : stsRatio >= 0.8 ? 'warn' : 'ok'
-  const stsColor  = stsStatus === 'danger' ? '#ef4444' : stsStatus === 'warn' ? '#f59e0b' : '#10b981'
+  const stsColor  = stsStatus === 'danger' ? 'var(--color-exp)' : stsStatus === 'warn' ? '#f59e0b' : 'var(--color-inc)'
 
   // ── Month-End Forecast ────────────────────────────────
   const monthForecast = useMemo(() => {
@@ -1497,14 +1550,15 @@ export default function Tracker({ session }) {
   if (loading) return <div className="tracker-loading"><div className="spinner" /><p>Loading your data…</p></div>
 
   const TABS = [
-    { id: 'overview',  label: '📊 Overview' },
-    { id: 'income',    label: '💵 Income' },
-    { id: 'trends',    label: '📈 Trends' },
-    { id: 'budgets',   label: '💰 Budgets' },
-    { id: 'goals',     label: '🎯 Goals' },
-    { id: 'insights',  label: '💡 Insights' },
-    { id: 'exchange',  label: '💱 Exchange' },
-    { id: 'settings',  label: '⚙️ Settings' },
+    { id: 'overview',   label: '📊 Overview' },
+    { id: 'income',     label: '💵 Income' },
+    { id: 'trends',     label: '📈 Trends' },
+    { id: 'budgets',    label: '💰 Budgets' },
+    { id: 'goals',      label: '🎯 Goals' },
+    { id: 'insights',   label: '💡 Insights' },
+    { id: 'recurring',  label: '🔄 Recurring' },
+    { id: 'exchange',   label: '💱 Exchange' },
+    { id: 'settings',   label: '⚙️ Settings' },
   ]
 
   // ── Currency grouping for Exchange tab ────────────────
@@ -1545,10 +1599,10 @@ export default function Tracker({ session }) {
       {tab === 'overview' && (
         <main>
           <div className="summary-grid">
-            <div className="summary-card"><div className="summary-label">Expenses{hasExpFilters ? ' (filtered)' : ''}</div><div className="summary-amount" style={{ color: '#ef4444' }}>{fmtINR(totalExp)}</div></div>
-            <div className="summary-card"><div className="summary-label">Income</div><div className="summary-amount" style={{ color: '#10b981' }}>{fmtINR(allIncINR)}</div></div>
-            <div className="summary-card"><div className="summary-label">Net Savings</div><div className="summary-amount" style={{ color: netSavings >= 0 ? '#f59e0b' : '#ef4444' }}>{netSavings >= 0 ? '+' : ''}{fmtINR(netSavings)}</div></div>
-            {budgets.monthly > 0 && <div className="summary-card"><div className="summary-label">Monthly Budget</div><div className="summary-amount" style={{ color: spentMonth > budgets.monthly ? '#ef4444' : '#10b981' }}>{fmtINR(spentMonth)} / {fmtINR(budgets.monthly)}</div></div>}
+            <div className="summary-card"><div className="summary-label">Expenses{hasExpFilters ? ' (filtered)' : ''}</div><div className="summary-amount" style={{ color: 'var(--color-exp)' }}>{fmtINR(totalExp)}</div></div>
+            <div className="summary-card"><div className="summary-label">Income</div><div className="summary-amount" style={{ color: 'var(--color-inc)' }}>{fmtINR(allIncINR)}</div></div>
+            <div className="summary-card"><div className="summary-label">Net Savings</div><div className="summary-amount" style={{ color: netSavings >= 0 ? 'var(--color-inc)' : 'var(--color-exp)' }}>{netSavings >= 0 ? '+' : ''}{fmtINR(netSavings)}</div></div>
+            {budgets.monthly > 0 && <div className="summary-card"><div className="summary-label">Monthly Budget</div><div className="summary-amount" style={{ color: spentMonth > budgets.monthly ? 'var(--color-exp)' : 'var(--color-inc)' }}>{fmtINR(spentMonth)} / {fmtINR(budgets.monthly)}</div></div>}
             {dailyAllowance > 0 && (
               <div className="summary-card" title={`Spent today: ${fmtINR(spentToday)} · Allowance: ${fmtINR(dailyAllowance)}/day · ${daysRemaining}d left`}>
                 <div className="summary-label">Daily Allowance</div>
@@ -1566,7 +1620,7 @@ export default function Tracker({ session }) {
               <div className="forecast-grid">
                 <div className="forecast-item">
                   <div className="forecast-label">Spent so far</div>
-                  <div className="forecast-val" style={{ color: '#ef4444' }}>{fmtINR(monthForecast.spentSoFar)}</div>
+                  <div className="forecast-val" style={{ color: 'var(--color-exp)' }}>{fmtINR(monthForecast.spentSoFar)}</div>
                   <div className="forecast-sub">day {monthForecast.dayOfMonth} of {monthForecast.daysInMonth}</div>
                 </div>
                 <div className="forecast-item">
@@ -1576,7 +1630,7 @@ export default function Tracker({ session }) {
                 </div>
                 <div className="forecast-item">
                   <div className="forecast-label">Projected total</div>
-                  <div className="forecast-val" style={{ color: monthForecast.projected > (budgets.monthly || Infinity) ? '#ef4444' : 'var(--text)' }}>{fmtINR(monthForecast.projected)}</div>
+                  <div className="forecast-val" style={{ color: monthForecast.projected > (budgets.monthly || Infinity) ? 'var(--color-exp)' : 'var(--text)' }}>{fmtINR(monthForecast.projected)}</div>
                   <div className="forecast-sub">
                     {monthForecast.trend !== null
                       ? (parseInt(monthForecast.trend) > 5 ? `↑${monthForecast.trend}% vs last month` : parseInt(monthForecast.trend) < -5 ? `↓${Math.abs(monthForecast.trend)}% vs last month` : `~flat vs last month`)
@@ -1586,7 +1640,7 @@ export default function Tracker({ session }) {
                 {monthForecast.projectedInc > 0 && (
                   <div className="forecast-item">
                     <div className="forecast-label">Projected savings</div>
-                    <div className="forecast-val" style={{ color: monthForecast.projectedSavings >= 0 ? '#10b981' : '#ef4444' }}>
+                    <div className="forecast-val" style={{ color: monthForecast.projectedSavings >= 0 ? 'var(--color-inc)' : 'var(--color-exp)' }}>
                       {monthForecast.projectedSavings >= 0 ? '+' : ''}{fmtINR(monthForecast.projectedSavings)}
                     </div>
                     <div className="forecast-sub">income this month: {fmtINR(monthForecast.projectedInc)}</div>
@@ -1603,7 +1657,7 @@ export default function Tracker({ session }) {
                 <div className="recurring-banner-title">📅 Upcoming Recurring ({upcomingRecurring.length})</div>
                 <div className="recurring-chips">
                   {upcomingRecurring.map(r => {
-                    const color = r.daysUntil <= 1 ? '#ef4444' : r.daysUntil <= 3 ? '#f59e0b' : '#667eea'
+                    const color = r.daysUntil <= 1 ? 'var(--color-exp)' : r.daysUntil <= 3 ? '#f59e0b' : '#667eea'
                     const urgency = r.daysUntil === 1 ? 'tomorrow' : `in ${r.daysUntil}d`
                     return (
                       <span key={r.id} className="recurring-chip" style={{ background: color + '18', color, border: `1px solid ${color}40` }}>
@@ -1696,9 +1750,9 @@ export default function Tracker({ session }) {
       {tab === 'income' && (
         <main>
           <div className="summary-grid">
-            <div className="summary-card"><div className="summary-label">Total Income</div><div className="summary-amount" style={{ color: '#10b981' }}>{fmtINR(allIncINR)}</div></div>
-            <div className="summary-card"><div className="summary-label">Total Expenses</div><div className="summary-amount" style={{ color: '#ef4444' }}>{fmtINR(allExpINR)}</div></div>
-            <div className="summary-card"><div className="summary-label">Net Savings</div><div className="summary-amount" style={{ color: netSavings >= 0 ? '#f59e0b' : '#ef4444' }}>{netSavings >= 0 ? '+' : ''}{fmtINR(netSavings)}</div></div>
+            <div className="summary-card"><div className="summary-label">Total Income</div><div className="summary-amount" style={{ color: 'var(--color-inc)' }}>{fmtINR(allIncINR)}</div></div>
+            <div className="summary-card"><div className="summary-label">Total Expenses</div><div className="summary-amount" style={{ color: 'var(--color-exp)' }}>{fmtINR(allExpINR)}</div></div>
+            <div className="summary-card"><div className="summary-label">Net Savings</div><div className="summary-amount" style={{ color: netSavings >= 0 ? 'var(--color-inc)' : 'var(--color-exp)' }}>{netSavings >= 0 ? '+' : ''}{fmtINR(netSavings)}</div></div>
             <div className="summary-card"><div className="summary-label">Showing</div><div className="summary-amount">{filteredInc.length} / {income.length}</div></div>
           </div>
 
@@ -1741,7 +1795,7 @@ export default function Tracker({ session }) {
             <div key={date} className="date-group">
               <div className="date-group-header">
                 <span>{new Date(date + 'T12:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                <span style={{ color: '#10b981' }}>+{fmtINR(items.reduce((s, i) => s + toINR(i), 0))}</span>
+                <span style={{ color: 'var(--color-inc)' }}>+{fmtINR(items.reduce((s, i) => s + toINR(i), 0))}</span>
               </div>
               {items.map(i => <IncItem key={i.id} item={i}
                 onDelete={id => setDelTarget({ id, type: 'income' })}
@@ -1790,12 +1844,12 @@ export default function Tracker({ session }) {
                   delta = <span className={pct > 5 ? 'delta-up' : pct < -5 ? 'delta-dn' : 'delta-flat'}>{pct > 5 ? '↑' : pct < -5 ? '↓' : '–'}{Math.abs(pct).toFixed(0)}%</span>
                 }
                 return (
-                  <tr key={i} className={isNow ? 'row-now' : ''}>
+                  <tr key={fullLabel} className={isNow ? 'row-now' : ''}>
                     <td style={{ fontWeight: isNow ? 700 : 400 }}>{fullLabel}{isNow && <span className="badge-now">now</span>}</td>
-                    <td style={{ color: '#ef4444', fontWeight: 600 }}>{fmtINR(value)}</td>
+                    <td style={{ color: 'var(--color-exp)', fontWeight: 600 }}>{fmtINR(value)}</td>
                     <td>{delta || <span className="delta-flat">—</span>}</td>
-                    <td style={{ color: '#10b981', fontWeight: 600 }}>{inc ? fmtINR(inc) : '—'}</td>
-                    <td style={{ color: saved >= 0 ? '#f59e0b' : '#ef4444', fontWeight: 600 }}>{inc ? (saved >= 0 ? '+' : '') + fmtINR(saved) : '—'}</td>
+                    <td style={{ color: 'var(--color-inc)', fontWeight: 600 }}>{inc ? fmtINR(inc) : '—'}</td>
+                    <td style={{ color: saved >= 0 ? 'var(--color-inc)' : 'var(--color-exp)', fontWeight: 600 }}>{inc ? (saved >= 0 ? '+' : '') + fmtINR(saved) : '—'}</td>
                     <td style={{ color: 'var(--text-muted)' }}>{cnt}</td>
                   </tr>
                 )
@@ -1826,10 +1880,10 @@ export default function Tracker({ session }) {
                   return (
                     <tr key={label}>
                       <td style={{ fontWeight: 600 }}>{label}</td>
-                      <td style={{ color: '#ef4444', fontWeight: 600 }}>{fmtINR(value)}</td>
+                      <td style={{ color: 'var(--color-exp)', fontWeight: 600 }}>{fmtINR(value)}</td>
                       <td>{delta || <span className="delta-flat">—</span>}</td>
-                      <td style={{ color: '#10b981', fontWeight: 600 }}>{yearInc ? fmtINR(yearInc) : '—'}</td>
-                      <td style={{ color: saved >= 0 ? '#f59e0b' : '#ef4444', fontWeight: 600 }}>{yearInc ? (saved >= 0 ? '+' : '') + fmtINR(saved) : '—'}</td>
+                      <td style={{ color: 'var(--color-inc)', fontWeight: 600 }}>{yearInc ? fmtINR(yearInc) : '—'}</td>
+                      <td style={{ color: saved >= 0 ? 'var(--color-inc)' : 'var(--color-exp)', fontWeight: 600 }}>{yearInc ? (saved >= 0 ? '+' : '') + fmtINR(saved) : '—'}</td>
                       <td style={{ color: 'var(--text-muted)' }}>{cnt}</td>
                     </tr>
                   )
@@ -1845,9 +1899,9 @@ export default function Tracker({ session }) {
         <main>
           <div className="summary-grid">
             {[
-              { val: fmtINR(spentToday), lbl: 'Today', color: budgets.daily > 0 ? (spentToday / budgets.daily >= 1 ? '#ef4444' : spentToday / budgets.daily >= 0.5 ? '#f59e0b' : '#10b981') : 'var(--text)' },
-              { val: fmtINR(spentWeek),  lbl: 'This Week', color: budgets.weekly > 0 ? (spentWeek / budgets.weekly >= 1 ? '#ef4444' : '#10b981') : 'var(--text)' },
-              { val: fmtINR(spentMonth), lbl: 'This Month', color: budgets.monthly > 0 ? (spentMonth / budgets.monthly >= 1 ? '#ef4444' : '#10b981') : 'var(--text)' },
+              { val: fmtINR(spentToday), lbl: 'Today', color: budgets.daily > 0 ? (spentToday / budgets.daily >= 1 ? 'var(--color-exp)' : spentToday / budgets.daily >= 0.5 ? '#f59e0b' : 'var(--color-inc)') : 'var(--text)' },
+              { val: fmtINR(spentWeek),  lbl: 'This Week', color: budgets.weekly > 0 ? (spentWeek / budgets.weekly >= 1 ? 'var(--color-exp)' : 'var(--color-inc)') : 'var(--text)' },
+              { val: fmtINR(spentMonth), lbl: 'This Month', color: budgets.monthly > 0 ? (spentMonth / budgets.monthly >= 1 ? 'var(--color-exp)' : 'var(--color-inc)') : 'var(--text)' },
               { val: expenses.filter(e => (e.date || '').startsWith(monthStr)).length, lbl: 'Txns This Month', color: 'var(--text)' },
             ].map(s => (
               <div key={s.lbl} className="summary-card"><div className="summary-label">{s.lbl}</div><div className="summary-amount" style={{ color: s.color }}>{s.val}</div></div>
@@ -1909,10 +1963,10 @@ export default function Tracker({ session }) {
             <div className="summary-grid">
               {[
                 { val: goalsWithContribs.length, lbl: 'Total Goals', color: '#667eea' },
-                { val: completedGoals, lbl: 'Completed', color: '#10b981' },
+                { val: completedGoals, lbl: 'Completed', color: 'var(--color-inc)' },
                 { val: fmtINR(totalTarget), lbl: 'Total Target', color: 'var(--text)' },
-                { val: fmtINR(totalContributed), lbl: 'Total Saved', color: '#10b981' },
-                { val: overallPct.toFixed(0) + '%', lbl: 'Overall', color: overallPct >= 100 ? '#10b981' : overallPct >= 50 ? '#f59e0b' : '#667eea' },
+                { val: fmtINR(totalContributed), lbl: 'Total Saved', color: 'var(--color-inc)' },
+                { val: overallPct.toFixed(0) + '%', lbl: 'Overall', color: overallPct >= 100 ? 'var(--color-inc)' : overallPct >= 50 ? '#f59e0b' : '#667eea' },
               ].map(s => <div key={s.lbl} className="summary-card"><div className="summary-label">{s.lbl}</div><div className="summary-amount" style={{ color: s.color }}>{s.val}</div></div>)}
             </div>
 
@@ -1921,7 +1975,7 @@ export default function Tracker({ session }) {
                 const contributed = goal.contributions.reduce((s, c) => s + c.amount, 0)
                 const pct         = goal.target > 0 ? Math.min((contributed / goal.target) * 100, 100) : 0
                 const done        = contributed >= goal.target
-                const barColor    = done ? '#10b981' : pct >= 75 ? '#f59e0b' : '#667eea'
+                const barColor    = done ? 'var(--color-inc)' : pct >= 75 ? '#f59e0b' : '#667eea'
                 const daysLeft    = goal.targetDate ? Math.ceil((new Date(goal.targetDate + 'T12:00:00') - new Date(todayStr + 'T12:00:00')) / 864e5) : null
                 return (
                   <div key={goal.id} className="goal-card" style={{ '--goal-accent': barColor }}>
@@ -1932,7 +1986,7 @@ export default function Tracker({ session }) {
                         <div className="goal-date">
                           {goal.targetDate
                             ? daysLeft < 0 ? '⚠️ Overdue' : daysLeft === 0 ? '🔔 Due today' : `📅 ${daysLeft}d left`
-                            : `Created ${goal.createdAt}`}
+                            : `Created ${goal.createdAt || 'unknown'}`}
                         </div>
                       </div>
                       <div className="goal-card-actions">
@@ -1991,7 +2045,7 @@ export default function Tracker({ session }) {
               {expTypeData.length > 0 && (
                 <div className="chart-card" style={{ marginTop: 16 }}>
                   <div className="chart-title">🏷️ Expense Type Breakdown</div>
-                  <BarChart data={expTypeData.map((d, i) => ({ ...d, _color: ['#667eea','#10b981','#ef4444','#f59e0b','#8b5cf6','#ec4899'][i % 6] }))} />
+                  <BarChart data={expTypeData.map((d, i) => ({ ...d, _color: ['#667eea','var(--color-inc)','var(--color-exp)','#f59e0b','#8b5cf6','#ec4899'][i % 6] }))} />
                 </div>
               )}
 
@@ -2062,7 +2116,7 @@ export default function Tracker({ session }) {
                       {subZombieData.creep.map((c, i) => (
                         <div key={i} className="sub-row sub-creep">
                           <div className="sub-desc">{c.desc}</div>
-                          <div className="sub-meta">{fmtINR(c.firstAmt)} → {fmtINR(c.lastAmt)} <span style={{ color: '#ef4444' }}>+{c.pct}%</span></div>
+                          <div className="sub-meta">{fmtINR(c.firstAmt)} → {fmtINR(c.lastAmt)} <span style={{ color: 'var(--color-exp)' }}>+{c.pct}%</span></div>
                         </div>
                       ))}
                     </div>
@@ -2075,7 +2129,7 @@ export default function Tracker({ session }) {
                       <tbody>{subZombieData.subs.map((s, i) => (
                         <tr key={i}>
                           <td>{s.desc}{s.isRec && <span className="item-tag item-tag-rec" style={{ marginLeft: 4 }}>🔄</span>}</td>
-                          <td style={{ fontWeight: 600, color: '#ef4444' }}>{fmtINR(s.avgAmt)}</td>
+                          <td style={{ fontWeight: 600, color: 'var(--color-exp)' }}>{fmtINR(s.avgAmt)}</td>
                           <td style={{ color: 'var(--text-muted)' }}>{s.count}</td>
                           <td style={{ color: 'var(--text-muted)' }}>{s.months}</td>
                           <td style={{ color: 'var(--text-muted)' }}>{s.lastDate}</td>
@@ -2349,20 +2403,98 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title">💸 Expense Tracker V6</div>
               <div className="about-meta">
-                <span className="about-badge">v6.0.0</span>
+                <span className="about-badge">v6.2.0</span>
                 <span className="about-badge">Phase 3 Complete</span>
                 <span className="about-badge">Cloud + Supabase</span>
               </div>
               <div className="about-row"><span>Architecture</span><span>Vite + React + Supabase</span></div>
               <div className="about-row"><span>Auth</span><span>Magic-link email (Supabase Auth)</span></div>
               <div className="about-row"><span>Database</span><span>Supabase Postgres + RLS</span></div>
-              <div className="about-row"><span>Features</span><span>8 tabs · 16 insights · 259-color palette · live FX rates</span></div>
+              <div className="about-row"><span>Features</span><span>9 tabs · 16 insights · 259-color palette · live FX rates</span></div>
               <div className="about-row"><span>V5 parity</span><span>100% — all V5 features ported + Goals/Budgets added</span></div>
               <div className="about-row"><span>Last updated</span><span>2026-03-31</span></div>
             </div>
           </div>
         </main>
       )}
+
+      {/* ══════════ RECURRING ══════════ */}
+      {tab === 'recurring' && (() => {
+        const recurExp = expenses.filter(e => e.isRecurring)
+        const recurInc = income.filter(i => i.isRecurring)
+        function daysUntil(d) {
+          if (!d) return null
+          return Math.round((new Date(d + 'T12:00:00') - new Date(todayStr + 'T12:00:00')) / 86400000)
+        }
+        function dueBadge(d) {
+          const n = daysUntil(d)
+          if (n === null) return { label: 'No due date', color: 'var(--text-muted)' }
+          if (n < 0)  return { label: `${Math.abs(n)}d overdue`, color: 'var(--color-exp)' }
+          if (n === 0) return { label: 'Due today',   color: '#f59e0b' }
+          if (n <= 3)  return { label: `Due in ${n}d`, color: '#f59e0b' }
+          return { label: `Due in ${n}d`, color: 'var(--text-muted)' }
+        }
+        return (
+          <main>
+            {recurExp.length === 0 && recurInc.length === 0 && (
+              <div className="empty-state">
+                <div className="empty-icon">🔄</div>
+                <div className="empty-title">No recurring items yet</div>
+                <div className="empty-text">Mark an expense or income entry as recurring when adding it.</div>
+              </div>
+            )}
+            {recurExp.length > 0 && (
+              <div className="rec-section">
+                <div className="rec-section-title">Recurring Expenses ({recurExp.length})</div>
+                {recurExp.map(e => {
+                  const badge = dueBadge(e.nextDueDate)
+                  return (
+                    <div key={e.id} className="rec-item">
+                      <div className="rec-item-left">
+                        <div className="rec-desc">{e.description}</div>
+                        <div className="rec-meta">
+                          {CATS[e.category]?.icon || ''} {e.category || 'Other'}
+                          {e.subcategory && <span>· {e.subcategory}</span>}
+                          {e.recurringPeriod && <span className="rec-period-badge">{e.recurringPeriod}</span>}
+                        </div>
+                      </div>
+                      <div className="rec-item-right">
+                        <div className="rec-amount" style={{ color: 'var(--color-exp)' }}>{fmtINR(toINR(e))}</div>
+                        <div className="rec-due" style={{ color: badge.color }}>{badge.label}</div>
+                      </div>
+                    </div>
+                  )
+                })}
+                <div className="rec-total">
+                  Monthly recurring spend: <strong style={{ color: 'var(--color-exp)' }}>{fmtINR(recurExp.reduce((s, e) => s + toINR(e), 0))}</strong>
+                </div>
+              </div>
+            )}
+            {recurInc.length > 0 && (
+              <div className="rec-section" style={{ marginTop: 16 }}>
+                <div className="rec-section-title">Recurring Income ({recurInc.length})</div>
+                {recurInc.map(i => (
+                  <div key={i.id} className="rec-item">
+                    <div className="rec-item-left">
+                      <div className="rec-desc">{i.description}</div>
+                      <div className="rec-meta">
+                        {i.source || 'Other'}
+                        {i.recurringPeriod && <span className="rec-period-badge">{i.recurringPeriod}</span>}
+                      </div>
+                    </div>
+                    <div className="rec-item-right">
+                      <div className="rec-amount" style={{ color: 'var(--color-inc)' }}>+{fmtINR(toINR(i))}</div>
+                    </div>
+                  </div>
+                ))}
+                <div className="rec-total">
+                  Monthly recurring income: <strong style={{ color: 'var(--color-inc)' }}>{fmtINR(recurInc.reduce((s, i) => s + toINR(i), 0))}</strong>
+                </div>
+              </div>
+            )}
+          </main>
+        )
+      })()}
 
       {/* ── Modals ── */}
       {showEF && <ExpenseForm initialData={editExpTarget} onSubmit={editExpTarget ? handleEditExpense : handleAddExpense} onClose={() => { setShowEF(false); setEditExpTarget(null) }} rateData={rateData} />}
