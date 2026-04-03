@@ -1,7 +1,16 @@
 import { StrictMode, Component } from 'react'
 import { createRoot } from 'react-dom/client'
+import { useRegisterSW } from 'virtual:pwa-register/react'
 import './styles/index.css'
 import App from './App.jsx'
+
+function PWAAutoUpdate() {
+  useRegisterSW({
+    onNeedRefresh() { window.location.reload() },
+    onRegisteredSW(_url, r) { r && setInterval(() => r.update(), 60 * 1000) },
+  })
+  return null
+}
 
 class ErrorBoundary extends Component {
   state = { error: null }
@@ -23,6 +32,7 @@ class ErrorBoundary extends Component {
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
+      <PWAAutoUpdate />
       <App />
     </ErrorBoundary>
   </StrictMode>,
