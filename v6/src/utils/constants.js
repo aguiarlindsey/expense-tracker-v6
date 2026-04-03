@@ -87,6 +87,8 @@ export const CC = [
   '#db2777','#be185d','#9d174d',
 ]
 export const PAY_METHODS    = ['Cash','Credit Card','Debit Card','UPI/QR','Net Banking','Wallet','Cheque','EMI','Other']
+export const UPI_APPS       = ['','GPay','PhonePe','Paytm','PayZapp','BHIM','Amazon Pay','WhatsApp Pay','Cred','Slice','Other']
+export const WALLET_APPS    = ['','Amazon Pay','Paytm','PhonePe','Mobikwik','Freecharge','Ola Money','Jio Money','Other']
 export const INC_SOURCES    = ['Salary','Freelance','Business','Rental','Dividends','Interest','Bonus','Gift','Refund','Side Income','Other']
 export const DINING_APPS    = ['','Swiggy','Zomato','Keta','Dineout','EatSure','Blinkit','Zepto','Direct/Self']
 export const GROCERY_TAGS   = ['Food','Beverages','Snacks','Dairy','Produce','Meat/Fish','Grains','Condiments','Frozen','Personal Care','Household','Baby/Kids','Pet Food','Bakery','Health/Organic','Other']

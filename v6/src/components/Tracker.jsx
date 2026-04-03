@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react'
 import { useStorage } from '../hooks/useStorage'
 import { useDebounce } from '../hooks/useDebounce'
-import { CATS, CM, PAY_METHODS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS } from '../utils/constants'
+import { CATS, CM, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS } from '../utils/constants'
 import { makeExpense, makeIncome, makeDedupContext, matchesSearch, stableId } from '../utils/dataHelpers'
 
 // ─── Helpers ─────────────────────────────────────────────
@@ -413,7 +413,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
             <div className="form-group">
               <label>Category</label>
               <select value={form.category} onChange={e => { s('category', e.target.value); s('subcategory', ''); s('diningApp', '') }}>
-                {Object.keys(CATS).map(c => <option key={c}>{CATS[c].icon} {c}</option>)}
+                {Object.keys(CATS).map(c => <option key={c} value={c}>{CATS[c].icon} {c}</option>)}
               </select>
             </div>
             <div className="form-group">
@@ -438,11 +438,27 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
               </select>
             </div>
           </div>
-          {form.paymentMethod !== 'Cash' && (
+          {form.paymentMethod === 'UPI/QR' && (
+            <div className="form-group">
+              <label>UPI App</label>
+              <select value={form.paymentDescription || ''} onChange={e => s('paymentDescription', e.target.value)}>
+                {UPI_APPS.map(a => <option key={a} value={a}>{a || '— Select app —'}</option>)}
+              </select>
+            </div>
+          )}
+          {form.paymentMethod === 'Wallet' && (
+            <div className="form-group">
+              <label>Wallet</label>
+              <select value={form.paymentDescription || ''} onChange={e => s('paymentDescription', e.target.value)}>
+                {WALLET_APPS.map(a => <option key={a} value={a}>{a || '— Select wallet —'}</option>)}
+              </select>
+            </div>
+          )}
+          {form.paymentMethod !== 'Cash' && form.paymentMethod !== 'UPI/QR' && form.paymentMethod !== 'Wallet' && (
             <div className="form-group">
               <label>Payment Reference</label>
               <input value={form.paymentDescription || ''} onChange={e => s('paymentDescription', e.target.value)}
-                placeholder="Card last 4 digits, UPI ID, txn ID…" />
+                placeholder="Card last 4 digits, txn ID…" />
             </div>
           )}
           {form.category === 'Food' && (
