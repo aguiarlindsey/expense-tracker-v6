@@ -29,7 +29,40 @@
 | 18 | 2026-04-02 | v6 Phase 3 close: audit, heatmap fixes, bug fixes (5 items), hours log | 2.0 |
 | 19 | 2026-04-02 | v6 Phase 4: GitHub + Vercel deploy, TDZ fixes, Chrome Auto Dark Mode fix, PWA | 3.5 |
 | 20 | 2026-04-02 | v6 Phase 4 audit + bug fixes (subcategory, UPI/Wallet), responsive CSS, PWA auto-reload, Phase 5 offline resilience | 4.0 |
-| **Total** | | | **~58.0 h** |
+| 21 | 2026-04-03 | v6 Phase 6: v5→v6 migration; Phase 7: real-time sync; Phase 8: push notifications | 5.5 |
+| **Total** | | | **~63.5 h** |
+
+---
+
+## [v6.7.0] — Phase 8: Push Notifications for Recurring Reminders
+_2026-04-03_
+
+- `public/sw-push.js` — service worker push event handler: displays custom notification (title, body, tag collapse, actions); `notificationclick` handler focuses existing window or opens new tab to `/?tab=recurring`
+- `vite.config.js` — `workbox.importScripts: ['/sw-push.js']` injects push handler into generated service worker
+- `src/hooks/useNotifications.js` — new hook: `requestAndSubscribe` (permission prompt → `pushManager.subscribe` with VAPID key → upsert to `push_subscriptions` table), `unsubscribe` (browser unsubscribe + DB delete), `permission`/`subscribed`/`loading`/`error` state
+- `src/components/Tracker.jsx` — Settings tab: new "🔔 Recurring Reminders" section with Enable/Disable button and permission state feedback; tab deep-link via `URLSearchParams` on init (`?tab=recurring` from notification opens correct tab)
+- `api/send-reminders.js` — Vercel Node.js serverless function: queries recurring expenses due ≤3 days, groups by user, sends web-push via `web-push` npm package, cleans up 410/404 stale subscriptions
+- `vercel.json` — cron schedule `30 1 * * *` (07:00 IST daily) triggers `/api/send-reminders`
+- `supabase/functions/send-recurring-reminders/index.ts` — Supabase Edge Function (kept as backup; active sender is Vercel route due to Deno/web-push Buffer incompatibility)
+- **Supabase** — `push_subscriptions` table created with RLS; `supabase_realtime` publication enabled on all 5 tables; `REPLICA IDENTITY FULL` set on all tables for DELETE event propagation
+- `web-push` added to `package.json` dependencies
+
+---
+
+## [v6.6.0] — Phase 7: Real-Time Multi-Tab/Device Sync
+_2026-04-03_
+
+- `src/hooks/useStorage.js` — single Supabase Realtime channel (`user-data-${userId}`) with 9 `postgres_changes` listeners across all 5 tables (expenses, income, budgets, goals, goal_contributions); INSERT dedup via `_pending` flag prevents double-apply from optimistic updates; UPDATE/DELETE handlers for all tables; `realtimeStatus` state (`connecting`→`live`/`error`/`offline`); channel cleanup on unmount via `supabase.removeChannel()`
+- `src/components/Tracker.jsx` — pulsing green dot in header shows live sync status (amber spinning = connecting, red = error, gray = offline); tooltip on hover
+- `src/styles/index.css` — `.realtime-dot`, `.realtime-live` (pulse animation), `.realtime-connecting`, `.realtime-error`, `.realtime-offline` styles
+
+---
+
+## [v6.5.0] — Phase 6: v5 → v6 Data Migration
+_2026-04-03_
+
+- `src/utils/migrateV5.js` — new file: `transformV5Expense` / `transformV5Income` (maps `desc`→`description`, normalises dates via `split('T')[0]`, handles `splitParts` as object or int, preserves original `_fp` fingerprint for dedup, computes `amountINR` if missing); `validateV5File` (rejects arrays, empty files, v6 backups with redirect message); `migrateV5Data` (per-record error capture — bad records warn, don't abort)
+- `src/components/Tracker.jsx` — Settings tab: new "🔀 Migrate from V5" section between Import and Danger Zone; `handleV5Import` handler with chunked 500/batch inserts, client-side dedup via `makeDedupContext`, per-record warnings, 12s auto-dismiss report banner
 
 ---
 
