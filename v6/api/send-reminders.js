@@ -1,40 +1,34 @@
-// Supabase Edge Function — send-recurring-reminders
-// Runs on a daily cron schedule (07:00 IST = 01:30 UTC)
+// Vercel serverless function — Node.js runtime
+// Triggered daily by Vercel cron (vercel.json)
 // Sends push notifications for recurring expenses due within 3 days
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import webpush from 'npm:web-push@3'
-import { Buffer } from 'node:buffer'
+import webpush from 'web-push'
+import { createClient } from '@supabase/supabase-js'
 
-const SUPABASE_URL             = Deno.env.get('SUPABASE_URL')!
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const VAPID_PUBLIC_KEY         = Deno.env.get('VAPID_PUBLIC_KEY')!
-const VAPID_PRIVATE_KEY        = Deno.env.get('VAPID_PRIVATE_KEY')!
-const VAPID_SUBJECT            = Deno.env.get('VAPID_SUBJECT')!
+webpush.setVapidDetails(
+  process.env.VAPID_SUBJECT,
+  process.env.VAPID_PUBLIC_KEY,
+  process.env.VAPID_PRIVATE_KEY
+)
 
-// Deno's Buffer.from('base64') doesn't handle URL-safe base64 (-_).
-// Passing a Buffer directly bypasses web-push's string format check.
-function vapidToBuffer(urlSafeKey: string): typeof Buffer.prototype {
-  const std = urlSafeKey.replace(/-/g, '+').replace(/_/g, '/')
-  const pad = std.length % 4
-  const padded = pad ? std + '='.repeat(4 - pad) : std
-  const bytes = Uint8Array.from(atob(padded), c => c.charCodeAt(0))
-  return Buffer.from(bytes)
-}
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  { auth: { persistSession: false } }
+)
 
-webpush.setVapidDetails(VAPID_SUBJECT, vapidToBuffer(VAPID_PUBLIC_KEY), vapidToBuffer(VAPID_PRIVATE_KEY))
+export default async function handler(req, res) {
+  // Only allow GET (cron) or POST (manual trigger)
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false },
-})
-
-Deno.serve(async (_req) => {
   const today = new Date()
   const threeDaysLater = new Date(today)
   threeDaysLater.setDate(today.getDate() + 3)
   const threeDaysStr = threeDaysLater.toISOString().split('T')[0]
 
-  // 1. Find all recurring expenses due within 3 days (service role bypasses RLS)
+  // 1. Find recurring expenses due within 3 days
   const { data: dueExpenses, error: expErr } = await supabase
     .from('expenses')
     .select('user_id, description, next_due_date, amount_inr, recurring_period')
@@ -42,16 +36,13 @@ Deno.serve(async (_req) => {
     .not('next_due_date', 'is', null)
     .lte('next_due_date', threeDaysStr)
 
-  if (expErr) {
-    return new Response(JSON.stringify({ error: expErr.message }), { status: 500 })
-  }
-
+  if (expErr) return res.status(500).json({ error: expErr.message })
   if (!dueExpenses || dueExpenses.length === 0) {
-    return new Response(JSON.stringify({ sent: 0, message: 'No due expenses' }), { status: 200 })
+    return res.status(200).json({ sent: 0, message: 'No due expenses' })
   }
 
   // 2. Group by user_id
-  const byUser: Record<string, typeof dueExpenses> = {}
+  const byUser = {}
   for (const exp of dueExpenses) {
     if (!byUser[exp.user_id]) byUser[exp.user_id] = []
     byUser[exp.user_id].push(exp)
@@ -64,13 +55,11 @@ Deno.serve(async (_req) => {
     .select('user_id, endpoint, p256dh, auth')
     .in('user_id', userIds)
 
-  if (subErr) {
-    return new Response(JSON.stringify({ error: subErr.message }), { status: 500 })
-  }
+  if (subErr) return res.status(500).json({ error: subErr.message })
 
-  // 4. Send a notification per subscription
+  // 4. Send notifications
   let sent = 0
-  const staleEndpoints: { user_id: string; endpoint: string }[] = []
+  const staleEndpoints = []
 
   for (const sub of (subs ?? [])) {
     const userExpenses = byUser[sub.user_id] ?? []
@@ -102,13 +91,11 @@ Deno.serve(async (_req) => {
         payload
       )
       sent++
-    } catch (err: unknown) {
-      const status = (err as { statusCode?: number }).statusCode
-      // 410 Gone or 404 = subscription no longer valid, remove it
-      if (status === 410 || status === 404) {
+    } catch (err) {
+      if (err.statusCode === 410 || err.statusCode === 404) {
         staleEndpoints.push({ user_id: sub.user_id, endpoint: sub.endpoint })
       }
-      console.error(`Push failed for ${sub.endpoint}:`, err)
+      console.error(`Push failed for ${sub.endpoint}:`, err.message)
     }
   }
 
@@ -121,8 +108,5 @@ Deno.serve(async (_req) => {
       .eq('endpoint', stale.endpoint)
   }
 
-  return new Response(
-    JSON.stringify({ sent, staleRemoved: staleEndpoints.length, checkedUsers: userIds.length }),
-    { status: 200, headers: { 'Content-Type': 'application/json' } }
-  )
-})
+  return res.status(200).json({ sent, staleRemoved: staleEndpoints.length, checkedUsers: userIds.length })
+}
