@@ -128,7 +128,8 @@ export function useStorage(userId) {
   const [contributions, setContributions] = useState([])
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState(null)
-  const [syncing,       setSyncing]       = useState(false)
+  const [syncing,         setSyncing]         = useState(false)
+  const [realtimeStatus,  setRealtimeStatus]  = useState('connecting')
 
   const { queue, online, enqueue, remove, bumpAttempts, dropExhausted } = useRetryQueue()
 
@@ -177,6 +178,119 @@ export function useStorage(userId) {
       })))
     })
   }, [userId])
+
+  // ── Realtime event handlers ───────────────────────────────
+
+  function handleExpenseEvent(event, payload) {
+    if (event === 'INSERT') {
+      const incoming = expenseFromDb(payload.new)
+      setExpenses(prev => {
+        if (prev.some(e => e.id === incoming.id && !e._pending)) return prev
+        const hasPending = prev.some(e => e.id === incoming.id && e._pending)
+        if (hasPending) return prev.map(e => e.id === incoming.id ? incoming : e)
+        return [incoming, ...prev]
+      })
+    } else if (event === 'UPDATE') {
+      const incoming = expenseFromDb(payload.new)
+      setExpenses(prev => prev.map(e => e.id === incoming.id ? incoming : e))
+    } else if (event === 'DELETE') {
+      setExpenses(prev => prev.filter(e => e.id !== payload.old.id))
+    }
+  }
+
+  function handleIncomeEvent(event, payload) {
+    if (event === 'INSERT') {
+      const incoming = incomeFromDb(payload.new)
+      setIncome(prev => {
+        if (prev.some(i => i.id === incoming.id && !i._pending)) return prev
+        const hasPending = prev.some(i => i.id === incoming.id && i._pending)
+        if (hasPending) return prev.map(i => i.id === incoming.id ? incoming : i)
+        return [incoming, ...prev]
+      })
+    } else if (event === 'UPDATE') {
+      const incoming = incomeFromDb(payload.new)
+      setIncome(prev => prev.map(i => i.id === incoming.id ? incoming : i))
+    } else if (event === 'DELETE') {
+      setIncome(prev => prev.filter(i => i.id !== payload.old.id))
+    }
+  }
+
+  function handleBudgetEvent(payload) {
+    if (payload.eventType === 'DELETE') return
+    const row = payload.new
+    setBudgets({
+      daily:      parseFloat(row.daily)   || 0,
+      weekly:     parseFloat(row.weekly)  || 0,
+      monthly:    parseFloat(row.monthly) || 0,
+      categories: row.categories || {},
+    })
+  }
+
+  function handleGoalEvent(payload) {
+    if (payload.eventType === 'INSERT') {
+      const g = payload.new
+      const incoming = {
+        id: g.id, name: g.name, target: parseFloat(g.target),
+        targetDate: g.target_date || '', icon: g.icon || '🎯',
+        note: g.note || '', createdAt: g.created_at || '',
+      }
+      setGoals(prev => {
+        if (prev.some(x => x.id === incoming.id && !x._pending)) return prev
+        const hasPending = prev.some(x => x.id === incoming.id && x._pending)
+        if (hasPending) return prev.map(x => x.id === incoming.id ? incoming : x)
+        return [incoming, ...prev]
+      })
+    } else if (payload.eventType === 'UPDATE') {
+      const g = payload.new
+      setGoals(prev => prev.map(x => x.id === g.id ? {
+        id: g.id, name: g.name, target: parseFloat(g.target),
+        targetDate: g.target_date || '', icon: g.icon || '🎯',
+        note: g.note || '', createdAt: g.created_at || '',
+      } : x))
+    } else if (payload.eventType === 'DELETE') {
+      setGoals(prev => prev.filter(x => x.id !== payload.old.id))
+    }
+  }
+
+  function handleContributionEvent(payload) {
+    if (payload.eventType === 'INSERT') {
+      const c = payload.new
+      const incoming = { id: c.id, goalId: c.goal_id, date: c.date, amount: parseFloat(c.amount), note: c.note || '' }
+      setContributions(prev => {
+        if (prev.some(x => x.id === incoming.id && !x._pending)) return prev
+        const hasPending = prev.some(x => x.id === incoming.id && x._pending)
+        if (hasPending) return prev.map(x => x.id === incoming.id ? incoming : x)
+        return [incoming, ...prev]
+      })
+    } else if (payload.eventType === 'DELETE') {
+      setContributions(prev => prev.filter(x => x.id !== payload.old.id))
+    }
+  }
+
+  // ── Realtime subscription ─────────────────────────────────
+  useEffect(() => {
+    if (!userId) return
+    setRealtimeStatus('connecting')
+
+    const channel = supabase
+      .channel(`user-data-${userId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'expenses',           filter: `user_id=eq.${userId}` }, p => handleExpenseEvent('INSERT', p))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'expenses',           filter: `user_id=eq.${userId}` }, p => handleExpenseEvent('UPDATE', p))
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'expenses',           filter: `user_id=eq.${userId}` }, p => handleExpenseEvent('DELETE', p))
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'income',             filter: `user_id=eq.${userId}` }, p => handleIncomeEvent('INSERT', p))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'income',             filter: `user_id=eq.${userId}` }, p => handleIncomeEvent('UPDATE', p))
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'income',             filter: `user_id=eq.${userId}` }, p => handleIncomeEvent('DELETE', p))
+      .on('postgres_changes', { event: '*',      schema: 'public', table: 'budgets',            filter: `user_id=eq.${userId}` }, p => handleBudgetEvent(p))
+      .on('postgres_changes', { event: '*',      schema: 'public', table: 'goals',              filter: `user_id=eq.${userId}` }, p => handleGoalEvent(p))
+      .on('postgres_changes', { event: '*',      schema: 'public', table: 'goal_contributions', filter: `user_id=eq.${userId}` }, p => handleContributionEvent(p))
+      .subscribe(status => {
+        if (status === 'SUBSCRIBED')    setRealtimeStatus('live')
+        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setRealtimeStatus('error')
+        else if (status === 'CLOSED')   setRealtimeStatus('offline')
+      })
+
+    return () => { supabase.removeChannel(channel) }
+  }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── executeOp: replay a single queued operation ───────────
   const executeOp = useCallback(async (op, payload) => {
@@ -492,6 +606,7 @@ export function useStorage(userId) {
     pendingCount: queue.length,
     syncing,
     online,
+    realtimeStatus,
     addExpense, editExpense, deleteExpense, deleteManyExpenses,
     addIncome,  editIncome,  deleteIncome,
     saveBudgets,

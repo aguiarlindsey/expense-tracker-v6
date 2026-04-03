@@ -896,7 +896,7 @@ export default function Tracker({ session }) {
   const {
     expenses, income, budgets, goals, contributions,
     loading, error,
-    pendingCount, syncing, online,
+    pendingCount, syncing, online, realtimeStatus,
     addExpense, editExpense, deleteExpense, deleteManyExpenses,
     addIncome,  editIncome,  deleteIncome,
     saveBudgets,
@@ -1693,6 +1693,15 @@ export default function Tracker({ session }) {
           <span className="tracker-stats">{expenses.length} expenses · {income.length} income</span>
         </div>
         <div className="tracker-header-right">
+          <span
+            className={`realtime-dot realtime-${realtimeStatus}`}
+            title={
+              realtimeStatus === 'live'       ? 'Live sync active' :
+              realtimeStatus === 'connecting' ? 'Connecting to live sync…' :
+              realtimeStatus === 'error'      ? 'Live sync error — changes may be delayed' :
+              'Live sync offline'
+            }
+          />
           <button className="btn-ghost btn-sm" title="D" onClick={() => setDark(m => !m)}>{dark ? '🌙' : '☀️'}</button>
           <button className="btn-ghost btn-sm" title="Colorblind mode" onClick={() => setColorblind(m => !m)} style={{ opacity: colorblind ? 1 : 0.5 }}>👁️</button>
           <button className="btn-primary btn-sm" onClick={() => setShowEF(true)} title="N">➕ Expense</button>
@@ -2543,8 +2552,8 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title">💸 Expense Tracker V6</div>
               <div className="about-meta">
-                <span className="about-badge">v6.5.0</span>
-                <span className="about-badge">Phase 6 Complete</span>
+                <span className="about-badge">v6.6.0</span>
+                <span className="about-badge">Phase 7 Complete</span>
                 <span className="about-badge">Cloud + Supabase</span>
                 <span className="about-badge">PWA</span>
               </div>

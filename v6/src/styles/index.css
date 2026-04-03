@@ -249,6 +249,28 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 }
 .item-pending { font-size: 0.75rem; margin-right: 3px; opacity: 0.7; }
 
+/* Realtime status dot */
+.realtime-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: default;
+  transition: background 0.3s;
+}
+.realtime-live {
+  background: #10b981;
+  animation: realtime-pulse 2s ease-out infinite;
+}
+.realtime-connecting { background: #f59e0b; animation: spin 1s linear infinite; }
+.realtime-error      { background: #ef4444; }
+.realtime-offline    { background: #9ca3af; }
+@keyframes realtime-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.5); }
+  70%  { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+  100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+
 /* Buttons */
 .btn-primary  { background: var(--primary); color: #fff; border: none; border-radius: 8px; padding: 0.5rem 1rem; cursor: pointer; font-weight: 500; transition: background 0.15s; }
 .btn-primary:hover { background: var(--primary-hover); }
