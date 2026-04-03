@@ -28,7 +28,23 @@
 | 17 | 2026-03-31 | v6 Phase 3 parity: 9 tabs, exchange, settings, export/import, forecast, subs | 4.0 |
 | 18 | 2026-04-02 | v6 Phase 3 close: audit, heatmap fixes, bug fixes (5 items), hours log | 2.0 |
 | 19 | 2026-04-02 | v6 Phase 4: GitHub + Vercel deploy, TDZ fixes, Chrome Auto Dark Mode fix, PWA | 3.5 |
-| **Total** | | | **~54.0 h** |
+| 20 | 2026-04-02 | v6 Phase 4 audit + bug fixes (subcategory, UPI/Wallet), responsive CSS, PWA auto-reload, Phase 5 offline resilience | 4.0 |
+| **Total** | | | **~58.0 h** |
+
+---
+
+## [v6.4.0] — Phase 5: Offline Resilience + Bug Fixes + Responsive
+_2026-04-02_
+
+- `src/hooks/useRetryQueue.js` — new hook: persists mutation queue to `localStorage` (`et_v6_retry_queue`), tracks `online`/`offline` via `window` events, exposes `enqueue` / `remove` / `bumpAttempts` / `dropExhausted`
+- `src/hooks/useStorage.js` — integrated retry queue into all 11 CRUD operations; every mutation now applies optimistically to local state with `_pending: true` then confirms to Supabase; `isNetworkError()` distinguishes network failures from real errors (only network errors are queued); `executeOp()` maps op name → Supabase call for replay; auto-drains queue on reconnect and on mount; max 5 attempts per item then drops
+- `src/components/Tracker.jsx` — offline amber banner ("You're offline · N changes queued"), blue syncing banner during queue replay, ⏳ pending indicator on unconfirmed expense/income items
+- `src/styles/index.css` — `.offline-banner`, `.syncing-banner`, `.syncing-spinner`, `.item-pending` styles added
+- **Bug fix** — category dropdown `<option>` missing `value` attr caused subcategories to always be blank when any non-Food category was selected; added `value={c}` to fix
+- **Bug fix** — no UPI app / wallet selector in expense form; added `UPI_APPS` and `WALLET_APPS` arrays to `constants.js`; UPI/QR → dropdown (GPay, PhonePe, PayZapp, etc.), Wallet → dropdown (Amazon Pay, Paytm, etc.)
+- **Responsive CSS** — full mobile + tablet breakpoints: tabs scroll horizontally (9 tabs no longer overflow), modal slides up from bottom, filter bar stacks vertically, form rows go single-column, app header truncates/hides email, tables get horizontal scroll, heatmap cells shrink
+- **PWA auto-reload** — `useRegisterSW` in `main.jsx` with `onNeedRefresh → window.location.reload()` and 60s polling; new deploys activate automatically without manual hard-refresh
+- **Phase 4 audit fixes** — page title corrected "v6" → "Expense Tracker"; `<meta name="theme-color">` added to `index.html`
 
 ---
 
