@@ -829,7 +829,10 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
         {item.notes && <div className="item-notes">{item.notes}</div>}
       </div>
       <div className="item-right">
-        <div className="item-amount">{fmtINR(toINR(item))}</div>
+        <div className="item-amount">
+          {item._pending && <span className="item-pending" title="Pending sync">⏳</span>}
+          {fmtINR(toINR(item))}
+        </div>
         {item.currency !== 'INR' && <div className="item-foreign">{CM[item.currency]?.symbol || item.currency}{item.amount}</div>}
         {!bulkMode && (
           <div className="item-actions">
@@ -856,7 +859,10 @@ const IncItem = memo(function IncItem({ item, onDelete, onEdit }) {
         {item.notes && <div className="item-notes">{item.notes}</div>}
       </div>
       <div className="item-right">
-        <div className="item-amount" style={{ color: 'var(--color-inc)' }}>+{fmtINR(toINR(item))}</div>
+        <div className="item-amount" style={{ color: 'var(--color-inc)' }}>
+          {item._pending && <span className="item-pending" title="Pending sync">⏳</span>}
+          +{fmtINR(toINR(item))}
+        </div>
         {item.currency !== 'INR' && <div className="item-foreign">{CM[item.currency]?.symbol || item.currency}{item.amount}</div>}
         <div className="item-actions">
           <button className="item-btn" onClick={() => onEdit(item)}>✏️</button>
@@ -889,6 +895,7 @@ export default function Tracker({ session }) {
   const {
     expenses, income, budgets, goals, contributions,
     loading, error,
+    pendingCount, syncing, online,
     addExpense, editExpense, deleteExpense, deleteManyExpenses,
     addIncome,  editIncome,  deleteIncome,
     saveBudgets,
@@ -1586,6 +1593,17 @@ export default function Tracker({ session }) {
 
   return (
     <div className="tracker">
+      {!online && (
+        <div className="offline-banner">
+          <span>📡 You're offline{pendingCount > 0 ? ` · ${pendingCount} change${pendingCount !== 1 ? 's' : ''} queued` : ''}</span>
+          <span className="offline-banner-sub">Changes will sync automatically when reconnected</span>
+        </div>
+      )}
+      {online && syncing && (
+        <div className="syncing-banner">
+          <span className="syncing-spinner" /> Syncing {pendingCount} change{pendingCount !== 1 ? 's' : ''}…
+        </div>
+      )}
       {error && <div className="error-banner">⚠️ {error} <button onClick={() => window.location.reload()}>Retry</button></div>}
 
       {/* ── Header ── */}

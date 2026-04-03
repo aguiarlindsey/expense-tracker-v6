@@ -1,5 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../utils/supabase'
+import { useRetryQueue } from './useRetryQueue'
+
+// ── Network error detection ───────────────────────────────
+function isNetworkError(err) {
+  if (!navigator.onLine) return true
+  const msg = (err?.message || '').toLowerCase()
+  return msg.includes('fetch') || msg.includes('network') || msg.includes('failed to fetch') || msg.includes('load failed') || msg.includes('networkerror')
+}
 
 // ── DB ↔ App field mapping ────────────────────────────────
 
@@ -113,18 +121,22 @@ function incomeFromDb(row) {
 // ── Hook ─────────────────────────────────────────────────
 
 export function useStorage(userId) {
-  const [expenses, setExpenses] = useState([])
-  const [income,   setIncome]   = useState([])
-  const [budgets,  setBudgets]  = useState({ daily: 0, weekly: 0, monthly: 0, categories: {} })
-  const [loading,  setLoading]  = useState(true)
-  const [error,    setError]    = useState(null)
+  const [expenses,      setExpenses]      = useState([])
+  const [income,        setIncome]        = useState([])
+  const [budgets,       setBudgets]       = useState({ daily: 0, weekly: 0, monthly: 0, categories: {} })
+  const [goals,         setGoals]         = useState([])
+  const [contributions, setContributions] = useState([])
+  const [loading,       setLoading]       = useState(true)
+  const [error,         setError]         = useState(null)
+  const [syncing,       setSyncing]       = useState(false)
+
+  const { queue, online, enqueue, remove, bumpAttempts, dropExhausted } = useRetryQueue()
 
   // ── Initial load ──────────────────────────────────────
   useEffect(() => {
     if (!userId) return
     setLoading(true)
     setError(null)
-
     Promise.all([
       supabase.from('expenses').select('*').eq('user_id', userId).order('date', { ascending: false }),
       supabase.from('income').select('*').eq('user_id', userId).order('date', { ascending: false }),
@@ -146,73 +158,6 @@ export function useStorage(userId) {
     })
   }, [userId])
 
-  // ── Expenses ─────────────────────────────────────────
-  const addExpense = useCallback(async (exp) => {
-    const row = expenseToDb(exp, userId)
-    const { data, error: err } = await supabase.from('expenses').insert(row).select().single()
-    if (err) { setError(err.message); return }
-    setExpenses(prev => [expenseFromDb(data), ...prev])
-  }, [userId])
-
-  const editExpense = useCallback(async (exp) => {
-    const row = expenseToDb(exp, userId)
-    const { data, error: err } = await supabase.from('expenses').update(row).eq('id', exp.id).select().single()
-    if (err) { setError(err.message); return }
-    setExpenses(prev => prev.map(e => e.id === exp.id ? expenseFromDb(data) : e))
-  }, [userId])
-
-  const deleteExpense = useCallback(async (id) => {
-    const { error: err } = await supabase.from('expenses').delete().eq('id', id)
-    if (err) { setError(err.message); return }
-    setExpenses(prev => prev.filter(e => e.id !== id))
-  }, [])
-
-  const deleteManyExpenses = useCallback(async (ids) => {
-    const { error: err } = await supabase.from('expenses').delete().in('id', ids)
-    if (err) { setError(err.message); return }
-    const idSet = new Set(ids)
-    setExpenses(prev => prev.filter(e => !idSet.has(e.id)))
-  }, [])
-
-  // ── Income ───────────────────────────────────────────
-  const addIncome = useCallback(async (inc) => {
-    const row = incomeToDb(inc, userId)
-    const { data, error: err } = await supabase.from('income').insert(row).select().single()
-    if (err) { setError(err.message); return }
-    setIncome(prev => [incomeFromDb(data), ...prev])
-  }, [userId])
-
-  const editIncome = useCallback(async (inc) => {
-    const row = incomeToDb(inc, userId)
-    const { data, error: err } = await supabase.from('income').update(row).eq('id', inc.id).select().single()
-    if (err) { setError(err.message); return }
-    setIncome(prev => prev.map(i => i.id === inc.id ? incomeFromDb(data) : i))
-  }, [userId])
-
-  const deleteIncome = useCallback(async (id) => {
-    const { error: err } = await supabase.from('income').delete().eq('id', id)
-    if (err) { setError(err.message); return }
-    setIncome(prev => prev.filter(i => i.id !== id))
-  }, [])
-
-  // ── Budgets ──────────────────────────────────────────
-  const saveBudgets = useCallback(async (nb) => {
-    setBudgets(nb) // optimistic
-    const { error: err } = await supabase.from('budgets').upsert({
-      user_id:    userId,
-      daily:      nb.daily    || 0,
-      weekly:     nb.weekly   || 0,
-      monthly:    nb.monthly  || 0,
-      categories: nb.categories || {},
-      updated_at: new Date().toISOString(),
-    })
-    if (err) setError(err.message)
-  }, [userId])
-
-  // ── Goals ─────────────────────────────────────────────
-  const [goals,         setGoals]         = useState([])
-  const [contributions, setContributions] = useState([]) // all contributions flat
-
   useEffect(() => {
     if (!userId) return
     Promise.all([
@@ -222,69 +167,267 @@ export function useStorage(userId) {
       if (gRes.error) setError(gRes.error.message)
       if (cRes.error) setError(cRes.error.message)
       setGoals((gRes.data || []).map(g => ({
-        id:         g.id,
-        name:       g.name,
-        target:     parseFloat(g.target),
-        targetDate: g.target_date || '',
-        icon:       g.icon || '🎯',
-        note:       g.note || '',
-        createdAt:  g.created_at || '',
+        id: g.id, name: g.name, target: parseFloat(g.target),
+        targetDate: g.target_date || '', icon: g.icon || '🎯',
+        note: g.note || '', createdAt: g.created_at || '',
       })))
       setContributions((cRes.data || []).map(c => ({
-        id:     c.id,
-        goalId: c.goal_id,
-        date:   c.date,
-        amount: parseFloat(c.amount),
-        note:   c.note || '',
+        id: c.id, goalId: c.goal_id, date: c.date,
+        amount: parseFloat(c.amount), note: c.note || '',
       })))
     })
   }, [userId])
 
+  // ── executeOp: replay a single queued operation ───────────
+  const executeOp = useCallback(async (op, payload) => {
+    switch (op) {
+      case 'addExpense': {
+        const { data, error: err } = await supabase.from('expenses').insert(expenseToDb(payload, userId)).select().single()
+        if (err) throw new Error(err.message)
+        setExpenses(prev => prev.map(e => e.id === payload.id ? expenseFromDb(data) : e))
+        break
+      }
+      case 'editExpense': {
+        const { error: err } = await supabase.from('expenses').update(expenseToDb(payload, userId)).eq('id', payload.id)
+        if (err) throw new Error(err.message)
+        setExpenses(prev => prev.map(e => e.id === payload.id ? { ...e, _pending: false } : e))
+        break
+      }
+      case 'deleteExpense': {
+        const { error: err } = await supabase.from('expenses').delete().eq('id', payload.id)
+        if (err) throw new Error(err.message)
+        break
+      }
+      case 'addIncome': {
+        const { data, error: err } = await supabase.from('income').insert(incomeToDb(payload, userId)).select().single()
+        if (err) throw new Error(err.message)
+        setIncome(prev => prev.map(i => i.id === payload.id ? incomeFromDb(data) : i))
+        break
+      }
+      case 'editIncome': {
+        const { error: err } = await supabase.from('income').update(incomeToDb(payload, userId)).eq('id', payload.id)
+        if (err) throw new Error(err.message)
+        setIncome(prev => prev.map(i => i.id === payload.id ? { ...i, _pending: false } : i))
+        break
+      }
+      case 'deleteIncome': {
+        const { error: err } = await supabase.from('income').delete().eq('id', payload.id)
+        if (err) throw new Error(err.message)
+        break
+      }
+      case 'saveBudgets': {
+        const { error: err } = await supabase.from('budgets').upsert({
+          user_id: userId, daily: payload.daily || 0, weekly: payload.weekly || 0,
+          monthly: payload.monthly || 0, categories: payload.categories || {},
+          updated_at: new Date().toISOString(),
+        })
+        if (err) throw new Error(err.message)
+        break
+      }
+      case 'addGoal': {
+        const { error: err } = await supabase.from('goals').insert({
+          id: payload.id, user_id: userId, name: payload.name,
+          target: payload.target, target_date: payload.targetDate || null,
+          icon: payload.icon || '🎯', note: payload.note || null,
+        })
+        if (err) throw new Error(err.message)
+        setGoals(prev => prev.map(g => g.id === payload.id ? { ...g, _pending: false } : g))
+        break
+      }
+      case 'deleteGoal': {
+        const { error: err } = await supabase.from('goals').delete().eq('id', payload.id)
+        if (err) throw new Error(err.message)
+        break
+      }
+      case 'addContribution': {
+        const { error: err } = await supabase.from('goal_contributions').insert({
+          id: payload.id, goal_id: payload.goalId, user_id: userId,
+          date: payload.date, amount: payload.amount, note: payload.note || null,
+        })
+        if (err) throw new Error(err.message)
+        setContributions(prev => prev.map(c => c.id === payload.id ? { ...c, _pending: false } : c))
+        break
+      }
+      case 'deleteContribution': {
+        const { error: err } = await supabase.from('goal_contributions').delete().eq('id', payload.id)
+        if (err) throw new Error(err.message)
+        break
+      }
+      default:
+        break
+    }
+  }, [userId])
+
+  // ── Replay queue ──────────────────────────────────────────
+  const replay = useCallback(async () => {
+    const snapshot = loadQueueSnapshot()
+    if (!snapshot.length || syncing) return
+    setSyncing(true)
+    for (const item of snapshot) {
+      try {
+        await executeOp(item.op, item.payload)
+        remove(item.id)
+      } catch {
+        bumpAttempts(item.id)
+      }
+    }
+    dropExhausted(5)
+    setSyncing(false)
+  }, [syncing, executeOp, remove, bumpAttempts, dropExhausted])
+
+  // Replay on reconnect
+  useEffect(() => {
+    if (online && queue.length > 0 && !syncing) replay()
+  }, [online]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Replay on mount if previous session left items queued
+  useEffect(() => {
+    if (online && queue.length > 0) replay()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Expenses ─────────────────────────────────────────────
+  const addExpense = useCallback(async (exp) => {
+    setExpenses(prev => [{ ...exp, _pending: true }, ...prev])
+    if (!navigator.onLine) { enqueue('addExpense', exp); return }
+    const { data, error: err } = await supabase.from('expenses').insert(expenseToDb(exp, userId)).select().single()
+    if (err) {
+      if (isNetworkError(err)) { enqueue('addExpense', exp) }
+      else { setError(err.message); setExpenses(prev => prev.filter(e => e.id !== exp.id)) }
+      return
+    }
+    setExpenses(prev => prev.map(e => e.id === exp.id ? expenseFromDb(data) : e))
+  }, [userId, enqueue])
+
+  const editExpense = useCallback(async (exp) => {
+    setExpenses(prev => prev.map(e => e.id === exp.id ? { ...exp, _pending: true } : e))
+    if (!navigator.onLine) { enqueue('editExpense', exp); return }
+    const { data, error: err } = await supabase.from('expenses').update(expenseToDb(exp, userId)).eq('id', exp.id).select().single()
+    if (err) {
+      if (isNetworkError(err)) { enqueue('editExpense', exp) }
+      else { setError(err.message) }
+      return
+    }
+    setExpenses(prev => prev.map(e => e.id === exp.id ? expenseFromDb(data) : e))
+  }, [userId, enqueue])
+
+  const deleteExpense = useCallback(async (id) => {
+    setExpenses(prev => prev.filter(e => e.id !== id))
+    if (!navigator.onLine) { enqueue('deleteExpense', { id }); return }
+    const { error: err } = await supabase.from('expenses').delete().eq('id', id)
+    if (err && isNetworkError(err)) enqueue('deleteExpense', { id })
+    else if (err) setError(err.message)
+  }, [userId, enqueue])
+
+  const deleteManyExpenses = useCallback(async (ids) => {
+    const idSet = new Set(ids)
+    setExpenses(prev => prev.filter(e => !idSet.has(e.id)))
+    if (!navigator.onLine) { ids.forEach(id => enqueue('deleteExpense', { id })); return }
+    const { error: err } = await supabase.from('expenses').delete().in('id', ids)
+    if (err && isNetworkError(err)) ids.forEach(id => enqueue('deleteExpense', { id }))
+    else if (err) setError(err.message)
+  }, [userId, enqueue])
+
+  // ── Income ───────────────────────────────────────────────
+  const addIncome = useCallback(async (inc) => {
+    setIncome(prev => [{ ...inc, _pending: true }, ...prev])
+    if (!navigator.onLine) { enqueue('addIncome', inc); return }
+    const { data, error: err } = await supabase.from('income').insert(incomeToDb(inc, userId)).select().single()
+    if (err) {
+      if (isNetworkError(err)) { enqueue('addIncome', inc) }
+      else { setError(err.message); setIncome(prev => prev.filter(i => i.id !== inc.id)) }
+      return
+    }
+    setIncome(prev => prev.map(i => i.id === inc.id ? incomeFromDb(data) : i))
+  }, [userId, enqueue])
+
+  const editIncome = useCallback(async (inc) => {
+    setIncome(prev => prev.map(i => i.id === inc.id ? { ...inc, _pending: true } : i))
+    if (!navigator.onLine) { enqueue('editIncome', inc); return }
+    const { data, error: err } = await supabase.from('income').update(incomeToDb(inc, userId)).eq('id', inc.id).select().single()
+    if (err) {
+      if (isNetworkError(err)) { enqueue('editIncome', inc) }
+      else { setError(err.message) }
+      return
+    }
+    setIncome(prev => prev.map(i => i.id === inc.id ? incomeFromDb(data) : i))
+  }, [userId, enqueue])
+
+  const deleteIncome = useCallback(async (id) => {
+    setIncome(prev => prev.filter(i => i.id !== id))
+    if (!navigator.onLine) { enqueue('deleteIncome', { id }); return }
+    const { error: err } = await supabase.from('income').delete().eq('id', id)
+    if (err && isNetworkError(err)) enqueue('deleteIncome', { id })
+    else if (err) setError(err.message)
+  }, [userId, enqueue])
+
+  // ── Budgets ──────────────────────────────────────────────
+  const saveBudgets = useCallback(async (nb) => {
+    setBudgets(nb)
+    if (!navigator.onLine) { enqueue('saveBudgets', nb); return }
+    const { error: err } = await supabase.from('budgets').upsert({
+      user_id: userId, daily: nb.daily || 0, weekly: nb.weekly || 0,
+      monthly: nb.monthly || 0, categories: nb.categories || {},
+      updated_at: new Date().toISOString(),
+    })
+    if (err && isNetworkError(err)) enqueue('saveBudgets', nb)
+    else if (err) setError(err.message)
+  }, [userId, enqueue])
+
+  // ── Goals ─────────────────────────────────────────────────
   const addGoal = useCallback(async (goal) => {
+    setGoals(prev => [{ ...goal, _pending: true }, ...prev])
+    if (!navigator.onLine) { enqueue('addGoal', goal); return }
     const { data, error: err } = await supabase.from('goals').insert({
-      id:          goal.id,
-      user_id:     userId,
-      name:        goal.name,
-      target:      goal.target,
-      target_date: goal.targetDate || null,
-      icon:        goal.icon || '🎯',
-      note:        goal.note || null,
+      id: goal.id, user_id: userId, name: goal.name, target: goal.target,
+      target_date: goal.targetDate || null, icon: goal.icon || '🎯', note: goal.note || null,
     }).select().single()
-    if (err) { setError(err.message); return }
-    setGoals(prev => [{
+    if (err) {
+      if (isNetworkError(err)) { enqueue('addGoal', goal) }
+      else { setError(err.message); setGoals(prev => prev.filter(g => g.id !== goal.id)) }
+      return
+    }
+    setGoals(prev => prev.map(g => g.id === goal.id ? {
       id: data.id, name: data.name, target: parseFloat(data.target),
       targetDate: data.target_date || '', icon: data.icon || '🎯',
       note: data.note || '', createdAt: data.created_at || '',
-    }, ...prev])
-  }, [userId])
+    } : g))
+  }, [userId, enqueue])
 
   const deleteGoal = useCallback(async (id) => {
-    const { error: err } = await supabase.from('goals').delete().eq('id', id)
-    if (err) { setError(err.message); return }
     setGoals(prev => prev.filter(g => g.id !== id))
     setContributions(prev => prev.filter(c => c.goalId !== id))
-  }, [])
+    if (!navigator.onLine) { enqueue('deleteGoal', { id }); return }
+    const { error: err } = await supabase.from('goals').delete().eq('id', id)
+    if (err && isNetworkError(err)) enqueue('deleteGoal', { id })
+    else if (err) setError(err.message)
+  }, [userId, enqueue])
 
   const addContribution = useCallback(async (goalId, contrib) => {
+    setContributions(prev => [{ ...contrib, goalId, _pending: true }, ...prev])
+    if (!navigator.onLine) { enqueue('addContribution', { ...contrib, goalId }); return }
     const { data, error: err } = await supabase.from('goal_contributions').insert({
-      id:      contrib.id,
-      goal_id: goalId,
-      user_id: userId,
-      date:    contrib.date,
-      amount:  contrib.amount,
-      note:    contrib.note || null,
+      id: contrib.id, goal_id: goalId, user_id: userId,
+      date: contrib.date, amount: contrib.amount, note: contrib.note || null,
     }).select().single()
-    if (err) { setError(err.message); return }
-    setContributions(prev => [{ id: data.id, goalId: data.goal_id, date: data.date, amount: parseFloat(data.amount), note: data.note || '' }, ...prev])
-  }, [userId])
+    if (err) {
+      if (isNetworkError(err)) { enqueue('addContribution', { ...contrib, goalId }) }
+      else { setError(err.message); setContributions(prev => prev.filter(c => c.id !== contrib.id)) }
+      return
+    }
+    setContributions(prev => prev.map(c => c.id === contrib.id
+      ? { id: data.id, goalId: data.goal_id, date: data.date, amount: parseFloat(data.amount), note: data.note || '' }
+      : c))
+  }, [userId, enqueue])
 
   const deleteContribution = useCallback(async (contribId) => {
-    const { error: err } = await supabase.from('goal_contributions').delete().eq('id', contribId)
-    if (err) { setError(err.message); return }
     setContributions(prev => prev.filter(c => c.id !== contribId))
-  }, [])
+    if (!navigator.onLine) { enqueue('deleteContribution', { id: contribId }); return }
+    const { error: err } = await supabase.from('goal_contributions').delete().eq('id', contribId)
+    if (err && isNetworkError(err)) enqueue('deleteContribution', { id: contribId })
+    else if (err) setError(err.message)
+  }, [userId, enqueue])
 
-  // ── Bulk import ──────────────────────────────────────
+  // ── Bulk import ──────────────────────────────────────────
   const bulkAddExpenses = useCallback(async (exps) => {
     if (!exps.length) return { added: 0, errors: 0 }
     const rows = exps.map(e => expenseToDb(e, userId))
@@ -303,7 +446,7 @@ export function useStorage(userId) {
     return { added: (data || []).length, errors: 0 }
   }, [userId])
 
-  // ── Clear / danger zone ──────────────────────────────
+  // ── Clear / danger zone ──────────────────────────────────
   const clearExpenses = useCallback(async () => {
     const { error: err } = await supabase.from('expenses').delete().eq('user_id', userId)
     if (err) { setError(err.message); return }
@@ -339,14 +482,16 @@ export function useStorage(userId) {
     setGoals([])
     setContributions([])
     try {
-      ['et_v6_rates', 'et_v6_dark', 'et_v6_cb', 'et_v6_base'].forEach(k => localStorage.removeItem(k))
+      ['et_v6_rates', 'et_v6_dark', 'et_v6_cb', 'et_v6_base', 'et_v6_retry_queue'].forEach(k => localStorage.removeItem(k))
     } catch {}
   }, [userId])
 
   return {
-    expenses, income, budgets,
-    goals, contributions,
+    expenses, income, budgets, goals, contributions,
     loading, error,
+    pendingCount: queue.length,
+    syncing,
+    online,
     addExpense, editExpense, deleteExpense, deleteManyExpenses,
     addIncome,  editIncome,  deleteIncome,
     saveBudgets,
@@ -354,4 +499,9 @@ export function useStorage(userId) {
     bulkAddExpenses, bulkAddIncome,
     clearExpenses, clearIncome, clearAll, factoryReset,
   }
+}
+
+// Read queue directly from localStorage (needed inside replay to get fresh snapshot)
+function loadQueueSnapshot() {
+  try { return JSON.parse(localStorage.getItem('et_v6_retry_queue') || '[]') } catch { return [] }
 }

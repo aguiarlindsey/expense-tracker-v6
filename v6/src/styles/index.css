@@ -231,6 +231,24 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 /* Error banner */
 .error-banner { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.88rem; }
 
+/* Offline / sync banners */
+.offline-banner {
+  display: flex; flex-direction: column; gap: 2px;
+  background: #fef3c7; color: #92400e; border: 1px solid #fcd34d;
+  border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.75rem; font-size: 0.88rem; font-weight: 500;
+}
+.offline-banner-sub { font-size: 0.78rem; font-weight: 400; color: #b45309; }
+.syncing-banner {
+  display: flex; align-items: center; gap: 0.5rem;
+  background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;
+  border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.75rem; font-size: 0.88rem;
+}
+.syncing-spinner {
+  width: 14px; height: 14px; border: 2px solid #bfdbfe; border-top-color: #1d4ed8;
+  border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0;
+}
+.item-pending { font-size: 0.75rem; margin-right: 3px; opacity: 0.7; }
+
 /* Buttons */
 .btn-primary  { background: var(--primary); color: #fff; border: none; border-radius: 8px; padding: 0.5rem 1rem; cursor: pointer; font-weight: 500; transition: background 0.15s; }
 .btn-primary:hover { background: var(--primary-hover); }
