@@ -4,6 +4,7 @@ import { useDebounce } from '../hooks/useDebounce'
 import { CATS, CM, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS } from '../utils/constants'
 import { makeExpense, makeIncome, makeDedupContext, matchesSearch, stableId } from '../utils/dataHelpers'
 import { migrateV5Data, validateV5File } from '../utils/migrateV5'
+import { useNotifications } from '../hooks/useNotifications'
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -905,8 +906,21 @@ export default function Tracker({ session }) {
     clearExpenses, clearIncome, clearAll, factoryReset,
   } = useStorage(userId)
 
+  const {
+    permission:          notifPermission,
+    subscribed:          notifSubscribed,
+    loading:             notifLoading,
+    error:               notifError,
+    requestAndSubscribe: notifEnable,
+    unsubscribe:         notifDisable,
+  } = useNotifications(userId)
+
   // ── UI state ─────────────────────────────────────────
-  const [tab, setTab]                     = useState('overview')
+  const [tab, setTab]                     = useState(() => {
+    const p = new URLSearchParams(window.location.search).get('tab')
+    const valid = ['overview','income','trends','budgets','goals','insights','recurring','exchange','settings']
+    return valid.includes(p) ? p : 'overview'
+  })
   const [dark, setDark]                   = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s !== null ? s === '1' : window.matchMedia('(prefers-color-scheme: dark)').matches })
   const [colorblind, setColorblind]       = useState(() => localStorage.getItem('et_v6_cb') === '1')
   const [showEF, setShowEF]               = useState(false)
@@ -2434,6 +2448,40 @@ export default function Tracker({ session }) {
             </div>
           </div>
 
+          {/* Push Notifications */}
+          <div className="settings-section" style={{ marginTop: 16 }}>
+            <h3>🔔 Recurring Reminders</h3>
+            <p className="settings-desc">
+              Get a daily push notification when a recurring expense is due within 3 days. Works even when the app is closed.
+            </p>
+            <div className="settings-row">
+              <div className="settings-row-label">
+                <strong>Push Notifications</strong>
+                <span>
+                  {notifPermission === 'denied'
+                    ? 'Blocked — enable in browser site settings, then reload.'
+                    : notifPermission === 'unsupported'
+                    ? 'Not supported in this browser.'
+                    : notifSubscribed
+                    ? 'Active — you will receive daily reminders.'
+                    : 'Not enabled.'}
+                </span>
+              </div>
+              {notifPermission !== 'denied' && notifPermission !== 'unsupported' && (
+                notifSubscribed ? (
+                  <button className="btn-ghost btn-sm" onClick={notifDisable} disabled={notifLoading}>
+                    {notifLoading ? 'Disabling…' : '🔕 Disable'}
+                  </button>
+                ) : (
+                  <button className="btn-primary btn-sm" onClick={notifEnable} disabled={notifLoading}>
+                    {notifLoading ? 'Enabling…' : '🔔 Enable'}
+                  </button>
+                )
+              )}
+            </div>
+            {notifError && <div className="settings-note" style={{ color: 'var(--color-exp)', marginTop: 8 }}>⚠ {notifError}</div>}
+          </div>
+
           {/* Export */}
           <div className="settings-section" style={{ marginTop: 16 }}>
             <h3>📤 Export Data</h3>
@@ -2552,8 +2600,8 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title">💸 Expense Tracker V6</div>
               <div className="about-meta">
-                <span className="about-badge">v6.6.0</span>
-                <span className="about-badge">Phase 7 Complete</span>
+                <span className="about-badge">v6.7.0</span>
+                <span className="about-badge">Phase 8 Complete</span>
                 <span className="about-badge">Cloud + Supabase</span>
                 <span className="about-badge">PWA</span>
               </div>

@@ -8,6 +8,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
+      workbox: {
+        importScripts: ['/sw-push.js'],
+      },
       manifest: {
         name: 'Expense Tracker',
         short_name: 'Expenses',
