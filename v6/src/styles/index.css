@@ -883,3 +883,34 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
   /* Category allocation: single column */
   .cat-alloc-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Incognito Mode ───────────────────────────────────────── */
+html.incognito .summary-amount,
+html.incognito .forecast-val,
+html.incognito .forecast-sub,
+html.incognito .pie-val,
+html.incognito .item-amount,
+html.incognito .bbar-amounts,
+html.incognito .bbar-over,
+html.incognito .goal-amounts,
+html.incognito .rec-amount,
+html.incognito .date-group-header span,
+html.incognito .recurring-chip-meta {
+  filter: blur(7px);
+  user-select: none;
+  transition: filter 0.15s ease;
+  cursor: pointer;
+}
+html.incognito .summary-amount:hover,
+html.incognito .forecast-val:hover,
+html.incognito .forecast-sub:hover,
+html.incognito .pie-val:hover,
+html.incognito .item-amount:hover,
+html.incognito .bbar-amounts:hover,
+html.incognito .bbar-over:hover,
+html.incognito .goal-amounts:hover,
+html.incognito .rec-amount:hover,
+html.incognito .date-group-header span:hover,
+html.incognito .recurring-chip-meta:hover {
+  filter: blur(0px);
+}

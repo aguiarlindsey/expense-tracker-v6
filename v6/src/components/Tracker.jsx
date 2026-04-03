@@ -923,6 +923,7 @@ export default function Tracker({ session }) {
   })
   const [dark, setDark]                   = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s !== null ? s === '1' : window.matchMedia('(prefers-color-scheme: dark)').matches })
   const [colorblind, setColorblind]       = useState(() => localStorage.getItem('et_v6_cb') === '1')
+  const [incognito, setIncognito]         = useState(() => localStorage.getItem('et_v6_incognito') === '1')
   const [showEF, setShowEF]               = useState(false)
   const [showIF, setShowIF]               = useState(false)
   const [editExpTarget, setEditExpTarget] = useState(null)
@@ -1202,6 +1203,10 @@ export default function Tracker({ session }) {
     document.documentElement.classList.toggle('colorblind', colorblind)
     localStorage.setItem('et_v6_cb', colorblind ? '1' : '0')
   }, [colorblind])
+  useEffect(() => {
+    document.documentElement.classList.toggle('incognito', incognito)
+    localStorage.setItem('et_v6_incognito', incognito ? '1' : '0')
+  }, [incognito])
 
   // ── Filters — expenses ───────────────────────────────
   const [expSearch,    setExpSearch]    = useState('')
@@ -1718,6 +1723,7 @@ export default function Tracker({ session }) {
           />
           <button className="btn-ghost btn-sm" title="D" onClick={() => setDark(m => !m)}>{dark ? '🌙' : '☀️'}</button>
           <button className="btn-ghost btn-sm" title="Colorblind mode" onClick={() => setColorblind(m => !m)} style={{ opacity: colorblind ? 1 : 0.5 }}>👁️</button>
+          <button className="btn-ghost btn-sm" title={incognito ? 'Show amounts' : 'Hide amounts'} onClick={() => setIncognito(m => !m)} style={{ opacity: incognito ? 1 : 0.5 }}>🙈</button>
           <button className="btn-primary btn-sm" onClick={() => setShowEF(true)} title="N">➕ Expense</button>
           <button className="btn-income  btn-sm" onClick={() => setShowIF(true)} title="I">💵 Income</button>
         </div>
