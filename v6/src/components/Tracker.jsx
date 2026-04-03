@@ -2606,8 +2606,8 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title">💸 Expense Tracker V6</div>
               <div className="about-meta">
-                <span className="about-badge">v6.7.0</span>
-                <span className="about-badge">Phase 8 Complete</span>
+                <span className="about-badge">v7.0.0</span>
+                <span className="about-badge">Incognito Mode</span>
                 <span className="about-badge">Cloud + Supabase</span>
                 <span className="about-badge">PWA</span>
               </div>
@@ -2620,7 +2620,7 @@ export default function Tracker({ session }) {
               <div className="about-row"><span>Features</span><span>9 tabs · 16 insights · 259-color palette · live FX rates</span></div>
               <div className="about-row"><span>Mobile</span><span>Fully responsive · UPI/Wallet selectors · horizontal tab scroll</span></div>
               <div className="about-row"><span>V5 parity</span><span>100% — all V5 features ported + Goals/Budgets/Offline added</span></div>
-              <div className="about-row"><span>Last updated</span><span>2026-04-02</span></div>
+              <div className="about-row"><span>Last updated</span><span>2026-04-03</span></div>
             </div>
           </div>
         </main>

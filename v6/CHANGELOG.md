@@ -30,7 +30,20 @@
 | 19 | 2026-04-02 | v6 Phase 4: GitHub + Vercel deploy, TDZ fixes, Chrome Auto Dark Mode fix, PWA | 3.5 |
 | 20 | 2026-04-02 | v6 Phase 4 audit + bug fixes (subcategory, UPI/Wallet), responsive CSS, PWA auto-reload, Phase 5 offline resilience | 4.0 |
 | 21 | 2026-04-03 | v6 Phase 6: v5→v6 migration; Phase 7: real-time sync; Phase 8: push notifications | 5.5 |
-| **Total** | | | **~63.5 h** |
+| 22 | 2026-04-03 | v7.0.0: Incognito mode toggle — blur all amounts, hover-to-reveal, persisted | 1.5 |
+| **Total** | | | **~65.0 h** |
+
+---
+
+## [v7.0.0] — Incognito Mode
+_2026-04-03_
+
+- 🙈 button added to header (between colorblind toggle and ➕ Expense)
+- CSS blur on 11 amount classes via `html.incognito` selector: `summary-amount`, `forecast-val`, `forecast-sub`, `pie-val`, `item-amount`, `bbar-amounts`, `bbar-over`, `goal-amounts`, `rec-amount`, `date-group-header span`, `recurring-chip-meta`
+- Hover-to-reveal on any blurred element (desktop)
+- State persisted to `localStorage` (`et_v6_incognito`); survives page refresh
+- Follows same pattern as dark/colorblind mode — `useEffect` + `documentElement.classList.toggle`
+- About section updated to v7.0.0
 
 ---
 
