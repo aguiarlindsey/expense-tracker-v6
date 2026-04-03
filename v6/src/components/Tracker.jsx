@@ -8,10 +8,12 @@ import { useNotifications } from '../hooks/useNotifications'
 
 // ─── Helpers ─────────────────────────────────────────────
 
-function fmtINR(n) {
+function _fmtINR(n) {
   if (isNaN(n) || n == null) return '₹0'
   return '₹' + parseFloat(n).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
+// Module-level alias — sub-components use this; Tracker shadows it with incognito-aware version
+const fmtINR = _fmtINR
 function toINR(e) {
   if (!e) return 0
   if (!e.currency || e.currency === 'INR') return parseFloat(e.amount || 0)
@@ -55,7 +57,8 @@ function ToastStack({ toasts, onDismiss }) {
 
 // ─── Charts ───────────────────────────────────────────────
 
-function PieChart({ data, size = 190 }) {
+function PieChart({ data, size = 190, incognito = false }) {
+  const fmtINR = n => incognito ? '••••••' : _fmtINR(n)
   const [hovered, setHovered] = useState(null)
   const total = (data || []).reduce((s, d) => s + d.value, 0)
   if (!total) return <div className="chart-empty">No data</div>
@@ -271,7 +274,8 @@ function HeatmapCalendar({ expenses, income }) {
 
 // ─── Budget Bar ───────────────────────────────────────────
 
-const BudgetBar = memo(function BudgetBar({ icon, label, spent, budget }) {
+const BudgetBar = memo(function BudgetBar({ icon, label, spent, budget, incognito = false }) {
+  const fmtINR = n => incognito ? '••••••' : _fmtINR(n)
   if (!budget || budget <= 0) return (
     <div className="bbar-wrap">
       <div className="bbar-header">
@@ -924,6 +928,9 @@ export default function Tracker({ session }) {
   const [dark, setDark]                   = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s !== null ? s === '1' : window.matchMedia('(prefers-color-scheme: dark)').matches })
   const [colorblind, setColorblind]       = useState(() => localStorage.getItem('et_v6_cb') === '1')
   const [incognito, setIncognito]         = useState(() => localStorage.getItem('et_v6_incognito') === '1')
+  // Shadow module-level fmtINR — all JSX in this component uses this version
+  // eslint-disable-next-line no-shadow
+  const fmtINR = n => incognito ? '••••••' : _fmtINR(n)
   const [showEF, setShowEF]               = useState(false)
   const [showIF, setShowIF]               = useState(false)
   const [editExpTarget, setEditExpTarget] = useState(null)
@@ -1863,8 +1870,8 @@ export default function Tracker({ session }) {
 
           {filteredExp.length > 0 && !bulkMode && (
             <div className="chart-row">
-              <div className="chart-card"><div className="chart-title">By Category</div><PieChart data={catData} /></div>
-              <div className="chart-card"><div className="chart-title">By Payment</div><PieChart data={payData} /></div>
+              <div className="chart-card"><div className="chart-title">By Category</div><PieChart data={catData} incognito={incognito} /></div>
+              <div className="chart-card"><div className="chart-title">By Payment</div><PieChart data={payData} incognito={incognito} /></div>
             </div>
           )}
 
@@ -1923,7 +1930,7 @@ export default function Tracker({ session }) {
 
           {income.length > 0 && (
             <div className="chart-row">
-              <div className="chart-card"><div className="chart-title">By Source</div><PieChart data={incSrcData} /></div>
+              <div className="chart-card"><div className="chart-title">By Source</div><PieChart data={incSrcData} incognito={incognito} /></div>
               {monthlyIncData.length >= 2 && <div className="chart-card"><div className="chart-title">Monthly Trend</div><LineChart data={monthlyIncData} /></div>}
             </div>
           )}
@@ -1958,8 +1965,8 @@ export default function Tracker({ session }) {
             </div>
           </div>
           <div className="chart-row">
-            <div className="chart-card"><div className="chart-title">Category Breakdown</div><PieChart data={catData} /></div>
-            <div className="chart-card"><div className="chart-title">Payment Breakdown</div><PieChart data={payData} /></div>
+            <div className="chart-card"><div className="chart-title">Category Breakdown</div><PieChart data={catData} incognito={incognito} /></div>
+            <div className="chart-card"><div className="chart-title">Payment Breakdown</div><PieChart data={payData} incognito={incognito} /></div>
           </div>
           {catData.length > 0 && (
             <div className="chart-card" style={{ marginBottom: '1rem' }}>
@@ -2066,9 +2073,9 @@ export default function Tracker({ session }) {
             </div>
             <div className="chart-card">
               <div className="chart-title">📊 Budget vs Actual</div>
-              <BudgetBar icon="📅" label="Daily"   spent={spentToday} budget={budgets.daily} />
-              <BudgetBar icon="🗓️" label="Weekly"  spent={spentWeek}  budget={budgets.weekly} />
-              <BudgetBar icon="📆" label="Monthly" spent={spentMonth} budget={budgets.monthly} />
+              <BudgetBar icon="📅" label="Daily"   spent={spentToday} budget={budgets.daily}    incognito={incognito} />
+              <BudgetBar icon="🗓️" label="Weekly"  spent={spentWeek}  budget={budgets.weekly}  incognito={incognito} />
+              <BudgetBar icon="📆" label="Monthly" spent={spentMonth} budget={budgets.monthly} incognito={incognito} />
             </div>
           </div>
 
@@ -2086,7 +2093,7 @@ export default function Tracker({ session }) {
                         value={catBgt || ''}
                         onChange={e => saveBudgets({ ...budgets, categories: { ...(budgets.categories || {}), [cat]: parseFloat(e.target.value) || 0 } })} />
                     </div>
-                    {(catBgt > 0 || catSpent > 0) && <div style={{ paddingLeft: '1.5rem' }}><BudgetBar label={`${fmtINR(catSpent)} spent`} spent={catSpent} budget={catBgt} /></div>}
+                    {(catBgt > 0 || catSpent > 0) && <div style={{ paddingLeft: '1.5rem' }}><BudgetBar label={`${fmtINR(catSpent)} spent`} spent={catSpent} budget={catBgt} incognito={incognito} /></div>}
                   </div>
                 )
               })}
