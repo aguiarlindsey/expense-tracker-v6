@@ -3,6 +3,7 @@ import { useStorage } from '../hooks/useStorage'
 import { useDebounce } from '../hooks/useDebounce'
 import { CATS, CM, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS } from '../utils/constants'
 import { makeExpense, makeIncome, makeDedupContext, matchesSearch, stableId } from '../utils/dataHelpers'
+import { migrateV5Data, validateV5File } from '../utils/migrateV5'
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -923,6 +924,8 @@ export default function Tracker({ session }) {
   const [confirmAction, setConfirmAction] = useState(null)
   const [importReport,  setImportReport]  = useState(null)
   const [importing,     setImporting]     = useState(false)
+  const [v5Report,      setV5Report]      = useState(null)
+  const [v5Importing,   setV5Importing]   = useState(false)
 
   // ── Safe-to-Spend ─────────────────────────────────────
   const [savingsGoal, setSavingsGoal] = useState(() => parseFloat(localStorage.getItem('et_v6_sts_goal') || '0') || 0)
@@ -1019,6 +1022,83 @@ export default function Tracker({ session }) {
       setTimeout(() => setImportReport(null), 7000)
     }
     setImporting(false)
+  }
+
+  const handleV5Import = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    e.target.value = ''
+    setV5Importing(true)
+    try {
+      const text = await file.text()
+      let raw
+      try { raw = JSON.parse(text) } catch {
+        setV5Report({ error: true, details: '❌ Could not parse file. Make sure you exported JSON from V5 Settings → Export Data.' })
+        setTimeout(() => setV5Report(null), 8000)
+        setV5Importing(false)
+        return
+      }
+
+      const { valid, reason } = validateV5File(raw)
+      if (!valid) {
+        setV5Report({ error: true, details: `❌ ${reason}` })
+        setTimeout(() => setV5Report(null), 8000)
+        setV5Importing(false)
+        return
+      }
+
+      const { expenses: transformed, income: transformedInc, warnings } = migrateV5Data(raw)
+
+      const expDedup = makeDedupContext(expenses)
+      const incDedup = makeDedupContext(income)
+
+      const toAddExp = [], skippedExp = []
+      transformed.forEach(exp => {
+        if (expDedup.isDuplicate(exp)) { skippedExp.push(exp); return }
+        expDedup.register(exp)
+        toAddExp.push(exp)
+      })
+
+      const toAddInc = [], skippedInc = []
+      transformedInc.forEach(inc => {
+        if (incDedup.isDuplicate(inc)) { skippedInc.push(inc); return }
+        incDedup.register(inc)
+        toAddInc.push(inc)
+      })
+
+      // Chunk into batches of 500 to stay within Supabase insert limits
+      const chunkSize = 500
+      let expAdded = 0, expErrors = 0
+      for (let i = 0; i < toAddExp.length; i += chunkSize) {
+        const res = await bulkAddExpenses(toAddExp.slice(i, i + chunkSize))
+        expAdded  += res?.added  || 0
+        expErrors += res?.errors || 0
+      }
+
+      let incAdded = 0, incErrors = 0
+      for (let i = 0; i < toAddInc.length; i += chunkSize) {
+        const res = await bulkAddIncome(toAddInc.slice(i, i + chunkSize))
+        incAdded  += res?.added  || 0
+        incErrors += res?.errors || 0
+      }
+
+      const totalAdded   = expAdded + incAdded
+      const totalSkipped = skippedExp.length + skippedInc.length
+      const lines = []
+      if (expAdded)        lines.push(`  • ${expAdded} expense${expAdded !== 1 ? 's' : ''} migrated`)
+      if (incAdded)        lines.push(`  • ${incAdded} income record${incAdded !== 1 ? 's' : ''} migrated`)
+      if (totalSkipped)    lines.push(`  • ${totalSkipped} duplicate${totalSkipped !== 1 ? 's' : ''} skipped`)
+      if (expErrors + incErrors) lines.push(`  • ${expErrors + incErrors} record${expErrors + incErrors !== 1 ? 's' : ''} failed to save`)
+      if (warnings.length) lines.push('', '  Warnings:', ...warnings.slice(0, 5).map(w => `  ⚠ ${w}`))
+      if (warnings.length > 5) lines.push(`  … and ${warnings.length - 5} more warnings`)
+
+      setV5Report({ count: totalAdded, skipped: totalSkipped, error: false, details: lines.join('\n') })
+      setTimeout(() => setV5Report(null), 12000)
+    } catch (err) {
+      setV5Report({ error: true, details: `❌ Migration failed: ${err.message}` })
+      setTimeout(() => setV5Report(null), 8000)
+    }
+    setV5Importing(false)
   }
 
   const executeConfirmedAction = async () => {
@@ -2389,6 +2469,32 @@ export default function Tracker({ session }) {
             )}
           </div>
 
+          {/* V5 Migration */}
+          <div className="settings-section" style={{ marginTop: 16 }}>
+            <h3>🔀 Migrate from V5</h3>
+            <p className="settings-desc">Import your historical data from the old single-file app. Export your data from V5 Settings → Export Data → Download JSON, then upload it here. Duplicates are detected by fingerprint and skipped automatically — safe to run multiple times.</p>
+            <div className="settings-row">
+              <div className="settings-row-label">
+                <strong>Upload V5 Export File</strong>
+                <span>Accepts the JSON file exported from V5 Settings.</span>
+              </div>
+              <label className={`btn-ghost btn-sm${v5Importing ? ' disabled' : ''}`} style={{ cursor: 'pointer' }}>
+                {v5Importing ? 'Migrating…' : 'Choose V5 File'}
+                <input type="file" accept=".json" onChange={handleV5Import} style={{ display: 'none' }} disabled={v5Importing} />
+              </label>
+            </div>
+            {v5Report && (
+              <div className={`import-report${v5Report.error ? ' error' : ' success'}`}>
+                <div className="import-report-title">
+                  {v5Report.error
+                    ? '❌ Migration Failed'
+                    : `✅ ${v5Report.count} record${v5Report.count !== 1 ? 's' : ''} migrated${v5Report.skipped ? `, ${v5Report.skipped} skipped` : ''}`}
+                </div>
+                <pre className="import-report-detail">{v5Report.details}</pre>
+              </div>
+            )}
+          </div>
+
           {/* Danger Zone */}
           <div className="danger-zone" style={{ marginTop: 16 }}>
             <h3>🚨 Danger Zone</h3>
@@ -2437,8 +2543,8 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title">💸 Expense Tracker V6</div>
               <div className="about-meta">
-                <span className="about-badge">v6.4.0</span>
-                <span className="about-badge">Phase 5 Complete</span>
+                <span className="about-badge">v6.5.0</span>
+                <span className="about-badge">Phase 6 Complete</span>
                 <span className="about-badge">Cloud + Supabase</span>
                 <span className="about-badge">PWA</span>
               </div>
