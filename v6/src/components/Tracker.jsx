@@ -2437,16 +2437,21 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title">💸 Expense Tracker V6</div>
               <div className="about-meta">
-                <span className="about-badge">v6.2.0</span>
-                <span className="about-badge">Phase 3 Complete</span>
+                <span className="about-badge">v6.4.0</span>
+                <span className="about-badge">Phase 5 Complete</span>
                 <span className="about-badge">Cloud + Supabase</span>
+                <span className="about-badge">PWA</span>
               </div>
               <div className="about-row"><span>Architecture</span><span>Vite + React + Supabase</span></div>
               <div className="about-row"><span>Auth</span><span>Magic-link email (Supabase Auth)</span></div>
               <div className="about-row"><span>Database</span><span>Supabase Postgres + RLS</span></div>
+              <div className="about-row"><span>Deployment</span><span>Vercel CDN · auto-deploy on push</span></div>
+              <div className="about-row"><span>Offline</span><span>Retry queue — changes sync automatically on reconnect</span></div>
+              <div className="about-row"><span>PWA</span><span>Installable · service worker · auto-updates</span></div>
               <div className="about-row"><span>Features</span><span>9 tabs · 16 insights · 259-color palette · live FX rates</span></div>
-              <div className="about-row"><span>V5 parity</span><span>100% — all V5 features ported + Goals/Budgets added</span></div>
-              <div className="about-row"><span>Last updated</span><span>2026-03-31</span></div>
+              <div className="about-row"><span>Mobile</span><span>Fully responsive · UPI/Wallet selectors · horizontal tab scroll</span></div>
+              <div className="about-row"><span>V5 parity</span><span>100% — all V5 features ported + Goals/Budgets/Offline added</span></div>
+              <div className="about-row"><span>Last updated</span><span>2026-04-02</span></div>
             </div>
           </div>
         </main>
