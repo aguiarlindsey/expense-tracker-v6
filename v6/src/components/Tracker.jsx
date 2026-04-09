@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react'
 import { useStorage } from '../hooks/useStorage'
 import { useDebounce } from '../hooks/useDebounce'
-import { CATS, CM, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS } from '../utils/constants'
+import { CATS, CM, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS, FALLBACK_RATES } from '../utils/constants'
 import { makeExpense, makeIncome, makeDedupContext, matchesSearch, stableId } from '../utils/dataHelpers'
 import { migrateV5Data, validateV5File } from '../utils/migrateV5'
 import { useNotifications } from '../hooks/useNotifications'
@@ -1162,9 +1162,19 @@ export default function Tracker({ session }) {
         const d = { rates, ts: Date.now(), source: 'live' }
         save(d); setRateData(d)
       })
-      .catch(() => { if (cached) setRateData({ ...cached, source: 'offline' }) })
+      .catch(() => {
+        clearTimeout(t)
+        if (cached) {
+          setRateData({ ...cached, source: 'cached' })
+          addToast('warn', '💱', 'Exchange Rates', 'Using cached rates — API unavailable')
+        } else {
+          const d = { rates: { ...FALLBACK_RATES }, ts: Date.now(), source: 'fallback' }
+          setRateData(d)
+          addToast('warn', '💱', 'Exchange Rates', 'Using built-in fallback rates — API unavailable')
+        }
+      })
       .finally(() => clearTimeout(t))
-  }, [baseCurrency])
+  }, [baseCurrency, addToast])
 
   const refreshRates = async () => {
     setRateFetching(true)
@@ -1176,13 +1186,25 @@ export default function Tracker({ session }) {
       const d = { rates, ts: Date.now(), source: 'live' }
       try { localStorage.setItem('et_v6_rates', JSON.stringify(d)) } catch {}
       setRateData(d)
-    } catch {}
+    } catch {
+      const RATE_KEY = 'et_v6_rates'
+      const cached = (() => { try { return JSON.parse(localStorage.getItem(RATE_KEY)) } catch { return null } })()
+      if (cached) {
+        setRateData({ ...cached, source: 'cached' })
+        addToast('warn', '💱', 'Exchange Rates', 'Using cached rates — API unavailable')
+      } else {
+        const d = { rates: { ...FALLBACK_RATES }, ts: Date.now(), source: 'fallback' }
+        setRateData(d)
+        addToast('warn', '💱', 'Exchange Rates', 'Using built-in fallback rates — API unavailable')
+      }
+    }
     setRateFetching(false)
   }
 
   const rsLabel = !rateData ? '⚪ No rates'
-    : rateData.source === 'live'    ? '🟢 Live'
-    : rateData.source === 'cached'  ? `🔵 Cached`
+    : rateData.source === 'live'     ? '🟢 Live'
+    : rateData.source === 'cached'   ? '🔵 Cached'
+    : rateData.source === 'fallback' ? '🟠 Fallback'
     : '🔴 Offline'
 
   // ── Toast ─────────────────────────────────────────────
@@ -2305,7 +2327,7 @@ export default function Tracker({ session }) {
                 {rateFetching ? 'Fetching…' : '🔄 Refresh'}
               </button>
             </div>
-            <p className="exchange-desc">Rates from <strong>exchangerate-api.com</strong> — fetched with {baseCurrency} base. Cached 6 h. Works offline using last saved rates.</p>
+            <p className="exchange-desc">Rates from <strong>exchangerate-api.com</strong> — fetched with {baseCurrency} base. Cached 6 h. Falls back to cached → built-in rates if API is unavailable.</p>
             {rateData?.rates ? (
               <div className="exchange-table-wrap">
                 <table className="exchange-table">
@@ -2613,8 +2635,9 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title">💸 Expense Tracker V6</div>
               <div className="about-meta">
-                <span className="about-badge">v7.0.0</span>
+                <span className="about-badge">v7.1.0</span>
                 <span className="about-badge">Incognito Mode</span>
+                <span className="about-badge">Rate Fallbacks</span>
                 <span className="about-badge">Cloud + Supabase</span>
                 <span className="about-badge">PWA</span>
               </div>
@@ -2627,7 +2650,7 @@ export default function Tracker({ session }) {
               <div className="about-row"><span>Features</span><span>9 tabs · 16 insights · 259-color palette · live FX rates</span></div>
               <div className="about-row"><span>Mobile</span><span>Fully responsive · UPI/Wallet selectors · horizontal tab scroll</span></div>
               <div className="about-row"><span>V5 parity</span><span>100% — all V5 features ported + Goals/Budgets/Offline added</span></div>
-              <div className="about-row"><span>Last updated</span><span>2026-04-03</span></div>
+              <div className="about-row"><span>Last updated</span><span>2026-04-10</span></div>
             </div>
           </div>
         </main>

@@ -86,6 +86,36 @@ export const CC = [
   '#3b82f6','#1d4ed8','#1e40af','#fce7f3','#fbcfe8','#f9a8d4','#f472b6','#ec4899',
   '#db2777','#be185d','#9d174d',
 ]
+// Ground-truth rates as of April 2026 (INR base — 1 INR = X units)
+export const FALLBACK_RATES = {
+  USD: 0.01195,
+  EUR: 0.01104,
+  GBP: 0.00942,
+  AED: 0.04388,
+  SGD: 0.01609,
+  CAD: 0.01659,
+  AUD: 0.01856,
+  JPY: 1.7850,
+  CNY: 0.08670,
+  CHF: 0.01074,
+  MYR: 0.05283,
+  THB: 0.41200,
+  HKD: 0.09310,
+  KRW: 16.430,
+  BRL: 0.06830,
+  MXN: 0.23700,
+  ZAR: 0.21780,
+  SAR: 0.04481,
+  QAR: 0.04350,
+  TRY: 0.41000,
+  SEK: 0.12360,
+  NOK: 0.12870,
+  DKK: 0.07780,
+  PLN: 0.04840,
+  RUB: 1.09500,
+  INR: 1,
+}
+
 export const PAY_METHODS    = ['Cash','Credit Card','Debit Card','UPI/QR','Net Banking','Wallet','Cheque','EMI','Other']
 export const UPI_APPS       = ['','GPay','PhonePe','Paytm','PayZapp','BHIM','Amazon Pay','WhatsApp Pay','Cred','Slice','Other']
 export const WALLET_APPS    = ['','Amazon Pay','Paytm','PhonePe','Mobikwik','Freecharge','Ola Money','Jio Money','Other']

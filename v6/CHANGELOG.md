@@ -31,7 +31,20 @@
 | 20 | 2026-04-02 | v6 Phase 4 audit + bug fixes (subcategory, UPI/Wallet), responsive CSS, PWA auto-reload, Phase 5 offline resilience | 4.0 |
 | 21 | 2026-04-03 | v6 Phase 6: v5→v6 migration; Phase 7: real-time sync; Phase 8: push notifications | 5.5 |
 | 22 | 2026-04-03 | v7.0.0: Incognito mode toggle — blur all amounts, hover-to-reveal, persisted | 1.5 |
-| **Total** | | | **~65.0 h** |
+| 23 | 2026-04-10 | v7.1.0: Emergency rate fallbacks — cached → built-in rates when API unavailable | 1.0 |
+| **Total** | | | **~66.0 h** |
+
+---
+
+## [v7.1.0] — Emergency Rate Fallbacks
+_2026-04-10_
+
+- Added `FALLBACK_RATES` to `src/utils/constants.js` — hardcoded April 2026 INR-relative rates for 26 currencies
+- Auto-fetch on mount: if API fails, uses cached rates first (with toast), then built-in fallback (with toast)
+- Manual refresh (`refreshRates`): same cached → fallback ladder on error
+- `rsLabel` now shows `🟠 Fallback` when built-in rates are active
+- Exchange tab description updated to reflect three-tier fallback chain
+- About section bumped to v7.1.0
 
 ---
 
