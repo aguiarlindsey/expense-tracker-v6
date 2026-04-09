@@ -32,7 +32,27 @@
 | 21 | 2026-04-03 | v6 Phase 6: v5→v6 migration; Phase 7: real-time sync; Phase 8: push notifications | 5.5 |
 | 22 | 2026-04-03 | v7.0.0: Incognito mode toggle — blur all amounts, hover-to-reveal, persisted | 1.5 |
 | 23 | 2026-04-10 | v7.1.0: Emergency rate fallbacks — cached → built-in rates when API unavailable | 1.0 |
-| **Total** | | | **~66.0 h** |
+| 24 | 2026-04-10 | v7.1.1: 122-currency expansion + historical rate sync (Frankfurter API) | 2.0 |
+| **Total** | | | **~68.0 h** |
+
+---
+
+## [v7.1.1] — 122 Currencies + Historical Rate Sync
+_2026-04-10_
+
+**Currency expansion (29 → 122)**
+- `CURRENCIES` array expanded from 29 to 122 entries across 8 groups: Major, Asia-Pacific, Middle East, Europe, Africa (30), Americas (21), Central Asia, Alternative Assets
+- `CG` (grouped currency map) exported from `constants.js` and imported at module scope so all form components can access it — fixes previous `CG is not defined` scope bug
+- `FALLBACK_RATES` expanded to cover all 120 fiat currencies (April 2026 INR-relative rates)
+- Add Expense, Add Income, and Settings base-currency selectors now render all 122 currencies in grouped `<optgroup>` dropdowns with flag + code + full name
+
+**Historical Rate Sync**
+- `ExpenseForm` and `IncomeForm`: when a past date + non-INR currency is selected, automatically fetches the closing rate for that day from `api.frankfurter.dev/v2/[DATE]?base=[CURRENCY]&symbols=INR`
+- 6-hour `localStorage` cache keyed `et_hist_[DATE]_[CURRENCY]` — shared between both forms, so the same date/currency pair never hits the network twice
+- `AbortController` cancels in-flight requests on re-trigger or unmount
+- Rate input disabled while fetching; label shows `⏳ Fetching historical rate…`
+- After fetch: label shows `📅 [DATE]` to confirm historical source; user can still manually override
+- Today/future dates continue using live `rateData` unchanged
 
 ---
 

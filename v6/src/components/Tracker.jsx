@@ -2704,9 +2704,11 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title">💸 Expense Tracker V6</div>
               <div className="about-meta">
-                <span className="about-badge">v7.1.0</span>
+                <span className="about-badge">v7.1.1</span>
                 <span className="about-badge">Incognito Mode</span>
                 <span className="about-badge">Rate Fallbacks</span>
+                <span className="about-badge">122 Currencies</span>
+                <span className="about-badge">Historical Rates</span>
                 <span className="about-badge">Cloud + Supabase</span>
                 <span className="about-badge">PWA</span>
               </div>
