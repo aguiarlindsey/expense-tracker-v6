@@ -392,7 +392,11 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
             <div className="form-group">
               <label>Currency</label>
               <select value={form.currency} onChange={e => onCurrencyChange(e.target.value)}>
-                {CURRENCIES.slice(0, 12).map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
+                {Object.entries(CG).map(([group, list]) => (
+                  <optgroup key={group} label={group}>
+                    {list.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code} — {c.name}</option>)}
+                  </optgroup>
+                ))}
               </select>
             </div>
           </div>
@@ -653,7 +657,11 @@ function IncomeForm({ onSubmit, onClose, initialData, rateData }) {
             <div className="form-group">
               <label>Currency</label>
               <select value={form.currency} onChange={e => onCurrencyChange(e.target.value)}>
-                {CURRENCIES.slice(0, 12).map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
+                {Object.entries(CG).map(([group, list]) => (
+                  <optgroup key={group} label={group}>
+                    {list.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code} — {c.name}</option>)}
+                  </optgroup>
+                ))}
               </select>
             </div>
           </div>
