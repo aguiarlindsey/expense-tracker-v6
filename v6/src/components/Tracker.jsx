@@ -318,7 +318,36 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
     useCatAlloc: false, categoryAllocations: {},
   })
   const [showPalette, setShowPalette] = useState(false)
+  const [rateFetching, setRateFetching] = useState(false)
   const s = (k, v) => setForm(p => ({ ...p, [k]: v }))
+
+  // ── Historical rate sync ───────────────────────────────
+  useEffect(() => {
+    if (form.currency === 'INR') return
+    if (!form.date || form.date >= today) return          // today/future → use live rates
+    const CACHE_KEY = `et_hist_${form.date}_${form.currency}`
+    const CACHE_TTL = 6 * 3600 * 1000
+    const cached = (() => { try { return JSON.parse(localStorage.getItem(CACHE_KEY)) } catch { return null } })()
+    if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
+      s('conversionRate', cached.rate)
+      return
+    }
+    const ctrl = new AbortController()
+    setRateFetching(true)
+    fetch(`https://api.frankfurter.dev/v2/${form.date}?base=${form.currency}&symbols=INR`, { signal: ctrl.signal })
+      .then(r => r.json())
+      .then(j => {
+        const rate = j?.rates?.INR
+        if (rate) {
+          const r6 = parseFloat(rate.toFixed(6))
+          s('conversionRate', r6)
+          try { localStorage.setItem(CACHE_KEY, JSON.stringify({ rate: r6, ts: Date.now() })) } catch {}
+        }
+      })
+      .catch(() => {})
+      .finally(() => setRateFetching(false))
+    return () => ctrl.abort()
+  }, [form.date, form.currency])
 
   const calcNextDue = (fromDate, period) => {
     const d = new Date((fromDate || today) + 'T12:00:00')
@@ -403,14 +432,19 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
           {isForeign && (
             <div className="form-row">
               <div className="form-group">
-                <label>Rate: 1 {form.currency} = ? INR</label>
+                <label>
+                  Rate: 1 {form.currency} = ? INR
+                  {rateFetching && <span style={{ marginLeft: 6, fontSize: '0.78em', color: 'var(--accent)' }}>⏳ Fetching historical rate…</span>}
+                  {!rateFetching && form.date < today && <span style={{ marginLeft: 6, fontSize: '0.78em', color: 'var(--text-muted)' }}>📅 {form.date}</span>}
+                </label>
                 <input type="number" step="0.000001" min="0" value={form.conversionRate}
-                  onChange={e => s('conversionRate', parseFloat(e.target.value) || 0)} />
+                  onChange={e => s('conversionRate', parseFloat(e.target.value) || 0)}
+                  disabled={rateFetching} />
               </div>
               {inrPreview !== null && (
                 <div className="form-group">
                   <label>INR Equivalent</label>
-                  <div className="currency-preview">{fmtINR(inrPreview)}</div>
+                  <div className="currency-preview">{rateFetching ? '⏳' : fmtINR(inrPreview)}</div>
                 </div>
               )}
             </div>
