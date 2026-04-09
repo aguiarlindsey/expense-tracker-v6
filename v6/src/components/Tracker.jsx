@@ -1174,7 +1174,7 @@ export default function Tracker({ session }) {
         }
       })
       .finally(() => clearTimeout(t))
-  }, [baseCurrency, addToast])
+  }, [baseCurrency]) // addToast omitted — useCallback([]); stable ref, not in TDZ-safe position
 
   const refreshRates = async () => {
     setRateFetching(true)
