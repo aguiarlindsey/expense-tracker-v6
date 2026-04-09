@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react'
 import { useStorage } from '../hooks/useStorage'
 import { useDebounce } from '../hooks/useDebounce'
-import { CATS, CM, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS, FALLBACK_RATES } from '../utils/constants'
+import { CATS, CM, CG, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS, FALLBACK_RATES } from '../utils/constants'
 import { makeExpense, makeIncome, makeDedupContext, matchesSearch, stableId } from '../utils/dataHelpers'
 import { migrateV5Data, validateV5File } from '../utils/migrateV5'
 import { useNotifications } from '../hooks/useNotifications'
@@ -1719,13 +1719,6 @@ export default function Tracker({ session }) {
     { id: 'exchange',   label: '💱 Exchange' },
     { id: 'settings',   label: '⚙️ Settings' },
   ]
-
-  // ── Currency grouping for Exchange tab ────────────────
-  const CG = CURRENCIES.reduce((acc, c) => {
-    if (!acc[c.group]) acc[c.group] = []
-    acc[c.group].push(c)
-    return acc
-  }, {})
 
   return (
     <div className="tracker">

@@ -133,6 +133,13 @@ export const CURRENCIES = [
 
 export const CM = Object.fromEntries(CURRENCIES.map(c => [c.code, c]))
 
+// Currencies grouped by region — used by all currency selectors
+export const CG = CURRENCIES.reduce((acc, c) => {
+  if (!acc[c.group]) acc[c.group] = []
+  acc[c.group].push(c)
+  return acc
+}, {})
+
 export const CATS = {
   'Food':          { icon: '🍽️', color: '#f97316', subs: ['Groceries','Restaurants','Snacks','Beverages','Sweets','Takeaway'] },
   'Transport':     { icon: '🚗', color: '#3b82f6', subs: ['Fuel','Auto/Cab','Bus/Train','Flight','Parking','Vehicle Maintenance'] },
