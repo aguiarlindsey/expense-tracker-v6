@@ -369,6 +369,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
     s('currency', code)
     if (code === 'INR') { s('conversionRate', 1); return }
     const rate = rateData?.rates?.[code]
+    // rateData.rates is now "INR per 1 foreign" — use directly
     if (rate) s('conversionRate', parseFloat(rate.toFixed(6)))
   }
 
@@ -680,6 +681,7 @@ function IncomeForm({ onSubmit, onClose, initialData, rateData }) {
     s('currency', code)
     if (code === 'INR') { s('conversionRate', 1); return }
     const rate = rateData?.rates?.[code]
+    // rateData.rates is now "INR per 1 foreign" — use directly
     if (rate) s('conversionRate', parseFloat(rate.toFixed(6)))
   }
 
@@ -1222,7 +1224,7 @@ export default function Tracker({ session }) {
 
   useEffect(() => { localStorage.setItem('et_v6_base', baseCurrency) }, [baseCurrency])
   useEffect(() => {
-    const RATE_KEY = 'et_v6_rates', TTL = 6 * 3600 * 1000
+    const RATE_KEY = 'et_v6_rates2', TTL = 6 * 3600 * 1000
     const load = () => { try { return JSON.parse(localStorage.getItem(RATE_KEY)) } catch { return null } }
     const save = d  => { try { localStorage.setItem(RATE_KEY, JSON.stringify(d)) } catch {} }
     const cached = load(), fresh = cached && (Date.now() - cached.ts) < TTL
@@ -1232,9 +1234,16 @@ export default function Tracker({ session }) {
     fetch(`https://api.exchangerate-api.com/v4/latest/${baseCurrency}`, { signal: ctrl.signal })
       .then(r => r.json())
       .then(j => {
+        // Normalise to "INR per 1 unit of foreign currency" for consistent use everywhere
         const rates = {}
-        Object.keys(j.rates).forEach(k => { rates[k] = j.rates['INR'] ? j.rates[k] / j.rates['INR'] : j.rates[k] })
-        if (baseCurrency === 'INR') Object.keys(j.rates).forEach(k => { rates[k] = j.rates[k] })
+        if (baseCurrency === 'INR') {
+          // API returns "1 INR = X foreign" → invert to "INR per 1 foreign"
+          Object.keys(j.rates).forEach(k => { rates[k] = j.rates[k] ? 1 / j.rates[k] : 0 })
+        } else {
+          // API returns "1 base = X foreign"; j.rates['INR'] is base→INR
+          // "INR per 1 foreign" = j.rates['INR'] / j.rates[k]
+          Object.keys(j.rates).forEach(k => { rates[k] = j.rates['INR'] && j.rates[k] ? j.rates['INR'] / j.rates[k] : 0 })
+        }
         const d = { rates, ts: Date.now(), source: 'live' }
         save(d); setRateData(d)
       })
@@ -1244,7 +1253,10 @@ export default function Tracker({ session }) {
           setRateData({ ...cached, source: 'cached' })
           addToast('warn', '💱', 'Exchange Rates', 'Using cached rates — API unavailable')
         } else {
-          const d = { rates: { ...FALLBACK_RATES }, ts: Date.now(), source: 'fallback' }
+          // FALLBACK_RATES is "1 INR = X foreign" → invert to "INR per 1 foreign"
+          const rates = {}
+          Object.keys(FALLBACK_RATES).forEach(k => { rates[k] = k === 'INR' ? 1 : (FALLBACK_RATES[k] ? 1 / FALLBACK_RATES[k] : 0) })
+          const d = { rates, ts: Date.now(), source: 'fallback' }
           setRateData(d)
           addToast('warn', '💱', 'Exchange Rates', 'Using built-in fallback rates — API unavailable')
         }
@@ -1258,18 +1270,24 @@ export default function Tracker({ session }) {
       const r = await fetch(`https://api.exchangerate-api.com/v4/latest/${baseCurrency}`)
       const j = await r.json()
       const rates = {}
-      Object.keys(j.rates).forEach(k => { rates[k] = baseCurrency === 'INR' ? j.rates[k] : j.rates[k] / (j.rates['INR'] || 1) })
+      if (baseCurrency === 'INR') {
+        Object.keys(j.rates).forEach(k => { rates[k] = j.rates[k] ? 1 / j.rates[k] : 0 })
+      } else {
+        Object.keys(j.rates).forEach(k => { rates[k] = j.rates['INR'] && j.rates[k] ? j.rates['INR'] / j.rates[k] : 0 })
+      }
       const d = { rates, ts: Date.now(), source: 'live' }
-      try { localStorage.setItem('et_v6_rates', JSON.stringify(d)) } catch {}
+      try { localStorage.setItem('et_v6_rates2', JSON.stringify(d)) } catch {}
       setRateData(d)
     } catch {
-      const RATE_KEY = 'et_v6_rates'
+      const RATE_KEY = 'et_v6_rates2'
       const cached = (() => { try { return JSON.parse(localStorage.getItem(RATE_KEY)) } catch { return null } })()
       if (cached) {
         setRateData({ ...cached, source: 'cached' })
         addToast('warn', '💱', 'Exchange Rates', 'Using cached rates — API unavailable')
       } else {
-        const d = { rates: { ...FALLBACK_RATES }, ts: Date.now(), source: 'fallback' }
+        const rates = {}
+        Object.keys(FALLBACK_RATES).forEach(k => { rates[k] = k === 'INR' ? 1 : (FALLBACK_RATES[k] ? 1 / FALLBACK_RATES[k] : 0) })
+        const d = { rates, ts: Date.now(), source: 'fallback' }
         setRateData(d)
         addToast('warn', '💱', 'Exchange Rates', 'Using built-in fallback rates — API unavailable')
       }
