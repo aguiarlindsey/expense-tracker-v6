@@ -33,7 +33,32 @@
 | 22 | 2026-04-03 | v7.0.0: Incognito mode toggle — blur all amounts, hover-to-reveal, persisted | 1.5 |
 | 23 | 2026-04-10 | v7.1.0: Emergency rate fallbacks — cached → built-in rates when API unavailable | 1.0 |
 | 24 | 2026-04-10 | v7.1.1: 122-currency expansion + historical rate sync (Frankfurter API) | 2.0 |
-| **Total** | | | **~68.0 h** |
+| 25 | 2026-04-24 | v7.2.0: Burn-Rate Forecasting — 7-day velocity, acceleration, runway, category burn | 1.5 |
+| **Total** | | | **~69.5 h** |
+
+---
+
+## [v7.2.0] — Burn-Rate Forecasting
+_2026-04-24_
+
+**New: `burnRate` useMemo (Tracker.jsx)**
+- Computes 7-day and previous-7-day daily spend rates for week-over-week velocity
+- Acceleration metric: % change in daily rate vs prior week; guarded against division-by-zero
+- Budget runway: days until monthly budget depleted at current daily rate, with exact depletion date
+- Top-3 category burn rates for current month (total + daily rate)
+
+**Overview tab — expanded forecast panel**
+- New `forecast-burn-row` section below the existing 4-cell forecast grid
+- "7-day avg rate" cell with colored acceleration indicator (↑/↓/~flat vs prev week)
+- "Budget runway" cell (only shown when monthly budget is set): green/amber/red with depletion date
+- "Top burn category" cell: icon, name, daily rate, and month-to-date total
+
+**Insights tab — 2 new insights (total: 18)**
+- #17 Burn Rate Accelerating/Slowing: fires when acceleration ≥ 10%, shows both weekly rates
+- #18 Budget Runway/Exhausted/On Track: fires when monthly budget is set; three states
+
+**CSS**
+- `.forecast-burn-row` — grid row matching forecast-grid layout, separated by `var(--border)` divider
 
 ---
 

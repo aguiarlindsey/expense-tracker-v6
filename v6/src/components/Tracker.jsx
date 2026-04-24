@@ -1550,6 +1550,41 @@ export default function Tracker({ session }) {
     return Object.entries(t).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value)
   }, [filteredExp])
 
+  // ── Burn-Rate Forecasting ─────────────────────────────
+  const burnRate = useMemo(() => {
+    const empty = { last7Total: 0, prev7Total: 0, last7Rate: 0, prev7Rate: 0, acceleration: null, runwayDays: null, runwayDate: null, willExceedBudget: false, topCatRates: [], spentSoFar: 0, dailyRate: 0, projected: 0 }
+    if (!expenses.length) return empty
+    const today = new Date(todayStr + 'T12:00:00')
+    const y = today.getFullYear(), mo = today.getMonth()
+    const daysInMonth = new Date(y, mo + 1, 0).getDate()
+    const dayOfMonth  = today.getDate()
+    const d7  = new Date(today); d7.setDate(d7.getDate() - 7);  const d7str  = d7.toISOString().split('T')[0]
+    const d14 = new Date(today); d14.setDate(d14.getDate() - 14); const d14str = d14.toISOString().split('T')[0]
+    const last7Total = expenses.filter(e => e.date > d7str  && e.date <= todayStr).reduce((s, e) => s + toINR(e), 0)
+    const prev7Total = expenses.filter(e => e.date > d14str && e.date <= d7str).reduce((s, e) => s + toINR(e), 0)
+    const last7Rate  = last7Total / 7
+    const prev7Rate  = prev7Total / 7
+    const acceleration = prev7Total > 0 ? ((last7Rate - prev7Rate) / prev7Rate * 100) : null
+    const spentSoFar   = expenses.filter(e => (e.date || '').startsWith(monthStr)).reduce((s, e) => s + toINR(e), 0)
+    const dailyRate    = dayOfMonth > 0 ? spentSoFar / dayOfMonth : 0
+    const projected    = dailyRate * daysInMonth
+    let runwayDays = null, runwayDate = null, willExceedBudget = false
+    if (budgets.monthly > 0 && dailyRate > 0) {
+      willExceedBudget = projected > budgets.monthly
+      const remaining = budgets.monthly - spentSoFar
+      if (remaining <= 0) {
+        runwayDays = 0; runwayDate = todayStr
+      } else {
+        runwayDays = Math.floor(remaining / dailyRate)
+        const rd = new Date(today); rd.setDate(rd.getDate() + runwayDays)
+        runwayDate = rd.toISOString().split('T')[0]
+      }
+    }
+    const catTotals = {}
+    expenses.filter(e => (e.date || '').startsWith(monthStr)).forEach(e => { const c = e.category || 'Other'; catTotals[c] = (catTotals[c] || 0) + toINR(e) })
+    const topCatRates = Object.entries(catTotals).map(([cat, total]) => ({ cat, total, rate: dayOfMonth > 0 ? total / dayOfMonth : 0 })).sort((a, b) => b.total - a.total).slice(0, 3)
+    return { last7Total, prev7Total, last7Rate, prev7Rate, acceleration, runwayDays, runwayDate, willExceedBudget, topCatRates, spentSoFar, dailyRate, projected }
+  }, [expenses, todayStr, monthStr, budgets])
 
   // ── Insights ─────────────────────────────────────────
   const insights = useMemo(() => {
@@ -1686,8 +1721,26 @@ export default function Tracker({ session }) {
       res.push({ title: '💵 Income Consistency', text: `Your monthly income is ${consistency} (CV: ${cv}%). Average: ${fmtINR(avgInc)}/month across ${incVals.length} months.` })
     }
 
+    // 17. Burn rate acceleration
+    if (burnRate.acceleration !== null && burnRate.last7Total > 0 && Math.abs(burnRate.acceleration) >= 10) {
+      const accel = burnRate.acceleration > 0
+      const pct = Math.min(Math.abs(burnRate.acceleration), 999).toFixed(0)
+      res.push({ title: accel ? '🔴 Burn Rate Accelerating' : '🟢 Burn Rate Slowing', text: `Daily spend ${accel ? 'up' : 'down'} ${pct}% this week (${fmtINR(burnRate.last7Rate)}/d) vs last week (${fmtINR(burnRate.prev7Rate)}/d).` })
+    }
+
+    // 18. Budget runway
+    if (burnRate.runwayDays !== null) {
+      if (burnRate.runwayDays <= 0) {
+        res.push({ title: '🚨 Budget Exhausted', text: `Monthly budget of ${fmtINR(budgets.monthly)} already exceeded. You've spent ${fmtINR(burnRate.spentSoFar)} this month.` })
+      } else if (burnRate.willExceedBudget) {
+        res.push({ title: '⚠️ Budget Runway', text: `At current pace (${fmtINR(burnRate.dailyRate)}/d), your ${fmtINR(budgets.monthly)} budget runs out in ${burnRate.runwayDays} days (${burnRate.runwayDate}).` })
+      } else {
+        res.push({ title: '✅ Budget on Track', text: `Projected month-end spend: ${fmtINR(burnRate.projected)}. That leaves ${fmtINR(budgets.monthly - burnRate.projected)} under your ${fmtINR(budgets.monthly)} monthly budget.` })
+      }
+    }
+
     return res
-  }, [catData, expenses, monthlyExpData, allMonthlyExp, allMonthlyInc, allIncINR, allExpINR])
+  }, [catData, expenses, monthlyExpData, allMonthlyExp, allMonthlyInc, allIncINR, allExpINR, burnRate, budgets])
 
   // ── Goals computed ────────────────────────────────────
   // Attach contributions to goals
@@ -1903,6 +1956,34 @@ export default function Tracker({ session }) {
                       {monthForecast.projectedSavings >= 0 ? '+' : ''}{fmtINR(monthForecast.projectedSavings)}
                     </div>
                     <div className="forecast-sub">income this month: {fmtINR(monthForecast.projectedInc)}</div>
+                  </div>
+                )}
+              </div>
+              {/* Burn Rate Row */}
+              <div className="forecast-burn-row">
+                <div className="forecast-item">
+                  <div className="forecast-label">7-day avg rate</div>
+                  <div className="forecast-val">{fmtINR(burnRate.last7Rate)}/d</div>
+                  <div className="forecast-sub" style={{ color: burnRate.acceleration === null ? 'var(--text-muted)' : burnRate.acceleration > 10 ? 'var(--color-exp)' : burnRate.acceleration < -10 ? 'var(--color-inc)' : 'var(--text-muted)' }}>
+                    {burnRate.acceleration === null ? 'no prior data' : burnRate.acceleration > 10 ? `↑${Math.min(Math.abs(burnRate.acceleration), 999).toFixed(0)}% vs prev week` : burnRate.acceleration < -10 ? `↓${Math.min(Math.abs(burnRate.acceleration), 999).toFixed(0)}% vs prev week` : '~flat vs prev week'}
+                  </div>
+                </div>
+                {budgets.monthly > 0 && burnRate.runwayDays !== null && (
+                  <div className="forecast-item">
+                    <div className="forecast-label">Budget runway</div>
+                    <div className="forecast-val" style={{ color: burnRate.runwayDays <= 0 ? 'var(--color-exp)' : burnRate.willExceedBudget ? '#f59e0b' : 'var(--color-inc)' }}>
+                      {burnRate.runwayDays <= 0 ? 'Exceeded' : `${burnRate.runwayDays}d left`}
+                    </div>
+                    <div className="forecast-sub">
+                      {burnRate.runwayDays <= 0 ? `over by ${fmtINR(burnRate.spentSoFar - budgets.monthly)}` : `budget runs out ${burnRate.runwayDate}`}
+                    </div>
+                  </div>
+                )}
+                {burnRate.topCatRates[0] && (
+                  <div className="forecast-item">
+                    <div className="forecast-label">Top burn category</div>
+                    <div className="forecast-val">{CATS[burnRate.topCatRates[0].cat]?.icon || '📦'} {burnRate.topCatRates[0].cat}</div>
+                    <div className="forecast-sub">{fmtINR(burnRate.topCatRates[0].rate)}/d · {fmtINR(burnRate.topCatRates[0].total)} this month</div>
                   </div>
                 )}
               </div>
@@ -2722,7 +2803,7 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title">💸 Expense Tracker V6</div>
               <div className="about-meta">
-                <span className="about-badge">v7.1.1</span>
+                <span className="about-badge">v7.2.0</span>
                 <span className="about-badge">Incognito Mode</span>
                 <span className="about-badge">Rate Fallbacks</span>
                 <span className="about-badge">122 Currencies</span>

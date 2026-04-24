@@ -765,6 +765,14 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 .forecast-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .forecast-val { font-size: 1.1rem; font-weight: 700; color: var(--text); }
 .forecast-sub { font-size: 0.72rem; color: var(--text-muted); }
+.forecast-burn-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
 
 /* ── Safe-to-Spend summary ── */
 .sts-summary {
