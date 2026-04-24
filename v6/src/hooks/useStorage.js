@@ -118,6 +118,32 @@ function incomeFromDb(row) {
   }
 }
 
+// ── Trip mappers ──────────────────────────────────────────
+
+function tripToDb(t, userId) {
+  return {
+    id:         t.id,
+    user_id:    userId,
+    name:       t.name,
+    start_date: t.startDate,
+    end_date:   t.endDate,
+    currency:   t.currency,
+    notes:      t.notes || null,
+  }
+}
+
+function tripFromDb(row) {
+  return {
+    id:        row.id,
+    name:      row.name,
+    startDate: row.start_date,
+    endDate:   row.end_date,
+    currency:  row.currency,
+    notes:     row.notes || '',
+    createdAt: row.created_at || '',
+  }
+}
+
 // ── Hook ─────────────────────────────────────────────────
 
 export function useStorage(userId) {
@@ -126,6 +152,7 @@ export function useStorage(userId) {
   const [budgets,       setBudgets]       = useState({ daily: 0, weekly: 0, monthly: 0, categories: {} })
   const [goals,         setGoals]         = useState([])
   const [contributions, setContributions] = useState([])
+  const [trips,         setTrips]         = useState([])
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState(null)
   const [syncing,         setSyncing]         = useState(false)
@@ -164,7 +191,8 @@ export function useStorage(userId) {
     Promise.all([
       supabase.from('goals').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
       supabase.from('goal_contributions').select('*').eq('user_id', userId).order('date', { ascending: false }),
-    ]).then(([gRes, cRes]) => {
+      supabase.from('trips').select('*').eq('user_id', userId).order('start_date', { ascending: false }),
+    ]).then(([gRes, cRes, tRes]) => {
       if (gRes.error) setError(gRes.error.message)
       if (cRes.error) setError(cRes.error.message)
       setGoals((gRes.data || []).map(g => ({
@@ -176,6 +204,7 @@ export function useStorage(userId) {
         id: c.id, goalId: c.goal_id, date: c.date,
         amount: parseFloat(c.amount), note: c.note || '',
       })))
+      setTrips((tRes.data || []).map(tripFromDb))
     })
   }, [userId])
 
@@ -267,6 +296,22 @@ export function useStorage(userId) {
     }
   }
 
+  function handleTripEvent(payload) {
+    if (payload.eventType === 'INSERT') {
+      const incoming = tripFromDb(payload.new)
+      setTrips(prev => {
+        if (prev.some(t => t.id === incoming.id && !t._pending)) return prev
+        const hasPending = prev.some(t => t.id === incoming.id && t._pending)
+        if (hasPending) return prev.map(t => t.id === incoming.id ? incoming : t)
+        return [incoming, ...prev]
+      })
+    } else if (payload.eventType === 'UPDATE') {
+      setTrips(prev => prev.map(t => t.id === payload.new.id ? tripFromDb(payload.new) : t))
+    } else if (payload.eventType === 'DELETE') {
+      setTrips(prev => prev.filter(t => t.id !== payload.old.id))
+    }
+  }
+
   // ── Realtime subscription ─────────────────────────────────
   useEffect(() => {
     if (!userId) return
@@ -283,6 +328,7 @@ export function useStorage(userId) {
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'budgets',            filter: `user_id=eq.${userId}` }, p => handleBudgetEvent(p))
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'goals',              filter: `user_id=eq.${userId}` }, p => handleGoalEvent(p))
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'goal_contributions', filter: `user_id=eq.${userId}` }, p => handleContributionEvent(p))
+      .on('postgres_changes', { event: '*',      schema: 'public', table: 'trips',              filter: `user_id=eq.${userId}` }, p => handleTripEvent(p))
       .subscribe(status => {
         if (status === 'SUBSCRIBED')    setRealtimeStatus('live')
         else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setRealtimeStatus('error')
@@ -541,6 +587,27 @@ export function useStorage(userId) {
     else if (err) setError(err.message)
   }, [userId, enqueue])
 
+  // ── Trips ─────────────────────────────────────────────────
+  const addTrip = useCallback(async (trip) => {
+    setTrips(prev => [{ ...trip, _pending: true }, ...prev])
+    const { data, error: err } = await supabase.from('trips').insert(tripToDb(trip, userId)).select().single()
+    if (err) { setError(err.message); setTrips(prev => prev.filter(t => t.id !== trip.id)); return }
+    setTrips(prev => prev.map(t => t.id === trip.id ? tripFromDb(data) : t))
+  }, [userId])
+
+  const editTrip = useCallback(async (trip) => {
+    setTrips(prev => prev.map(t => t.id === trip.id ? { ...trip, _pending: true } : t))
+    const { data, error: err } = await supabase.from('trips').update(tripToDb(trip, userId)).eq('id', trip.id).select().single()
+    if (err) { setError(err.message); return }
+    setTrips(prev => prev.map(t => t.id === trip.id ? tripFromDb(data) : t))
+  }, [userId])
+
+  const deleteTrip = useCallback(async (id) => {
+    setTrips(prev => prev.filter(t => t.id !== id))
+    const { error: err } = await supabase.from('trips').delete().eq('id', id)
+    if (err) setError(err.message)
+  }, [userId])
+
   // ── Bulk import ──────────────────────────────────────────
   const bulkAddExpenses = useCallback(async (exps) => {
     if (!exps.length) return { added: 0, errors: 0 }
@@ -589,19 +656,21 @@ export function useStorage(userId) {
       supabase.from('budgets').delete().eq('user_id', userId),
       supabase.from('goals').delete().eq('user_id', userId),
       supabase.from('goal_contributions').delete().eq('user_id', userId),
+      supabase.from('trips').delete().eq('user_id', userId),
     ])
     setExpenses([])
     setIncome([])
     setBudgets({ daily: 0, weekly: 0, monthly: 0, categories: {} })
     setGoals([])
     setContributions([])
+    setTrips([])
     try {
       ['et_v6_rates', 'et_v6_dark', 'et_v6_cb', 'et_v6_base', 'et_v6_retry_queue'].forEach(k => localStorage.removeItem(k))
     } catch {}
   }, [userId])
 
   return {
-    expenses, income, budgets, goals, contributions,
+    expenses, income, budgets, goals, contributions, trips,
     loading, error,
     pendingCount: queue.length,
     syncing,
@@ -611,6 +680,7 @@ export function useStorage(userId) {
     addIncome,  editIncome,  deleteIncome,
     saveBudgets,
     addGoal, deleteGoal, addContribution, deleteContribution,
+    addTrip, editTrip, deleteTrip,
     bulkAddExpenses, bulkAddIncome,
     clearExpenses, clearIncome, clearAll, factoryReset,
   }

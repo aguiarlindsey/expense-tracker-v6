@@ -34,7 +34,35 @@
 | 23 | 2026-04-10 | v7.1.0: Emergency rate fallbacks — cached → built-in rates when API unavailable | 1.0 |
 | 24 | 2026-04-10 | v7.1.1: 122-currency expansion + historical rate sync (Frankfurter API) | 2.0 |
 | 25 | 2026-04-24 | v7.2.0: Burn-Rate Forecasting — 7-day velocity, acceleration, runway, category burn | 1.5 |
-| **Total** | | | **~69.5 h** |
+| 26 | 2026-04-24 | v7.3.0: Trip Summary — trips table, CRUD, auto-link by date+currency, trip cards | 2.0 |
+| **Total** | | | **~71.5 h** |
+
+---
+
+## [v7.3.0] — Trip Summary
+_2026-04-24_
+
+**New: `trips` table (`supabase/add_trips.sql`)**
+- Schema: `id, user_id, name, start_date, end_date, currency, notes, created_at`
+- RLS: 4 policies (SELECT / INSERT / UPDATE / DELETE) scoped to `auth.uid()`
+- `REPLICA IDENTITY FULL` + added to `supabase_realtime` publication
+
+**`useStorage.js`**
+- `tripFromDb` / `tripToDb` field mappers
+- `trips` state; loaded in goals/contributions Promise.all
+- `handleTripEvent` for INSERT / UPDATE / DELETE realtime events
+- `addTrip`, `editTrip`, `deleteTrip` CRUD callbacks
+- `factoryReset` now deletes trips table too
+
+**Tracker.jsx — Trips tab (✈️, position 8)**
+- `tripsWithData` useMemo: filters expenses by `date ∈ [start, end]` AND `currency === trip.currency`; computes `totalOriginal`, `totalINR`, top-3 category breakdown, status badge
+- `submitTripForm` / `openEditTrip` handlers with overlap detection (toast warning, not blocking)
+- New Trip form: name, currency (grouped dropdown), start date, end date, notes; inline validation
+- TripCard: status badge (Active / Upcoming / Completed), total in trip currency, INR equivalent, category chips, edit/delete actions
+- Empty state with CTA; incognito-aware amount masking
+- Keyboard shortcut: key 8 = Trips (Exchange → 9; Settings unshortcutted)
+
+**CSS** — `.trips-header`, `.trip-form-grid`, `.trips-grid`, `.trip-card`, `.trip-status-badge`, `.trip-cats`, `.trip-empty-body` — responsive at 640px
 
 ---
 

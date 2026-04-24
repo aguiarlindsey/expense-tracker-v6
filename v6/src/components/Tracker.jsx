@@ -977,13 +977,14 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
 export default function Tracker({ session }) {
   const userId = session.user.id
   const {
-    expenses, income, budgets, goals, contributions,
+    expenses, income, budgets, goals, contributions, trips,
     loading, error,
     pendingCount, syncing, online, realtimeStatus,
     addExpense, editExpense, deleteExpense, deleteManyExpenses,
     addIncome,  editIncome,  deleteIncome,
     saveBudgets,
     addGoal, deleteGoal, addContribution, deleteContribution,
+    addTrip, editTrip, deleteTrip,
     bulkAddExpenses, bulkAddIncome,
     clearExpenses, clearIncome, clearAll, factoryReset,
   } = useStorage(userId)
@@ -1355,9 +1356,18 @@ export default function Tracker({ session }) {
   const [showAdvInc,  setShowAdvInc]  = useState(false)
   const dIncSearch = useDebounce(incSearch)
 
+  // ── Trip form state ───────────────────────────────────
+  const [showTripForm,    setShowTripForm]    = useState(false)
+  const [tripFormName,    setTripFormName]    = useState('')
+  const [tripFormStart,   setTripFormStart]   = useState('')
+  const [tripFormEnd,     setTripFormEnd]     = useState('')
+  const [tripFormCur,     setTripFormCur]     = useState('USD')
+  const [tripFormNotes,   setTripFormNotes]   = useState('')
+  const [editingTrip,     setEditingTrip]     = useState(null)
+
   // ── Keyboard shortcuts ───────────────────────────────
   useEffect(() => {
-    const TABS = ['overview', 'income', 'trends', 'budgets', 'goals', 'insights', 'recurring', 'exchange', 'settings']
+    const TABS = ['overview', 'income', 'trends', 'budgets', 'goals', 'insights', 'recurring', 'trips', 'exchange', 'settings']
     const h = e => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
       const n = parseInt(e.key); if (n >= 1 && n <= TABS.length) setTab(TABS[n - 1])
@@ -1585,6 +1595,45 @@ export default function Tracker({ session }) {
     const topCatRates = Object.entries(catTotals).map(([cat, total]) => ({ cat, total, rate: dayOfMonth > 0 ? total / dayOfMonth : 0 })).sort((a, b) => b.total - a.total).slice(0, 3)
     return { last7Total, prev7Total, last7Rate, prev7Rate, acceleration, runwayDays, runwayDate, willExceedBudget, topCatRates, spentSoFar, dailyRate, projected }
   }, [expenses, todayStr, monthStr, budgets])
+
+  // ── Trips computed ───────────────────────────────────
+  const tripsWithData = useMemo(() => {
+    return trips.map(trip => {
+      const matched = expenses.filter(e => e.date >= trip.startDate && e.date <= trip.endDate && e.currency === trip.currency)
+      const totalOriginal = matched.reduce((s, e) => s + e.amount, 0)
+      const totalINR      = matched.reduce((s, e) => s + toINR(e), 0)
+      const catTotals = {}
+      matched.forEach(e => { const c = e.category || 'Other'; catTotals[c] = (catTotals[c] || 0) + e.amount })
+      const topCats = Object.entries(catTotals)
+        .map(([cat, amt]) => ({ cat, amt, pct: totalOriginal > 0 ? Math.round(amt / totalOriginal * 100) : 0 }))
+        .sort((a, b) => b.amt - a.amt).slice(0, 3)
+      const status = todayStr < trip.startDate ? 'upcoming' : todayStr > trip.endDate ? 'completed' : 'active'
+      return { ...trip, matched, totalOriginal, totalINR, topCats, status }
+    }).sort((a, b) => b.startDate.localeCompare(a.startDate))
+  }, [trips, expenses, todayStr])
+
+  const submitTripForm = async () => {
+    if (!tripFormName.trim() || !tripFormStart || !tripFormEnd || tripFormStart > tripFormEnd) return
+    const trip = {
+      id:        editingTrip ? editingTrip.id : (Date.now().toString(36) + Math.random().toString(36).slice(2)),
+      name:      tripFormName.trim(),
+      startDate: tripFormStart,
+      endDate:   tripFormEnd,
+      currency:  tripFormCur,
+      notes:     tripFormNotes.trim(),
+    }
+    const overlaps = trips.filter(t => t.id !== trip.id && trip.startDate <= t.endDate && trip.endDate >= t.startDate)
+    if (overlaps.length) addToast('warn', '⚠️', 'Overlapping Trip', `"${trip.name}" overlaps with "${overlaps[0].name}". Saved anyway.`)
+    if (editingTrip) await editTrip(trip); else await addTrip(trip)
+    setShowTripForm(false); setEditingTrip(null)
+    setTripFormName(''); setTripFormStart(''); setTripFormEnd(''); setTripFormCur('USD'); setTripFormNotes('')
+  }
+
+  const openEditTrip = t => {
+    setEditingTrip(t); setTripFormName(t.name); setTripFormStart(t.startDate)
+    setTripFormEnd(t.endDate); setTripFormCur(t.currency); setTripFormNotes(t.notes || '')
+    setShowTripForm(true)
+  }
 
   // ── Insights ─────────────────────────────────────────
   const insights = useMemo(() => {
@@ -1855,6 +1904,7 @@ export default function Tracker({ session }) {
     { id: 'goals',      label: '🎯 Goals' },
     { id: 'insights',   label: '💡 Insights' },
     { id: 'recurring',  label: '🔄 Recurring' },
+    { id: 'trips',      label: '✈️ Trips' },
     { id: 'exchange',   label: '💱 Exchange' },
     { id: 'settings',   label: '⚙️ Settings' },
   ]
@@ -2484,6 +2534,130 @@ export default function Tracker({ session }) {
         </main>
       )}
 
+      {/* ── Trips tab ── */}
+      {tab === 'trips' && (
+        <main>
+          {/* Header row */}
+          <div className="trips-header">
+            <div>
+              <h2 className="trips-heading">✈️ Trips</h2>
+              <p className="trips-subheading">Auto-links expenses by date range + currency — no manual tagging needed.</p>
+            </div>
+            <button className="btn-primary" onClick={() => { setEditingTrip(null); setTripFormName(''); setTripFormStart(''); setTripFormEnd(''); setTripFormCur('USD'); setTripFormNotes(''); setShowTripForm(true) }}>+ New Trip</button>
+          </div>
+
+          {/* Add / Edit form */}
+          {showTripForm && (
+            <div className="card trip-form-card">
+              <div className="card-title">{editingTrip ? '✏️ Edit Trip' : '✈️ New Trip'}</div>
+              <div className="trip-form-grid">
+                <label className="form-label">Trip name
+                  <input className="form-input" placeholder="e.g. Melbourne Apr 2026" value={tripFormName} onChange={e => setTripFormName(e.target.value)} />
+                </label>
+                <label className="form-label">Currency
+                  <select className="form-input" value={tripFormCur} onChange={e => setTripFormCur(e.target.value)}>
+                    {Object.entries(CG).map(([group, list]) => (
+                      <optgroup key={group} label={group}>
+                        {list.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code} — {c.name}</option>)}
+                      </optgroup>
+                    ))}
+                  </select>
+                </label>
+                <label className="form-label">Start date
+                  <input type="date" className="form-input" value={tripFormStart} onChange={e => setTripFormStart(e.target.value)} />
+                </label>
+                <label className="form-label">End date
+                  <input type="date" className="form-input" value={tripFormEnd} onChange={e => setTripFormEnd(e.target.value)} />
+                </label>
+                <label className="form-label trip-notes-label">Notes (optional)
+                  <input className="form-input" placeholder="Hotel name, purpose…" value={tripFormNotes} onChange={e => setTripFormNotes(e.target.value)} />
+                </label>
+              </div>
+              {tripFormStart && tripFormEnd && tripFormStart > tripFormEnd && (
+                <div className="trip-form-error">End date must be on or after start date.</div>
+              )}
+              <div className="trip-form-actions">
+                <button className="btn-primary" onClick={submitTripForm} disabled={!tripFormName.trim() || !tripFormStart || !tripFormEnd || tripFormStart > tripFormEnd}>
+                  {editingTrip ? 'Save changes' : 'Create trip'}
+                </button>
+                <button className="btn-ghost" onClick={() => { setShowTripForm(false); setEditingTrip(null) }}>Cancel</button>
+              </div>
+            </div>
+          )}
+
+          {/* Trip cards */}
+          {tripsWithData.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">✈️</div>
+              <h3>No trips yet</h3>
+              <p>Create a trip and all expenses matching the dates + currency are tallied automatically.</p>
+              <button className="btn-primary" onClick={() => setShowTripForm(true)}>+ New Trip</button>
+            </div>
+          ) : (
+            <div className="trips-grid">
+              {tripsWithData.map(trip => {
+                const cur      = CM[trip.currency] || { flag: '🌍', symbol: trip.currency, code: trip.currency }
+                const fmtAmt   = n => incognito ? '••••' : (cur.symbol + parseFloat(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+                const statusCl = trip.status === 'active' ? 'trip-badge-active' : trip.status === 'upcoming' ? 'trip-badge-upcoming' : 'trip-badge-done'
+                const statusTx = trip.status === 'active' ? '● Active' : trip.status === 'upcoming' ? '◷ Upcoming' : '✓ Completed'
+                const nights   = Math.round((new Date(trip.endDate + 'T12:00:00') - new Date(trip.startDate + 'T12:00:00')) / 864e5) + 1
+                return (
+                  <div key={trip.id} className={`trip-card ${trip._pending ? 'trip-card-pending' : ''}`}>
+                    <div className="trip-card-top">
+                      <div className="trip-card-title-row">
+                        <span className="trip-card-name">{trip.name}</span>
+                        <span className={`trip-status-badge ${statusCl}`}>{statusTx}</span>
+                      </div>
+                      <div className="trip-card-meta">
+                        <span>{trip.startDate} → {trip.endDate}</span>
+                        <span className="trip-meta-dot">·</span>
+                        <span>{nights} day{nights !== 1 ? 's' : ''}</span>
+                        <span className="trip-meta-dot">·</span>
+                        <span>{cur.flag} {cur.code}</span>
+                      </div>
+                    </div>
+
+                    <div className="trip-card-body">
+                      {trip.totalOriginal > 0 ? (
+                        <>
+                          <div className="trip-total">{fmtAmt(trip.totalOriginal)}</div>
+                          <div className="trip-total-sub">
+                            {trip.currency !== 'INR' && <span>≈ {fmtINR(trip.totalINR)}</span>}
+                            <span className="trip-meta-dot">·</span>
+                            <span>{trip.matched.length} expense{trip.matched.length !== 1 ? 's' : ''}</span>
+                          </div>
+                          {trip.topCats.length > 0 && (
+                            <div className="trip-cats">
+                              {trip.topCats.map(c => (
+                                <span key={c.cat} className="trip-cat-chip">
+                                  {CATS[c.cat]?.icon || '📦'} {c.cat} <span className="trip-cat-pct">{c.pct}%</span>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="trip-empty-body">
+                          <span className="trip-empty-icon">🔍</span>
+                          <span>No {cur.code} expenses found for these dates</span>
+                        </div>
+                      )}
+                      {trip.notes && <div className="trip-notes">{trip.notes}</div>}
+                    </div>
+
+                    <div className="trip-card-actions">
+                      <button className="btn-ghost btn-sm" onClick={() => openEditTrip(trip)}>✏️ Edit</button>
+                      <button className="btn-ghost btn-sm" onClick={() => setTab('overview')}>📊 View expenses</button>
+                      <button className="btn-danger btn-sm" onClick={() => deleteTrip(trip.id)}>🗑️</button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </main>
+      )}
+
       {/* ── Exchange tab ── */}
       {tab === 'exchange' && (
         <main>
@@ -2803,7 +2977,7 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title">💸 Expense Tracker V6</div>
               <div className="about-meta">
-                <span className="about-badge">v7.2.0</span>
+                <span className="about-badge">v7.3.0</span>
                 <span className="about-badge">Incognito Mode</span>
                 <span className="about-badge">Rate Fallbacks</span>
                 <span className="about-badge">122 Currencies</span>
