@@ -35,7 +35,30 @@
 | 24 | 2026-04-10 | v7.1.1: 122-currency expansion + historical rate sync (Frankfurter API) | 2.0 |
 | 25 | 2026-04-24 | v7.2.0: Burn-Rate Forecasting — 7-day velocity, acceleration, runway, category burn | 1.5 |
 | 26 | 2026-04-24 | v7.3.0: Trip Summary — trips table, CRUD, auto-link by date+currency, trip cards | 2.0 |
-| **Total** | | | **~71.5 h** |
+| 26b | 2026-04-25 | v7.3.0: Trips expand/collapse — inline expense list (Date·Cat·Desc·Amt), per-day rate, full-width expanded card | 1.5 |
+| **Total** | | | **~73.0 h** |
+
+---
+
+## [v7.3.0b] — Trips: Expand/Collapse + Inline Expense List
+_2026-04-25_
+
+**Tracker.jsx**
+- `expandedTripId` state — one card expanded at a time; click header or "▼ Show expenses" button to toggle
+- Trip card header (`trip-card-top`) is now a keyboard-accessible button (Enter/Space toggles)
+- Expanded view shows full expense table: Date · Category · Description · Amount (trip currency)
+- Expenses sorted newest-first (`b.date.localeCompare(a.date)`)
+- Total row at bottom: expense count + grand total
+- Per-day spend rate added to summary sub-row (`totalOriginal / nights`)
+- Empty expanded state: "No AUD expenses in this date range yet — add expenses and they'll appear automatically"
+- Chevron indicator (▼/▲) in card header title row
+- Date comparison note: YYYY-MM-DD lexicographic order = chronological order; timezone-safe
+
+**CSS**
+- `.trip-card-expanded` — `grid-column: 1 / -1` (full width when open)
+- `.trip-exp-header / row / total` — 4-column CSS grid (110px · 160px · 1fr · 120px)
+- `.trip-exp-row:hover` background highlight
+- Mobile (≤640px): category column hidden; grid collapses to 3 columns
 
 ---
 
