@@ -1364,6 +1364,7 @@ export default function Tracker({ session }) {
   const [tripFormCur,     setTripFormCur]     = useState('USD')
   const [tripFormNotes,   setTripFormNotes]   = useState('')
   const [editingTrip,     setEditingTrip]     = useState(null)
+  const [expandedTripId,  setExpandedTripId]  = useState(null)
 
   // ── Keyboard shortcuts ───────────────────────────────
   useEffect(() => {
@@ -2596,17 +2597,27 @@ export default function Tracker({ session }) {
           ) : (
             <div className="trips-grid">
               {tripsWithData.map(trip => {
-                const cur      = CM[trip.currency] || { flag: '🌍', symbol: trip.currency, code: trip.currency }
-                const fmtAmt   = n => incognito ? '••••' : (cur.symbol + parseFloat(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
-                const statusCl = trip.status === 'active' ? 'trip-badge-active' : trip.status === 'upcoming' ? 'trip-badge-upcoming' : 'trip-badge-done'
-                const statusTx = trip.status === 'active' ? '● Active' : trip.status === 'upcoming' ? '◷ Upcoming' : '✓ Completed'
-                const nights   = Math.round((new Date(trip.endDate + 'T12:00:00') - new Date(trip.startDate + 'T12:00:00')) / 864e5) + 1
+                const isExpanded = expandedTripId === trip.id
+                const cur        = CM[trip.currency] || { flag: '🌍', symbol: trip.currency, code: trip.currency }
+                // YYYY-MM-DD string comparison is safe — lexicographic order matches chronological order
+                const fmtAmt     = n => incognito ? '••••' : (cur.symbol + parseFloat(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+                const statusCl   = trip.status === 'active' ? 'trip-badge-active' : trip.status === 'upcoming' ? 'trip-badge-upcoming' : 'trip-badge-done'
+                const statusTx   = trip.status === 'active' ? '● Active' : trip.status === 'upcoming' ? '◷ Upcoming' : '✓ Completed'
+                const nights     = Math.round((new Date(trip.endDate + 'T12:00:00') - new Date(trip.startDate + 'T12:00:00')) / 864e5) + 1
+                const sortedExps = [...trip.matched].sort((a, b) => b.date.localeCompare(a.date))
                 return (
-                  <div key={trip.id} className={`trip-card ${trip._pending ? 'trip-card-pending' : ''}`}>
-                    <div className="trip-card-top">
+                  <div key={trip.id} className={`trip-card${trip._pending ? ' trip-card-pending' : ''}${isExpanded ? ' trip-card-expanded' : ''}`}>
+
+                    {/* Clickable header — toggles expense list */}
+                    <div className="trip-card-top trip-card-top-clickable" role="button" tabIndex={0}
+                      onClick={() => setExpandedTripId(isExpanded ? null : trip.id)}
+                      onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setExpandedTripId(isExpanded ? null : trip.id)}>
                       <div className="trip-card-title-row">
                         <span className="trip-card-name">{trip.name}</span>
-                        <span className={`trip-status-badge ${statusCl}`}>{statusTx}</span>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <span className={`trip-status-badge ${statusCl}`}>{statusTx}</span>
+                          <span className="trip-chevron">{isExpanded ? '▲' : '▼'}</span>
+                        </div>
                       </div>
                       <div className="trip-card-meta">
                         <span>{trip.startDate} → {trip.endDate}</span>
@@ -2617,6 +2628,7 @@ export default function Tracker({ session }) {
                       </div>
                     </div>
 
+                    {/* Summary body — always visible */}
                     <div className="trip-card-body">
                       {trip.totalOriginal > 0 ? (
                         <>
@@ -2625,6 +2637,8 @@ export default function Tracker({ session }) {
                             {trip.currency !== 'INR' && <span>≈ {fmtINR(trip.totalINR)}</span>}
                             <span className="trip-meta-dot">·</span>
                             <span>{trip.matched.length} expense{trip.matched.length !== 1 ? 's' : ''}</span>
+                            <span className="trip-meta-dot">·</span>
+                            <span style={{ color: 'var(--color-exp)' }}>{fmtAmt(trip.totalOriginal / Math.max(nights, 1))}/day</span>
                           </div>
                           {trip.topCats.length > 0 && (
                             <div className="trip-cats">
@@ -2639,16 +2653,49 @@ export default function Tracker({ session }) {
                       ) : (
                         <div className="trip-empty-body">
                           <span className="trip-empty-icon">🔍</span>
-                          <span>No {cur.code} expenses found for these dates</span>
+                          <span>No {cur.code} expenses found for these dates yet</span>
                         </div>
                       )}
                       {trip.notes && <div className="trip-notes">{trip.notes}</div>}
                     </div>
 
+                    {/* Expanded expense list — auto-updates when expenses state changes */}
+                    {isExpanded && (
+                      <div className="trip-expense-list">
+                        {sortedExps.length > 0 ? (
+                          <>
+                            <div className="trip-exp-header">
+                              <span>Date</span>
+                              <span>Category</span>
+                              <span>Description</span>
+                              <span className="trip-exp-right">Amount</span>
+                            </div>
+                            {sortedExps.map(e => (
+                              <div key={e.id} className="trip-exp-row">
+                                <span className="trip-exp-date">{e.date}</span>
+                                <span className="trip-exp-cat">{CATS[e.category]?.icon || '📦'} {e.category || 'Other'}</span>
+                                <span className="trip-exp-desc" title={e.description}>{e.description}</span>
+                                <span className="trip-exp-amt trip-exp-right">{fmtAmt(e.amount)}</span>
+                              </div>
+                            ))}
+                            <div className="trip-exp-total">
+                              <span style={{ gridColumn: '1 / 3' }}>Total · {sortedExps.length} expense{sortedExps.length !== 1 ? 's' : ''}</span>
+                              <span></span>
+                              <span className="trip-exp-right">{fmtAmt(trip.totalOriginal)}</span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="trip-exp-none">No {cur.code} expenses in this date range yet. Add expenses and they'll appear here automatically.</div>
+                        )}
+                      </div>
+                    )}
+
                     <div className="trip-card-actions">
                       <button className="btn-ghost btn-sm" onClick={() => openEditTrip(trip)}>✏️ Edit</button>
-                      <button className="btn-ghost btn-sm" onClick={() => setTab('overview')}>📊 View expenses</button>
-                      <button className="btn-danger btn-sm" onClick={() => deleteTrip(trip.id)}>🗑️</button>
+                      <button className="btn-ghost btn-sm" onClick={() => setExpandedTripId(isExpanded ? null : trip.id)}>
+                        {isExpanded ? '▲ Collapse' : '▼ Show expenses'}
+                      </button>
+                      <button className="btn-danger btn-sm" style={{ marginLeft: 'auto' }} onClick={() => deleteTrip(trip.id)}>🗑️</button>
                     </div>
                   </div>
                 )

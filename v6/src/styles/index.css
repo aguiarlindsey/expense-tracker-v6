@@ -638,11 +638,68 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 .trip-notes { font-size: 0.78rem; color: var(--text-muted); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-style: italic; }
 
 .trip-card-actions { padding: 10px 16px; border-top: 1px solid var(--border); display: flex; gap: 6px; background: var(--bg); }
+.trip-card-expanded { grid-column: 1 / -1; }
+.trip-card-top-clickable { cursor: pointer; user-select: none; }
+.trip-card-top-clickable:hover { background: var(--surface); }
+.trip-chevron { font-size: 0.7rem; color: var(--text-muted); }
+
+/* ── Expanded expense list ── */
+.trip-expense-list { border-top: 2px solid var(--border); }
+.trip-exp-header {
+  display: grid;
+  grid-template-columns: 110px 160px 1fr 120px;
+  gap: 0 12px;
+  padding: 8px 16px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.trip-exp-row {
+  display: grid;
+  grid-template-columns: 110px 160px 1fr 120px;
+  gap: 0 12px;
+  padding: 9px 16px;
+  font-size: 0.84rem;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  transition: background 0.1s;
+}
+.trip-exp-row:last-of-type { border-bottom: none; }
+.trip-exp-row:hover { background: var(--bg); }
+.trip-exp-date { color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.trip-exp-cat  { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trip-exp-desc { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-exp-amt  { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--color-exp); }
+.trip-exp-right { text-align: right; }
+.trip-exp-total {
+  display: grid;
+  grid-template-columns: 110px 160px 1fr 120px;
+  gap: 0 12px;
+  padding: 10px 16px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--bg);
+  border-top: 2px solid var(--border);
+}
+.trip-exp-none {
+  padding: 20px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  font-style: italic;
+}
 
 @media (max-width: 640px) {
   .trip-form-grid { grid-template-columns: 1fr; }
   .trips-grid { grid-template-columns: 1fr; }
   .trips-header { flex-direction: column; }
+  .trip-exp-header, .trip-exp-row, .trip-exp-total { grid-template-columns: 90px 1fr 100px; }
+  .trip-exp-cat { display: none; }
 }
 
 /* ── Exchange Tab ── */
