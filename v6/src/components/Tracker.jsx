@@ -5,6 +5,7 @@ import { CATS, CM, CG, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPE
 import { makeExpense, makeIncome, makeDedupContext, matchesSearch, stableId } from '../utils/dataHelpers'
 import { migrateV5Data, validateV5File } from '../utils/migrateV5'
 import { useNotifications } from '../hooks/useNotifications'
+import { useSupabaseHeartbeat } from '../hooks/useSupabaseHeartbeat'
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -996,6 +997,7 @@ export default function Tracker({ session }) {
     requestAndSubscribe: notifEnable,
     unsubscribe:         notifDisable,
   } = useNotifications(userId)
+  useSupabaseHeartbeat(userId)
 
   // ── UI state ─────────────────────────────────────────
   const [tab, setTab]                     = useState(() => {

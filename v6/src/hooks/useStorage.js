@@ -133,19 +133,6 @@ export function useStorage(userId) {
 
   const { queue, online, enqueue, remove, bumpAttempts, dropExhausted } = useRetryQueue()
 
-  // ── Keep-alive heartbeat (prevents Supabase free-tier auto-pause) ───
-  // Supabase only counts REST API calls as "activity" — not Realtime WebSocket connections.
-  // This lightweight HEAD query runs at most once every 3 days to keep the project active.
-  useEffect(() => {
-    if (!userId) return
-    const KEY = 'et_v6_ka_ts'
-    const THREE_DAYS = 3 * 24 * 3600 * 1000
-    const last = parseInt(localStorage.getItem(KEY) || '0', 10)
-    if (Date.now() - last < THREE_DAYS) return
-    supabase.from('expenses').select('id', { count: 'exact', head: true }).eq('user_id', userId)
-      .then(() => { try { localStorage.setItem(KEY, String(Date.now())) } catch {} })
-  }, [userId])
-
   // ── Initial load ──────────────────────────────────────
   useEffect(() => {
     if (!userId) return
