@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(node *)",
+      "PowerShell($PSVersionTable.PSVersion)",
+      "PowerShell(& \"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -NoProfile -Command '$PSVersionTable.PSVersion' 2>$null; if \\(-not $?\\) { Write-Output \"PowerShell 7 not found at default path\" })",
+      "PowerShell(winget install *)",
+      "PowerShell(Get-Command *)"
+    ]
+  }
+}
