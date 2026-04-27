@@ -51,7 +51,14 @@ export function useRetryQueue() {
   const setQueue = useCallback((updater) => {
     _setQueue(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater
-      try { localStorage.setItem(KEY, JSON.stringify(next)) } catch {}
+      try {
+        localStorage.setItem(KEY, JSON.stringify(next))
+      } catch (e) {
+        if (e?.name === 'QuotaExceededError' || e?.code === 22) {
+          console.error('Retry queue: localStorage quota exceeded — offline changes may not persist across page reloads')
+          window.dispatchEvent(new CustomEvent('et-storage-quota-exceeded'))
+        }
+      }
       return next
     })
   }, [])

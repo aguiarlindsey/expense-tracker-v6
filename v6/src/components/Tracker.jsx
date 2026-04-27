@@ -1205,7 +1205,7 @@ export default function Tracker({ session }) {
   }
 
   const handleExportCSV = () => {
-    const headers = ['Date','Description','Amount','Currency','INR Amount','Category','Subcategory','Expense Type','Payment Method','Tags','Notes']
+    const headers = ['Date','Description','Amount','Currency','INR Amount','Category','Subcategory','Expense Type','Payment Method','Tags','Notes','Category Allocations','Is Recurring','Recurring Period']
     const rows = expenses.map(e => [
       e.date,
       `"${(e.description || '').replace(/"/g, '""')}"`,
@@ -1214,7 +1214,10 @@ export default function Tracker({ session }) {
       e.category, e.subcategory || '', e.expenseType || '',
       e.paymentMethod || '',
       `"${(e.tags || []).join(';')}"`,
-      `"${(e.notes || '').replace(/"/g, '""')}"`
+      `"${(e.notes || '').replace(/"/g, '""')}"`,
+      e.categoryAllocations ? `"${JSON.stringify(e.categoryAllocations).replace(/"/g, '""')}"` : '',
+      e.isRecurring ? 'Yes' : 'No',
+      e.recurringPeriod || '',
     ])
     const csv  = [headers, ...rows].map(r => r.join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
@@ -1489,7 +1492,6 @@ export default function Tracker({ session }) {
   useEffect(() => {
     if (expenses.length < 2) return
     expenses.forEach(newExp => {
-      if (newExp._pending) return
       if (checkedAnomalyIds.current.has(newExp.id)) return
       checkedAnomalyIds.current.add(newExp.id)
       try { localStorage.setItem('et_v6_anomaly_checked', JSON.stringify([...checkedAnomalyIds.current].slice(-500))) } catch {}
@@ -1555,6 +1557,14 @@ export default function Tracker({ session }) {
   const [tripFormNotes,   setTripFormNotes]   = useState('')
   const [editingTrip,     setEditingTrip]     = useState(null)
   const [expandedTripId,  setExpandedTripId]  = useState(null)
+
+  // ── Storage quota warning ────────────────────────────
+  useEffect(() => {
+    const h = () => addToast('warn', '⚠️', 'Storage almost full',
+      'Offline sync queue could not be saved. Clear browser storage or export data to avoid losing offline changes.')
+    window.addEventListener('et-storage-quota-exceeded', h)
+    return () => window.removeEventListener('et-storage-quota-exceeded', h)
+  }, [])
 
   // ── Keyboard shortcuts ───────────────────────────────
   useEffect(() => {
@@ -1738,7 +1748,7 @@ export default function Tracker({ session }) {
     const today = new Date(todayStr + 'T12:00:00')
     const y = today.getFullYear(), mo = today.getMonth()
     const daysInMonth = new Date(y, mo + 1, 0).getDate()
-    const dayOfMonth  = today.getDate()
+    const dayOfMonth  = Math.max(today.getDate(), 1) // guard against edge case
     const d7  = new Date(today); d7.setDate(d7.getDate() - 7);  const d7str  = d7.toISOString().split('T')[0]
     const d14 = new Date(today); d14.setDate(d14.getDate() - 14); const d14str = d14.toISOString().split('T')[0]
     const last7Total = expenses.filter(e => e.date > d7str  && e.date <= todayStr).reduce((s, e) => s + toINR(e), 0)
@@ -2007,7 +2017,9 @@ export default function Tracker({ session }) {
 
   // ── Safe-to-Spend computed ────────────────────────────
   const currentMonthInc   = useMemo(() => income.filter(i => (i.date || '').startsWith(monthStr)).reduce((s, i) => s + toINR(i), 0), [income, monthStr])
-  const currentMonthFixed = useMemo(() => expenses.filter(e => (e.date || '').startsWith(monthStr) && e.expenseType === 'fixed').reduce((s, e) => s + toINR(e), 0), [expenses, monthStr])
+  const currentMonthFixed = useMemo(() => expenses.filter(e =>
+    (e.date || '').startsWith(monthStr) && (e.expenseType === 'fixed' || e.isRecurring)
+  ).reduce((s, e) => s + toINR(e), 0), [expenses, monthStr])
   const { dailyAllowance, daysRemaining } = useMemo(() => calculateSafeToSpend(currentMonthInc, currentMonthFixed, savingsGoal, todayStr), [currentMonthInc, currentMonthFixed, savingsGoal, todayStr])
   const stsRatio = dailyAllowance > 0 ? spentToday / dailyAllowance : 0
   const stsStatus = stsRatio >= 1 ? 'danger' : stsRatio >= 0.8 ? 'warn' : 'ok'
@@ -2035,9 +2047,13 @@ export default function Tracker({ session }) {
   const SUB_SUBS = new Set(['OTT/Streaming', 'Streaming', 'Subscriptions', 'Software', 'Gaming', 'Cable'])
   const subZombieData = useMemo(() => {
     if (!expenses.length) return { subs: [], zombies: [], creep: [] }
+    // Normalize: lowercase + remove common billing suffixes so "Netflix" == "Netflix Premium" == "NETFLIX"
+    const normalize = s => (s || '').trim().toLowerCase()
+      .replace(/\s*(premium|basic|standard|monthly|annual|yearly|subscription|plan|plus|pro)\s*$/i, '')
+      .replace(/\s+/g, ' ').trim()
     const byDesc = {}
     expenses.forEach(e => {
-      const key = (e.description || '').trim().toLowerCase()
+      const key = normalize(e.description)
       if (!key) return
       if (!byDesc[key]) byDesc[key] = { desc: e.description, items: [] }
       byDesc[key].items.push(e)
