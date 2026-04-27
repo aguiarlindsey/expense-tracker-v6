@@ -5,6 +5,7 @@ import { CATS, CM, CG, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPE
 import { makeExpense, makeIncome, makeDedupContext, matchesSearch, stableId, detectAnomaly } from '../utils/dataHelpers'
 import { migrateV5Data, validateV5File } from '../utils/migrateV5'
 import { useNotifications } from '../hooks/useNotifications'
+import { useInsightViews } from '../hooks/useInsightViews'
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -1041,6 +1042,8 @@ export default function Tracker({ session }) {
     unsubscribe:         notifDisable,
   } = useNotifications(userId)
 
+  const { monthlyExp: viewMonthlyExp, monthlyInc: viewMonthlyInc, yearlyExp: viewYearlyExp, refetchViews } = useInsightViews(userId, expenses.length + income.length)
+
   // ── UI state ─────────────────────────────────────────
   const [tab, setTab]                     = useState(() => {
     const p = new URLSearchParams(window.location.search).get('tab')
@@ -1481,17 +1484,9 @@ export default function Tracker({ session }) {
   const allIncINR  = useMemo(() => income.reduce((s, i)   => s + toINR(i), 0), [income])
   const netSavings = allIncINR - allExpINR
 
-  // ── Month comparison table data (declared early to avoid Rollup TDZ) ──
-  const allMonthlyExp = useMemo(() => {
-    const m = {}
-    expenses.forEach(e => { const k = (e.date || '').substring(0, 7); if (k) m[k] = (m[k] || 0) + toINR(e) })
-    return Object.entries(m).sort((a, b) => a[0].localeCompare(b[0])).map(([k, v]) => ({ label: k.substring(5), fullLabel: k, value: v }))
-  }, [expenses])
-  const allMonthlyInc = useMemo(() => {
-    const m = {}
-    income.forEach(i => { const k = (i.date || '').substring(0, 7); if (k) m[k] = (m[k] || 0) + toINR(i) })
-    return m
-  }, [income])
+  // ── Month comparison table data — from SQL views ──────
+  const allMonthlyExp = viewMonthlyExp.map(r => ({ label: r.month.substring(5), fullLabel: r.month, value: parseFloat(r.total) }))
+  const allMonthlyInc = Object.fromEntries(viewMonthlyInc.map(r => [r.month, parseFloat(r.total)]))
 
   const todayStr   = new Date().toISOString().split('T')[0]
   const monthStr   = todayStr.substring(0, 7)
@@ -1586,23 +1581,9 @@ export default function Tracker({ session }) {
     return Object.entries(s).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value)
   }, [filteredInc])
 
-  const monthlyExpData = useMemo(() => {
-    const m = {}
-    expenses.forEach(e => { const k = (e.date || '').substring(0, 7); if (k) m[k] = (m[k] || 0) + toINR(e) })
-    return Object.entries(m).sort((a, b) => a[0].localeCompare(b[0])).slice(-12).map(([k, v]) => ({ label: k.substring(5), fullLabel: k, value: v }))
-  }, [expenses])
-
-  const monthlyIncData = useMemo(() => {
-    const m = {}
-    income.forEach(i => { const k = (i.date || '').substring(0, 7); if (k) m[k] = (m[k] || 0) + toINR(i) })
-    return Object.entries(m).sort((a, b) => a[0].localeCompare(b[0])).slice(-12).map(([k, v]) => ({ label: k.substring(5), fullLabel: k, value: v }))
-  }, [income])
-
-  const yearlyData = useMemo(() => {
-    const y = {}
-    expenses.forEach(e => { const k = (e.date || '').substring(0, 4); if (k) y[k] = (y[k] || 0) + toINR(e) })
-    return Object.entries(y).sort((a, b) => a[0].localeCompare(b[0])).map(([label, value]) => ({ label, value }))
-  }, [expenses])
+  const monthlyExpData = viewMonthlyExp.slice(-12).map(r => ({ label: r.month.substring(5), fullLabel: r.month, value: parseFloat(r.total) }))
+  const monthlyIncData = viewMonthlyInc.slice(-12).map(r => ({ label: r.month.substring(5), fullLabel: r.month, value: parseFloat(r.total) }))
+  const yearlyData     = viewYearlyExp.map(r => ({ label: r.year, value: parseFloat(r.total) }))
 
   const expTypeData = useMemo(() => {
     const t = {}
@@ -1851,7 +1832,7 @@ export default function Tracker({ session }) {
     }
 
     return res
-  }, [catData, expenses, monthlyExpData, allMonthlyExp, allMonthlyInc, allIncINR, allExpINR, burnRate, budgets])
+  }, [catData, expenses, monthlyExpData, viewMonthlyExp, viewMonthlyInc, allIncINR, allExpINR, burnRate, budgets])
 
   // ── Goals computed ────────────────────────────────────
   // Attach contributions to goals
