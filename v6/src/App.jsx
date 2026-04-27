@@ -8,6 +8,7 @@ import LockScreen from './components/LockScreen'
 
 const ENROLLED_KEY = 'et_v6_biometric_enrolled'
 const USER_ID_KEY  = 'et_v6_user_id'
+const EMAIL_KEY    = 'et_v6_user_email'
 
 export default function App() {
   const { session, loading } = useAuth()
@@ -23,6 +24,7 @@ export default function App() {
     if (session && localStorage.getItem(ENROLLED_KEY) === 'true' && biometricLocked) {
       // Store user_id before signing out (needed for biometric-auth-options)
       localStorage.setItem(USER_ID_KEY, session.user.id)
+      localStorage.setItem(EMAIL_KEY, session.user.email)
       supabase.auth.signOut()
     }
   }, [session, biometricLocked])

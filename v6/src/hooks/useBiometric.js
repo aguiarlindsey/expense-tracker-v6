@@ -4,6 +4,7 @@ import { supabase } from '../utils/supabase'
 
 const ENROLLED_KEY = 'et_v6_biometric_enrolled'
 const USER_ID_KEY  = 'et_v6_user_id'
+const EMAIL_KEY    = 'et_v6_user_email'
 
 async function safeJson(res) {
   try { return await res.json() } catch { return {} }
@@ -47,6 +48,7 @@ export function useBiometric() {
 
       localStorage.setItem(ENROLLED_KEY, 'true')
       localStorage.setItem(USER_ID_KEY, session.user.id)
+      localStorage.setItem(EMAIL_KEY, session.user.email)
       return { success: true }
     } catch (e) {
       const msg = e.name === 'NotAllowedError' ? 'Biometric cancelled or not available on this device.' : e.message
@@ -125,6 +127,7 @@ export function useBiometric() {
     } catch {}
     localStorage.removeItem(ENROLLED_KEY)
     localStorage.removeItem(USER_ID_KEY)
+    localStorage.removeItem(EMAIL_KEY)
   }, [])
 
   return { enroll, authenticate, removeEnrollment, enrolling, authenticating, error, isEnrolled, setError }

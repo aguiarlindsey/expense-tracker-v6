@@ -1099,4 +1099,18 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
   animation: spin 0.7s linear infinite;
   display: inline-block;
 }
+.lock-fallback-link {
+  background: none; border: none; cursor: pointer;
+  color: var(--primary); font-size: 0.82rem; margin-top: 1rem;
+  text-decoration: underline; padding: 0;
+}
+.lock-fallback-link:disabled { opacity: 0.5; cursor: not-allowed; }
+.lock-otp-desc { font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.2rem; line-height: 1.5; }
+.lock-otp-input {
+  width: 100%; text-align: center; font-size: 2rem; font-weight: 700;
+  letter-spacing: 0.5rem; padding: 0.6rem; border: 2px solid var(--border);
+  border-radius: 10px; background: var(--bg); color: var(--text);
+  margin-bottom: 1rem; outline: none;
+}
+.lock-otp-input:focus { border-color: var(--primary); }
 
