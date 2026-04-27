@@ -177,7 +177,8 @@ export default function LockScreen({ onUnlocked }) {
             <input
               className="lock-otp-input"
               type="text"
-              inputMode="numeric"
+              inputMode="text"
+              autoCapitalize="characters"
               maxLength={8}
               placeholder="XXXXXXXX"
               value={otp}
