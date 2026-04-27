@@ -91,12 +91,13 @@ export default async function handler(req, res) {
       })
     }
 
-    // Success — clear challenge + reset attempts (fire and forget)
-    admin.from('biometric_credentials').update({
-      current_challenge: null,
-      otp_attempts:      0,
-      otp_locked_until:  null,
+    // Reset attempts + lock (awaited — must clear before responding to prevent false lockout)
+    await admin.from('biometric_credentials').update({
+      otp_attempts:     0,
+      otp_locked_until: null,
     }).eq('user_id', userId)
+    // Clear challenge in background
+    admin.from('biometric_credentials').update({ current_challenge: null }).eq('user_id', userId)
 
     res.json({ verified: true, token_hash: challenge.token_hash })
   } catch (e) {

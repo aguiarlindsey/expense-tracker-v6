@@ -244,8 +244,9 @@ function PieChart({ data, size = 190, incognito = false }) {
   )
 }
 
-function LineChart({ data }) {
+function LineChart({ data, incognito = false }) {
   if (!data || data.length < 2) return <div className="chart-empty">Not enough data</div>
+  const fmt = n => incognito ? '••••' : _fmtINR(n)
   const vals = data.map(d => d.value)
   const maxV = Math.max(...vals, 1), minV = Math.min(...vals, 0), rng = maxV - minV || 1
   const W = 500, H = 140, pl = 10, pr = 10, pt = 10, pb = 28
@@ -261,6 +262,7 @@ function LineChart({ data }) {
       {pts.map((p, i) => (
         <g key={i}>
           <circle cx={p.x} cy={p.y} r="3" fill="var(--primary)" />
+          <title>{fmt(p.value)}</title>
           <text x={p.x} y={H - 4} textAnchor="middle" fontSize="9" fill="var(--text-muted)">{p.label}</text>
         </g>
       ))}
@@ -268,8 +270,9 @@ function LineChart({ data }) {
   )
 }
 
-function BarChart({ data }) {
+function BarChart({ data, incognito = false }) {
   if (!data || !data.length) return <div className="chart-empty">No data</div>
+  const fmt = n => incognito ? '••••' : _fmtINR(n)
   const max = Math.max(...data.map(d => d.value), 1)
   return (
     <div className="bar-chart">
@@ -282,7 +285,7 @@ function BarChart({ data }) {
             <div className="bar-track">
               <div className="bar-fill" style={{ width: pct + '%', background: color }} />
             </div>
-            <div className="bar-val">{fmtINR(d.value)}</div>
+            <div className="bar-val">{fmt(d.value)}</div>
           </div>
         )
       })}
@@ -1001,6 +1004,9 @@ function AddContributionModal({ goal, goalContribs, onSave, onClose }) {
     e.preventDefault()
     const amt = parseFloat(form.amount)
     if (!amt || amt <= 0) return
+    if (remaining > 0 && amt > remaining) {
+      if (!window.confirm(`This contribution (${_fmtINR(amt)}) exceeds the remaining goal balance of ${_fmtINR(remaining)}. Continue?`)) return
+    }
     onSave({ id: stableId({}), date: form.date, amount: amt, note: form.note.trim() })
     onClose()
   }
@@ -1302,6 +1308,16 @@ export default function Tracker({ session }) {
 
       const { expenses: transformed, income: transformedInc, warnings } = migrateV5Data(raw)
 
+      // Validate date formats — reject records with invalid dates to prevent downstream crashes
+      const dateRe = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/
+      const invalidDates = [...transformed, ...transformedInc].filter(r => r.date && !dateRe.test(r.date))
+      if (invalidDates.length > 0) {
+        setV5Report({ error: true, details: `❌ ${invalidDates.length} record(s) have invalid date formats (expected YYYY-MM-DD). Fix and re-import.` })
+        setTimeout(() => setV5Report(null), 8000)
+        setV5Importing(false)
+        return
+      }
+
       const expDedup = makeDedupContext(expenses)
       const incDedup = makeDedupContext(income)
 
@@ -1371,7 +1387,11 @@ export default function Tracker({ session }) {
   }
 
   // ── Exchange rates ────────────────────────────────────
-  const [baseCurrency, setBaseCurrency] = useState(() => localStorage.getItem('et_v6_base') || 'INR')
+  const [baseCurrency, setBaseCurrency] = useState(() => {
+    const stored = localStorage.getItem('et_v6_base') || 'INR'
+    // Validate against known list to prevent XSS via tampered localStorage
+    return CURRENCIES.some(c => c.code === stored) ? stored : 'INR'
+  })
   const [rateData,     setRateData]     = useState(null)
   const [rateFetching, setRateFetching] = useState(false)
 
@@ -1476,8 +1496,9 @@ export default function Tracker({ session }) {
       const anomaly = detectAnomaly(newExp, expenses.filter(e => e.id !== newExp.id))
       if (anomaly) {
         setAnomalyHistory(prev => [{ ...anomaly, id: newExp.id }, ...prev].slice(0, 20))
+        const desc = anomaly.description?.length > 40 ? anomaly.description.slice(0, 40) + '…' : anomaly.description
         addToast('warn', '⚠️', `${anomaly.category} unusually high`,
-          `${fmtINR(anomaly.thisAmount)} vs avg ${fmtINR(anomaly.avgAmount)} (${anomaly.deviationPct}% above average)`, 8000)
+          `${desc ? desc + ' — ' : ''}${fmtINR(anomaly.thisAmount)} vs avg ${fmtINR(anomaly.avgAmount)} (${anomaly.deviationPct}% above average)`, 8000)
       }
     })
   }, [expenses]) // addToast/fmtINR intentionally omitted — both are stable refs
@@ -1610,22 +1631,24 @@ export default function Tracker({ session }) {
   // ── Budget toast alerts ───────────────────────────────
   useEffect(() => {
     if (loading) return
+    const d = todayStr.substring(0, 10) // daily keys include date so they reset each day
+    const w = weekStart                  // weekly keys include week start
     const checks = [
-      { key: 'daily-50',  spent: spentToday, budget: budgets.daily,   pct: 50,  kind: 'warn',   icon: '⚡', label: 'Daily' },
-      { key: 'daily-80',  spent: spentToday, budget: budgets.daily,   pct: 80,  kind: 'warn',   icon: '🔔', label: 'Daily' },
-      { key: 'daily-100', spent: spentToday, budget: budgets.daily,   pct: 100, kind: 'danger', icon: '🚨', label: 'Daily' },
-      { key: 'week-50',   spent: spentWeek,  budget: budgets.weekly,  pct: 50,  kind: 'warn',   icon: '⚡', label: 'Weekly' },
-      { key: 'week-80',   spent: spentWeek,  budget: budgets.weekly,  pct: 80,  kind: 'warn',   icon: '🔔', label: 'Weekly' },
-      { key: 'week-100',  spent: spentWeek,  budget: budgets.weekly,  pct: 100, kind: 'danger', icon: '🚨', label: 'Weekly' },
-      { key: 'month-50',  spent: spentMonth, budget: budgets.monthly, pct: 50,  kind: 'warn',   icon: '⚡', label: 'Monthly' },
-      { key: 'month-80',  spent: spentMonth, budget: budgets.monthly, pct: 80,  kind: 'warn',   icon: '🔔', label: 'Monthly' },
-      { key: 'month-100', spent: spentMonth, budget: budgets.monthly, pct: 100, kind: 'danger', icon: '🚨', label: 'Monthly' },
+      { key: `daily-50-${d}`,  spent: spentToday, budget: budgets.daily,   pct: 50,  kind: 'warn',   icon: '⚡', label: 'Daily' },
+      { key: `daily-80-${d}`,  spent: spentToday, budget: budgets.daily,   pct: 80,  kind: 'warn',   icon: '🔔', label: 'Daily' },
+      { key: `daily-100-${d}`, spent: spentToday, budget: budgets.daily,   pct: 100, kind: 'danger', icon: '🚨', label: 'Daily' },
+      { key: `week-50-${w}`,   spent: spentWeek,  budget: budgets.weekly,  pct: 50,  kind: 'warn',   icon: '⚡', label: 'Weekly' },
+      { key: `week-80-${w}`,   spent: spentWeek,  budget: budgets.weekly,  pct: 80,  kind: 'warn',   icon: '🔔', label: 'Weekly' },
+      { key: `week-100-${w}`,  spent: spentWeek,  budget: budgets.weekly,  pct: 100, kind: 'danger', icon: '🚨', label: 'Weekly' },
+      { key: `month-50-${monthStr}`,  spent: spentMonth, budget: budgets.monthly, pct: 50,  kind: 'warn',   icon: '⚡', label: 'Monthly' },
+      { key: `month-80-${monthStr}`,  spent: spentMonth, budget: budgets.monthly, pct: 80,  kind: 'warn',   icon: '🔔', label: 'Monthly' },
+      { key: `month-100-${monthStr}`, spent: spentMonth, budget: budgets.monthly, pct: 100, kind: 'danger', icon: '🚨', label: 'Monthly' },
     ]
     Object.entries(budgets.categories || {}).forEach(([cat, bgt]) => {
       if (!bgt) return
       const spent = spentByCatMonth[cat] || 0
       ;[['50','warn','⚡'], ['80','warn','🔔'], ['100','danger','🚨']].forEach(([p, kind, icon]) => {
-        checks.push({ key: `cat-${cat}-${p}`, spent, budget: bgt, pct: parseInt(p), kind, icon, label: cat })
+        checks.push({ key: `cat-${cat}-${p}-${monthStr}`, spent, budget: bgt, pct: parseInt(p), kind, icon, label: cat })
       })
     })
     checks.forEach(({ key, spent, budget, pct, kind, icon, label }) => {
@@ -1747,7 +1770,7 @@ export default function Tracker({ session }) {
   // ── Trips computed ───────────────────────────────────
   const tripsWithData = useMemo(() => {
     return trips.map(trip => {
-      const matched = expenses.filter(e => e.date >= trip.startDate && e.date <= trip.endDate && e.currency === trip.currency)
+      const matched = expenses.filter(e => e.date >= trip.startDate && e.date <= trip.endDate && (e.currency || 'INR') === (trip.currency || 'INR'))
       const totalOriginal = matched.reduce((s, e) => s + e.amount, 0)
       const totalINR      = matched.reduce((s, e) => s + toINR(e), 0)
       const catTotals = {}
@@ -2323,7 +2346,7 @@ export default function Tracker({ session }) {
           {income.length > 0 && (
             <div className="chart-row">
               <div className="chart-card"><div className="chart-title">By Source</div><PieChart data={incSrcData} incognito={incognito} /></div>
-              {monthlyIncData.length >= 2 && <div className="chart-card"><div className="chart-title">Monthly Trend</div><LineChart data={monthlyIncData} /></div>}
+              {monthlyIncData.length >= 2 && <div className="chart-card"><div className="chart-title">Monthly Trend</div><LineChart data={monthlyIncData} incognito={incognito} /></div>}
             </div>
           )}
 
@@ -2353,7 +2376,7 @@ export default function Tracker({ session }) {
           <div className="chart-row">
             <div className="chart-card" style={{ gridColumn: '1 / -1' }}>
               <div className="chart-title">📅 Monthly Spending Trend (last 12 months)</div>
-              <LineChart data={monthlyExpData} />
+              <LineChart data={monthlyExpData} incognito={incognito} />
             </div>
           </div>
           <div className="chart-row">
@@ -2363,7 +2386,7 @@ export default function Tracker({ session }) {
           {catData.length > 0 && (
             <div className="chart-card" style={{ marginBottom: '1rem' }}>
               <div className="chart-title">Category Bars</div>
-              <BarChart data={catData} />
+              <BarChart data={catData} incognito={incognito} />
             </div>
           )}
           <div className="chart-card" style={{ marginBottom: '1rem' }}>
@@ -2401,7 +2424,7 @@ export default function Tracker({ session }) {
           {yearlyData.length > 0 && (
             <div className="chart-card" style={{ marginBottom: '1rem' }}>
               <div className="chart-title">📆 Year-over-Year</div>
-              <LineChart data={yearlyData} />
+              <LineChart data={yearlyData} incognito={incognito} />
             </div>
           )}
           {yearlyData.length > 0 && (
@@ -2590,7 +2613,7 @@ export default function Tracker({ session }) {
               {expTypeData.length > 0 && (
                 <div className="chart-card" style={{ marginTop: 16 }}>
                   <div className="chart-title">🏷️ Expense Type Breakdown</div>
-                  <BarChart data={expTypeData.map((d, i) => ({ ...d, _color: ['#667eea','var(--color-inc)','var(--color-exp)','#f59e0b','#8b5cf6','#ec4899'][i % 6] }))} />
+                  <BarChart incognito={incognito} data={expTypeData.map((d, i) => ({ ...d, _color: ['#667eea','var(--color-inc)','var(--color-exp)','#f59e0b','#8b5cf6','#ec4899'][i % 6] }))} />
                 </div>
               )}
 
@@ -2598,7 +2621,7 @@ export default function Tracker({ session }) {
               {diningData.length > 0 && (
                 <div className="chart-card" style={{ marginTop: 16 }}>
                   <div className="chart-title">🍔 Dining App Breakdown</div>
-                  <BarChart data={diningData.map((d, i) => ({ ...d, _color: CC[(i * 7) % CC.length] }))} />
+                  <BarChart incognito={incognito} data={diningData.map((d, i) => ({ ...d, _color: CC[(i * 7) % CC.length] }))} />
                 </div>
               )}
 
@@ -2606,7 +2629,7 @@ export default function Tracker({ session }) {
               {tagsData.length > 0 && (
                 <div className="chart-card" style={{ marginTop: 16 }}>
                   <div className="chart-title">🏷️ Tags Breakdown</div>
-                  <BarChart data={tagsData.map((d, i) => ({ ...d, _color: CC[(i * 11) % CC.length] }))} />
+                  <BarChart incognito={incognito} data={tagsData.map((d, i) => ({ ...d, _color: CC[(i * 11) % CC.length] }))} />
                 </div>
               )}
 

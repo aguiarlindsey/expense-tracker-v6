@@ -14,45 +14,34 @@ export default function App() {
   const { session, loading } = useAuth()
   useSupabaseHeartbeat(session?.user?.id)
 
-  // Biometric lock: starts locked if enrolled
   const [biometricLocked, setBiometricLocked] = useState(
     () => localStorage.getItem(ENROLLED_KEY) === 'true'
   )
+  // Prevents Tracker flashing during the sign-out that enforces the lock
+  const [signingOut, setSigningOut] = useState(false)
 
-  // When a session arrives and biometric is enrolled: sign out to enforce lock
   useEffect(() => {
     if (session && localStorage.getItem(ENROLLED_KEY) === 'true' && biometricLocked) {
-      // Store user_id before signing out (needed for biometric-auth-options)
       localStorage.setItem(USER_ID_KEY, session.user.id)
       localStorage.setItem(EMAIL_KEY, session.user.email)
-      supabase.auth.signOut()
+      setSigningOut(true)
+      supabase.auth.signOut().finally(() => setSigningOut(false))
     }
   }, [session, biometricLocked])
 
-  function handleUnlocked() {
-    setBiometricLocked(false)
+  function handleUnlocked() { setBiometricLocked(false) }
+
+  async function handleSignOut() { await supabase.auth.signOut() }
+
+  if (loading || signingOut) {
+    return <div className="app-loading"><div className="spinner" /></div>
   }
 
-  async function handleSignOut() {
-    await supabase.auth.signOut()
-  }
-
-  if (loading && !biometricLocked) {
-    return (
-      <div className="app-loading">
-        <div className="spinner" />
-      </div>
-    )
-  }
-
-  // Show lock screen if enrolled and not yet unlocked
   if (biometricLocked) {
     return <LockScreen onUnlocked={handleUnlocked} />
   }
 
-  if (!session) {
-    return <Auth />
-  }
+  if (!session) return <Auth />
 
   return (
     <div className="app-shell">

@@ -128,6 +128,8 @@ export function useBiometric() {
     localStorage.removeItem(ENROLLED_KEY)
     localStorage.removeItem(USER_ID_KEY)
     localStorage.removeItem(EMAIL_KEY)
+    // Sign out current session so user must re-authenticate via magic link
+    await supabase.auth.signOut()
   }, [])
 
   return { enroll, authenticate, removeEnrollment, enrolling, authenticating, error, isEnrolled, setError }

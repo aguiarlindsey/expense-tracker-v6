@@ -211,6 +211,9 @@ export function useStorage(userId) {
   // ── Realtime event handlers ───────────────────────────────
 
   function handleExpenseEvent(event, payload) {
+    // Guard: ensure realtime events only apply to current user's data
+    if (payload.new?.user_id && payload.new.user_id !== userId) return
+    if (payload.old?.user_id && payload.old.user_id !== userId) return
     if (event === 'INSERT') {
       const incoming = expenseFromDb(payload.new)
       setExpenses(prev => {
@@ -228,6 +231,8 @@ export function useStorage(userId) {
   }
 
   function handleIncomeEvent(event, payload) {
+    if (payload.new?.user_id && payload.new.user_id !== userId) return
+    if (payload.old?.user_id && payload.old.user_id !== userId) return
     if (event === 'INSERT') {
       const incoming = incomeFromDb(payload.new)
       setIncome(prev => {
