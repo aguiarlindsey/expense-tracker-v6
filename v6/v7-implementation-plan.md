@@ -1,7 +1,7 @@
 # V7 Implementation Plan — Detailed Step-by-Step
 
 **Based on:** `expensetrackerv6upgrade03APR265.md`
-**Started:** v6.7.0 | **Current:** v7.6.0 | **Last session:** Session 27 (2026-04-27)
+**Started:** v6.7.0 | **Current:** v7.7.1 | **Last session:** Session 28 (2026-04-27)
 **Working dir:** `D:\CLAUDE\EXPENSE_TRACKER\v6`
 
 ---
@@ -10,9 +10,9 @@
 
 | Status | Count |
 |--------|-------|
-| ✅ Complete | 8 |
+| ✅ Complete | 9 |
 | ⏭️ Next up | 1 |
-| 🔲 Remaining | 5 |
+| 🔲 Remaining | 4 |
 
 ---
 
@@ -28,8 +28,8 @@
 | 6 | ~~Anomaly Detection~~ | ~~v7.4.0~~ | ~~4–5h~~ | ✅ Done — Session 27 |
 | 7 | ~~SQL Views for Insights~~ | ~~v7.5.0~~ | ~~3–4h~~ | ✅ Done — Session 27 |
 | 8 | ~~Sync Queue Optimization~~ | ~~v7.6.0~~ | ~~4–5h~~ | ✅ Done — Session 27 |
-| 9 | **WebAuthn Biometric Lock** | v7.7.0 | 5–6h | ⏭️ **NEXT** |
-| 10 | Database Versioning + Conflict UI | v7.8.0 | 6–8h | 🔲 |
+| ~~9~~ | ~~WebAuthn Biometric Lock~~ | ~~v7.7.0~~ | ~~5–6h~~ | ✅ Done — Session 28 |
+| 10 | **Database Versioning + Conflict UI** | v7.8.0 | 6–8h | ⏭️ **NEXT** |
 | 11 | Tesseract.js OCR | v7.9.0 | 6–8h | 🔲 |
 | 12 | Middleware Protection | v7.10.0 | 4–5h | 🔲 |
 | 13 | HttpOnly Cookie Migration | v7.11.0 | 8–10h | 🔲 |
@@ -878,12 +878,12 @@ Generate a random secret, set it in Vercel dashboard under Environment Variables
 | Session 26 | WebAuthn Biometric Lock | ✅ Trip Summary (tab + CRUD) | v7.3.0 |
 | Session 26b | — | ✅ Trip expand/collapse + inline expense list | v7.3.0 |
 | Session 27 | DB Versioning + Conflict Modal | ✅ DB Maintenance Cron + Anomaly Detection + SQL Views + Sync Queue Optimization | v7.4.0b + v7.4.0 + v7.5.0 + v7.6.0 |
-| Session 28 | — | ⏭️ WebAuthn Biometric Lock | v7.7.0 |
-| Session 29 | — | DB Versioning + Conflict Modal | v7.8.0 |
+| Session 28 | WebAuthn Biometric Lock | ✅ WebAuthn (server-enforced) + Email OTP fallback + backup email + rate limiting + 45 break-test fixes (v7.7.1) | v7.7.0 + v7.7.1 |
+| Session 29 | — | ⏭️ DB Versioning + Conflict Modal | v7.8.0 |
 | Session 30 | — | Tesseract OCR | v7.9.0 |
 | Session 31 | — | Middleware Protection | v7.10.0 |
 | Session 32 | — | HttpOnly Cookie Migration | v7.11.0 |
 
 ---
 
-*Generated: 2026-04-03 | Last updated: 2026-04-27 | Current: v7.6.0*
+*Generated: 2026-04-03 | Last updated: 2026-04-27 | Current: v7.7.1*

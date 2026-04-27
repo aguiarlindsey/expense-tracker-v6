@@ -36,7 +36,9 @@
 | 25 | 2026-04-24 | v7.2.0: Burn-Rate Forecasting — 7-day velocity, acceleration, runway, category burn | 1.5 |
 | 26 | 2026-04-24 | v7.3.0: Trip Summary — trips table, CRUD, auto-link by date+currency, trip cards | 2.0 |
 | 26b | 2026-04-25 | v7.3.0: Trips expand/collapse — inline expense list (Date·Cat·Desc·Amt), per-day rate, full-width expanded card | 1.5 |
-| **Total** | | | **~73.0 h** |
+| 27 | 2026-04-27 | v7.4.0b: DB Maintenance Cron (api/maintenance.js + vercel.json); v7.4.0: Anomaly Detection (detectAnomaly, AnomalyPanel, localStorage persistence); v7.5.0: SQL Views for Insights (3 Postgres views, useInsightViews hook, 5 useMemo replaced); v7.6.0: Sync Queue Optimization (topoSort, dependsOn field, 8 enqueue callsites) | 6.0 |
+| 28 | 2026-04-27 | v7.7.0: WebAuthn Biometric Lock — server-enforced (4 API routes, useBiometric hook, LockScreen, 45-issue break-test audit fixed); OTP email fallback with backup email, server-side validation, rate limiting, alphanumeric OTP, 15-min lockout; v7.7.1: 45 break-test issues fixed (6 critical, 6 high, 6 medium, 3 medium-low, 3 low) | 9.0 |
+| **Total** | | | **~88.0 h** |
 
 ---
 
