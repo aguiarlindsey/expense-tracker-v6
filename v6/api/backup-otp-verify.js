@@ -38,12 +38,11 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Incorrect code. Please try again.' })
     }
 
-    // Clear challenge
-    await admin.from('biometric_credentials')
+    // Clear challenge in background — don't await, respond immediately
+    admin.from('biometric_credentials')
       .update({ current_challenge: null })
       .eq('user_id', userId)
 
-    // Return hashed_token so client can restore the MAIN account session
     res.json({ verified: true, token_hash: challenge.token_hash })
   } catch (e) {
     console.error('[backup-otp-verify]', e)
