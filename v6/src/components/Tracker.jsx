@@ -6,6 +6,7 @@ import { makeExpense, makeIncome, makeDedupContext, matchesSearch, stableId, det
 import { migrateV5Data, validateV5File } from '../utils/migrateV5'
 import { useNotifications } from '../hooks/useNotifications'
 import { useInsightViews } from '../hooks/useInsightViews'
+import { useBiometric } from '../hooks/useBiometric'
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -75,6 +76,61 @@ function AnomalyPanel(expenses, anomalyHistory, fmtINR) {
           </div>
         )
       }
+    </div>
+  )
+}
+
+// ─── Biometric Settings ───────────────────────────────────
+
+function BiometricSettings({ session }) {
+  const { enroll, removeEnrollment, enrolling, error, isEnrolled, setError } = useBiometric()
+  const [enrolled, setEnrolled] = useState(isEnrolled())
+  const [deviceName, setDeviceName] = useState('')
+  const [msg, setMsg] = useState(null)
+
+  async function handleEnroll() {
+    setMsg(null); setError(null)
+    const result = await enroll(session, deviceName || 'My Device')
+    if (result.success) { setEnrolled(true); setMsg('Biometric lock enabled. You will be prompted to verify on next sign-in.') }
+  }
+
+  async function handleRemove() {
+    setMsg(null)
+    await removeEnrollment(session)
+    setEnrolled(false)
+    setMsg('Biometric lock removed.')
+  }
+
+  return (
+    <div className="settings-section">
+      <h3>🔐 Security</h3>
+      {msg && <div className="settings-msg">{msg}</div>}
+      {error && <div className="settings-msg settings-msg-err">{error}</div>}
+      {enrolled ? (
+        <div className="settings-row">
+          <div className="settings-row-label">
+            <strong>Biometric Lock</strong>
+            <span>🟢 Enabled — app requires biometric / device PIN on every sign-in.</span>
+          </div>
+          <button className="btn-danger-sm" onClick={handleRemove}>Remove</button>
+        </div>
+      ) : (
+        <>
+          <div className="settings-row">
+            <div className="settings-row-label">
+              <strong>Biometric Lock</strong>
+              <span>Protect the app with your device fingerprint, face, or PIN. Locks on every sign-in.</span>
+            </div>
+          </div>
+          <div className="settings-row">
+            <input className="input-sm" placeholder="Device name (optional)" value={deviceName}
+              onChange={e => setDeviceName(e.target.value)} style={{ maxWidth: 200 }} />
+            <button className="btn-primary-sm" onClick={handleEnroll} disabled={enrolling}>
+              {enrolling ? 'Setting up…' : 'Enable Biometric Lock'}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -2806,6 +2862,9 @@ export default function Tracker({ session }) {
       {/* ── Settings tab ── */}
       {tab === 'settings' && (
         <main>
+          {/* Security */}
+          <BiometricSettings session={session} />
+
           {/* Appearance */}
           <div className="settings-section">
             <h3>🎨 Appearance</h3>
