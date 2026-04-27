@@ -6,6 +6,43 @@ function loadQueue() {
   try { return JSON.parse(localStorage.getItem(KEY) || '[]') } catch { return [] }
 }
 
+// Kahn's algorithm — returns items in dependency order
+export function topoSort(items) {
+  if (!items.length) return items
+  const map = {}
+  items.forEach(i => { map[i.id] = i })
+
+  const inDegree = {}
+  const adj = {}
+  items.forEach(i => { inDegree[i.id] = 0; adj[i.id] = [] })
+
+  items.forEach(i => {
+    (i.dependsOn || []).forEach(dep => {
+      if (map[dep]) {
+        adj[dep].push(i.id)
+        inDegree[i.id]++
+      }
+    })
+  })
+
+  const ready = items.filter(i => inDegree[i.id] === 0).map(i => i.id)
+  const result = []
+
+  while (ready.length) {
+    const id = ready.shift()
+    result.push(map[id])
+    adj[id].forEach(nextId => {
+      inDegree[nextId]--
+      if (inDegree[nextId] === 0) ready.push(nextId)
+    })
+  }
+
+  // Cycle fallback — append anything not yet sorted
+  items.forEach(i => { if (!result.find(r => r.id === i.id)) result.push(i) })
+
+  return result
+}
+
 export function useRetryQueue() {
   const [queue, _setQueue] = useState(loadQueue)
   const [online, setOnline] = useState(() => navigator.onLine)
@@ -30,11 +67,12 @@ export function useRetryQueue() {
     }
   }, [])
 
-  const enqueue = useCallback((op, payload) => {
+  const enqueue = useCallback((op, payload, dependsOn = []) => {
     setQueue(prev => [...prev, {
       id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
       op,
       payload,
+      dependsOn,
       ts: Date.now(),
       attempts: 0,
     }])
