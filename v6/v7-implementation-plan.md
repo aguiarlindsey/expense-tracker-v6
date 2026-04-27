@@ -1,7 +1,7 @@
 # V7 Implementation Plan — Detailed Step-by-Step
 
 **Based on:** `expensetrackerv6upgrade03APR265.md`
-**Started:** v6.7.0 | **Current:** v7.3.0 | **Last session:** Session 26b (2026-04-25)
+**Started:** v6.7.0 | **Current:** v7.6.0 | **Last session:** Session 27 (2026-04-27)
 **Working dir:** `D:\CLAUDE\EXPENSE_TRACKER\v6`
 
 ---
@@ -10,9 +10,9 @@
 
 | Status | Count |
 |--------|-------|
-| ✅ Complete | 4 |
+| ✅ Complete | 8 |
 | ⏭️ Next up | 1 |
-| 🔲 Remaining | 9 |
+| 🔲 Remaining | 5 |
 
 ---
 
@@ -24,17 +24,17 @@
 | 2 | Emergency Rate Fallbacks | v7.1.0 | 1–2h | ✅ Done — Session 22 |
 | 3 | Burn-Rate Forecasting | v7.2.0 | 3–4h | ✅ Done — Session 25 |
 | 4 | Trip Summary | v7.3.0 | 2h | ✅ Done — Session 26/26b |
-| 5 | **DB Maintenance Cron** | v7.4.0b | 1–2h | ⏭️ **NEXT** |
-| 6 | Anomaly Detection | v7.4.0 | 4–5h | 🔲 |
-| 7 | SQL Views for Insights | v7.5.0 | 3–4h | 🔲 |
-| 8 | WebAuthn Biometric Lock | v7.6.0 | 5–6h | 🔲 |
-| 9 | Database Versioning + Conflict UI | v7.7.0 | 6–8h | 🔲 |
-| 10 | Sync Optimization | v7.8.0 | 4–5h | 🔲 |
+| 5 | ~~DB Maintenance Cron~~ | ~~v7.4.0b~~ | ~~1–2h~~ | ✅ Done — Session 27 |
+| 6 | ~~Anomaly Detection~~ | ~~v7.4.0~~ | ~~4–5h~~ | ✅ Done — Session 27 |
+| 7 | ~~SQL Views for Insights~~ | ~~v7.5.0~~ | ~~3–4h~~ | ✅ Done — Session 27 |
+| 8 | ~~Sync Queue Optimization~~ | ~~v7.6.0~~ | ~~4–5h~~ | ✅ Done — Session 27 |
+| 9 | **WebAuthn Biometric Lock** | v7.7.0 | 5–6h | ⏭️ **NEXT** |
+| 10 | Database Versioning + Conflict UI | v7.8.0 | 6–8h | 🔲 |
 | 11 | Tesseract.js OCR | v7.9.0 | 6–8h | 🔲 |
 | 12 | Middleware Protection | v7.10.0 | 4–5h | 🔲 |
 | 13 | HttpOnly Cookie Migration | v7.11.0 | 8–10h | 🔲 |
 
-**Total remaining: ~44–55h across 9 features**
+**Total remaining: ~29–38h across 5 features**
 
 ---
 
@@ -428,8 +428,8 @@ Discard local changes, update React state with server version.
 
 ---
 
-## Step 2.3 — Sync Optimization (Dependency-Ordered Queue) 🔲 (v7.8.0)
-**Effort:** 4–5h | **Version:** v7.8.0 | **Risk:** Medium
+## Step 2.3 — Sync Optimization (Dependency-Ordered Queue) ✅ DONE (v7.6.0, Session 27)
+**Effort:** 4–5h | **Version:** v7.6.0 | **Risk:** Medium
 
 ### What it does
 Currently the offline retry queue processes items in order. This step adds dependency awareness — e.g., if a budget was created offline and expenses reference it, the budget INSERT must succeed before the expense INSERTs.
@@ -520,7 +520,7 @@ Full CRUD trip management with a dedicated ✈️ Trips tab (kbd=8). TripCards e
 
 ---
 
-## Step 3.3 — Smart Anomaly Detection 🔲 (v7.4.0)
+## Step 3.3 — Smart Anomaly Detection ✅ DONE (v7.4.0, Session 27)
 **Effort:** 4–5h | **Version:** v7.4.0 | **Risk:** Low-Medium
 
 ### What it does
@@ -723,7 +723,7 @@ If the exchange rate API is down or times out, use hardcoded 2026 rates instead 
 
 ---
 
-## Step 4.2 — SQL Views for Insight Calculations 🔲 (v7.5.0)
+## Step 4.2 — SQL Views for Insight Calculations ✅ DONE (v7.5.0, Session 27)
 **Effort:** 3–4h | **Version:** v7.5.0 | **Risk:** Low
 
 ### What it does
@@ -804,7 +804,7 @@ const { data: categoryTotals } = await supabase
 
 ---
 
-## Step 4.3 — Database Maintenance Cron ⏭️ NEXT (v7.4.0b)
+## Step 4.3 — Database Maintenance Cron ✅ DONE (v7.4.0b, Session 27)
 **Effort:** 1–2h | **Version:** v7.4.0b | **Risk:** Very Low
 
 ### What it does
@@ -877,15 +877,13 @@ Generate a random secret, set it in Vercel dashboard under Environment Variables
 | Session 25 | SQL Views + DB Maintenance | ✅ Burn-Rate Forecasting | v7.2.0 |
 | Session 26 | WebAuthn Biometric Lock | ✅ Trip Summary (tab + CRUD) | v7.3.0 |
 | Session 26b | — | ✅ Trip expand/collapse + inline expense list | v7.3.0 |
-| Session 27 | DB Versioning + Conflict Modal | ⏭️ DB Maintenance Cron → then Anomaly Detection | v7.4.0b + v7.4.0 |
-| Session 28 | Sync Queue Optimization | SQL Views for Insights | v7.5.0 |
-| Session 29 | Tesseract.js OCR | WebAuthn Biometric Lock | v7.6.0 |
-| Session 30 | Middleware Protection | DB Versioning + Conflict Modal | v7.7.0 |
-| Session 31 | HttpOnly Cookie Migration | Sync Queue Optimization | v7.8.0 |
-| Session 32 | — | Tesseract OCR | v7.9.0 |
-| Session 33 | — | Middleware Protection | v7.10.0 |
-| Session 34 | — | HttpOnly Cookie Migration | v7.11.0 |
+| Session 27 | DB Versioning + Conflict Modal | ✅ DB Maintenance Cron + Anomaly Detection + SQL Views + Sync Queue Optimization | v7.4.0b + v7.4.0 + v7.5.0 + v7.6.0 |
+| Session 28 | — | ⏭️ WebAuthn Biometric Lock | v7.7.0 |
+| Session 29 | — | DB Versioning + Conflict Modal | v7.8.0 |
+| Session 30 | — | Tesseract OCR | v7.9.0 |
+| Session 31 | — | Middleware Protection | v7.10.0 |
+| Session 32 | — | HttpOnly Cookie Migration | v7.11.0 |
 
 ---
 
-*Generated: 2026-04-03 | Last updated: 2026-04-26 | Current: v7.3.0*
+*Generated: 2026-04-03 | Last updated: 2026-04-27 | Current: v7.6.0*
