@@ -111,9 +111,8 @@ export default async function handler(req, res) {
   }
 
   res.json({
-    verified:     true,
-    token_hash:   linkData.properties.hashed_token,
-    email:        userData.user.email,
+    verified:   true,
+    token_hash: linkData.properties.hashed_token,
   })
   } catch (e) {
     console.error("[biometric-verify]", e)

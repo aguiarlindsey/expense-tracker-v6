@@ -2909,7 +2909,7 @@ export default function Tracker({ session }) {
                 {rateFetching ? 'Fetching…' : '🔄 Refresh'}
               </button>
             </div>
-            <p className="exchange-desc">Rates from <strong>exchangerate-api.com</strong> — fetched with {baseCurrency} base. Cached 6 h. Falls back to cached → built-in rates if API is unavailable.</p>
+            <p className="exchange-desc">Rates from <strong>exchangerate-api.com</strong> — fetched with {baseCurrency} base. Cached 6 h. Falls back to cached → built-in rates if API is unavailable.{rateData?.source === 'fallback' && <span style={{color:'var(--color-exp)',marginLeft:6}}>⚠️ Built-in fallback rates are from April 2026 — may not reflect current values.</span>}</p>
             {rateData?.rates ? (
               <div className="exchange-table-wrap">
                 <table className="exchange-table">

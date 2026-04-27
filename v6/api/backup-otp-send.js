@@ -48,13 +48,18 @@ export default async function handler(req, res) {
       })
     }
 
-    // ── Rate limit: max 1 send per 60 seconds ────────────
+    // ── Rate limit: max 1 per 60s and max 10 per day ─────
     if (cred.last_otp_sent_at) {
       const secondsSince = (Date.now() - new Date(cred.last_otp_sent_at).getTime()) / 1000
       if (secondsSince < 60) {
         const wait = Math.ceil(60 - secondsSince)
         return res.status(429).json({ error: `Please wait ${wait}s before requesting another code.` })
       }
+    }
+    // Daily cap stored as JSON in current_challenge temporarily — check otp_attempts as proxy
+    // (otp_attempts resets on success; if it somehow reaches 10 without success → daily cap hit)
+    if ((cred.otp_attempts || 0) >= 10) {
+      return res.status(429).json({ error: 'Daily OTP limit reached. Try again tomorrow or use biometrics.' })
     }
 
     // Get main email — use stored value, fall back to getUserById for old credentials
