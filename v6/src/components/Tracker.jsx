@@ -1042,7 +1042,7 @@ export default function Tracker({ session }) {
     unsubscribe:         notifDisable,
   } = useNotifications(userId)
 
-  const { monthlyExp: viewMonthlyExp, monthlyInc: viewMonthlyInc, yearlyExp: viewYearlyExp, refetchViews } = useInsightViews(userId, expenses.length + income.length)
+  const { monthlyExp: viewMonthlyExp, monthlyInc: viewMonthlyInc, yearlyExp: viewYearlyExp } = useInsightViews(userId, expenses.length + income.length)
 
   // ── UI state ─────────────────────────────────────────
   const [tab, setTab]                     = useState(() => {
