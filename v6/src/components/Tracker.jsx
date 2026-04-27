@@ -3073,7 +3073,7 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title">💸 Expense Tracker V6</div>
               <div className="about-meta">
-                <span className="about-badge">v7.5.0</span>
+                <span className="about-badge">v7.6.0</span>
                 <span className="about-badge">Incognito Mode</span>
                 <span className="about-badge">Rate Fallbacks</span>
                 <span className="about-badge">122 Currencies</span>
@@ -3085,12 +3085,12 @@ export default function Tracker({ session }) {
               <div className="about-row"><span>Auth</span><span>Magic-link email (Supabase Auth)</span></div>
               <div className="about-row"><span>Database</span><span>Supabase Postgres + RLS · SQL views for aggregations</span></div>
               <div className="about-row"><span>Deployment</span><span>Vercel CDN · auto-deploy on push</span></div>
-              <div className="about-row"><span>Offline</span><span>Retry queue — changes sync automatically on reconnect</span></div>
+              <div className="about-row"><span>Offline</span><span>Retry queue — dependency-ordered sync (topo sort) on reconnect</span></div>
               <div className="about-row"><span>PWA</span><span>Installable · service worker · auto-updates</span></div>
               <div className="about-row"><span>Features</span><span>10 tabs · 18 insights · anomaly detection · burn-rate forecast · 259-color palette · live FX rates</span></div>
               <div className="about-row"><span>Mobile</span><span>Fully responsive · UPI/Wallet selectors · horizontal tab scroll</span></div>
               <div className="about-row"><span>V5 parity</span><span>100% — all V5 features ported + Goals/Budgets/Offline added</span></div>
-              <div className="about-row"><span>Last updated</span><span>2026-04-27</span></div>
+              <div className="about-row"><span>Last updated</span><span>2026-04-27 (v7.6.0)</span></div>
             </div>
           </div>
         </main>
