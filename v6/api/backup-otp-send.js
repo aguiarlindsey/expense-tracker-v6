@@ -1,5 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 import nodemailer from 'nodemailer'
+import crypto from 'crypto'
+
+// Excludes O, 0, I, 1 to avoid visual confusion
+function generateOTP(length = 8) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  return Array.from(crypto.randomBytes(length)).map(b => chars[b % chars.length]).join('')
+}
 
 const admin = createClient(
   process.env.SUPABASE_URL,
@@ -29,17 +36,18 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to generate OTP' })
     }
 
-    const { email_otp, hashed_token } = linkData.properties
+    const { hashed_token } = linkData.properties
+    const otpCode   = generateOTP(8)
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
 
-    // Store OTP + token_hash in current_challenge (JSON)
+    // Store our alphanumeric OTP + Supabase token_hash in current_challenge
     await admin.from('biometric_credentials')
       .update({
-        current_challenge: JSON.stringify({ otp: email_otp, token_hash: hashed_token, expires_at: expiresAt }),
+        current_challenge: JSON.stringify({ otp: otpCode, token_hash: hashed_token, expires_at: expiresAt }),
       })
       .eq('user_id', userId)
 
-    // Send OTP to backup email via Gmail
+    // Send alphanumeric OTP to backup email via Gmail
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
@@ -53,8 +61,9 @@ export default async function handler(req, res) {
         <div style="font-family:sans-serif;max-width:400px;margin:auto">
           <h2>LA Expense Tracker — Sign In Code</h2>
           <p>Your one-time sign-in code is:</p>
-          <h1 style="font-size:2.5rem;letter-spacing:0.4em;font-family:monospace;color:#2563eb">${email_otp}</h1>
+          <h1 style="font-size:2.2rem;letter-spacing:0.35em;font-family:monospace;color:#2563eb">${otpCode}</h1>
           <p>Enter this code on the lock screen. It expires in <strong>10 minutes</strong>.</p>
+          <p style="color:#555;font-size:0.88rem">Code is case-insensitive. Characters I, O, 0 and 1 are not used.</p>
           <hr/>
           <p style="color:#888;font-size:0.82rem">If you didn't request this, someone may be trying to access your account.</p>
         </div>

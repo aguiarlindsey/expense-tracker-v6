@@ -179,9 +179,9 @@ export default function LockScreen({ onUnlocked }) {
               type="text"
               inputMode="numeric"
               maxLength={8}
-              placeholder="00000000"
+              placeholder="XXXXXXXX"
               value={otp}
-              onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
+              onChange={e => setOtp(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
               autoFocus
               onKeyDown={e => e.key === 'Enter' && otp.length >= 6 && handleVerifyOtp()}
             />

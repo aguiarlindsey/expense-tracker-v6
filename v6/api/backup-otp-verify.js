@@ -34,7 +34,7 @@ export default async function handler(req, res) {
     }
 
     // Check code matches
-    if (String(code).trim() !== String(challenge.otp).trim()) {
+    if (String(code).trim().toUpperCase() !== String(challenge.otp).trim().toUpperCase()) {
       return res.status(401).json({ error: 'Incorrect code. Please try again.' })
     }
 
