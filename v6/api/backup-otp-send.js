@@ -2,16 +2,14 @@ import { createClient } from '@supabase/supabase-js'
 import nodemailer from 'nodemailer'
 import crypto from 'crypto'
 
-// Excludes O, 0, I, 1 to avoid visual confusion
 function generateOTP(length = 8) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
   return Array.from(crypto.randomBytes(length)).map(b => chars[b % chars.length]).join('')
 }
 
-// Reuse transporter across calls in the same function instance
 const transporter = nodemailer.createTransport({
   service: 'gmail',
-  pool: true, // keep SMTP connection alive
+  pool: true,
   auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
 })
 
@@ -25,24 +23,27 @@ export default async function handler(req, res) {
   try {
     if (req.method !== 'POST') return res.status(405).end()
 
-    const { userId, backupEmail } = req.body
-    if (!userId || !backupEmail) return res.status(400).json({ error: 'Missing fields' })
+    const { userId, backupEmail, mainEmail } = req.body
+    if (!userId || !backupEmail || !mainEmail) return res.status(400).json({ error: 'Missing fields' })
 
-    // Run getUserById and generateLink sequentially (generateLink needs the email)
-    const { data: userData, error: userErr } = await admin.auth.admin.getUserById(userId)
-    if (userErr || !userData?.user) return res.status(404).json({ error: 'User not found' })
+    // Parallel: verify credential exists + generate session link for main account
+    const [credResult, linkResult] = await Promise.all([
+      admin.from('biometric_credentials').select('id').eq('user_id', userId).limit(1).single(),
+      admin.auth.admin.generateLink({ type: 'magiclink', email: mainEmail }),
+    ])
 
-    const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-      type:  'magiclink',
-      email: userData.user.email,
-    })
-    if (linkErr || !linkData?.properties) return res.status(500).json({ error: 'Failed to generate OTP' })
+    if (!credResult.data) return res.status(404).json({ error: 'No credential enrolled for this account' })
+    if (linkResult.error || !linkResult.data?.properties) return res.status(500).json({ error: 'Failed to generate session token' })
 
     const otpCode   = generateOTP(8)
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
-    const challenge = JSON.stringify({ otp: otpCode, token_hash: linkData.properties.hashed_token, expires_at: expiresAt })
+    const challenge = JSON.stringify({
+      otp:        otpCode,
+      token_hash: linkResult.data.properties.hashed_token,
+      expires_at: expiresAt,
+    })
 
-    // Parallel: save to DB and send email at the same time
+    // Parallel: save challenge to DB + send email
     await Promise.all([
       admin.from('biometric_credentials')
         .update({ current_challenge: challenge })
