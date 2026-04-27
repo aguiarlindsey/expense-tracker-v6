@@ -1113,4 +1113,18 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
   margin-bottom: 1rem; outline: none;
 }
 .lock-otp-input:focus { border-color: var(--primary); }
+.lock-email-hint {
+  font-size: 1rem; font-weight: 600; color: var(--text);
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 0.5rem 1rem;
+  margin-bottom: 1rem; letter-spacing: 0.03rem;
+  font-family: monospace;
+}
+.lock-otp-confirm-input {
+  width: 100%; padding: 0.7rem 0.9rem; font-size: 0.95rem;
+  border: 2px solid var(--border); border-radius: 10px;
+  background: var(--bg); color: var(--text);
+  margin-bottom: 1rem; outline: none;
+}
+.lock-otp-confirm-input:focus { border-color: var(--primary); }
 
