@@ -11,6 +11,7 @@ const admin = createClient(
 )
 
 export default async function handler(req, res) {
+  try {
   if (req.method !== 'POST') return res.status(405).end()
 
   const token = (req.headers.authorization || '').replace('Bearer ', '')
@@ -40,4 +41,8 @@ export default async function handler(req, res) {
   })
 
   res.json(options)
+  } catch (e) {
+    console.error("[biometric-register-options]", e)
+    if (!res.headersSent) res.status(500).json({ error: e.message || "Internal error" })
+  }
 }

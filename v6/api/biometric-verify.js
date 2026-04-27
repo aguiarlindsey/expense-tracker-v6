@@ -36,6 +36,7 @@ async function sendAlertEmail(attempts) {
 }
 
 export default async function handler(req, res) {
+  try {
   if (req.method !== 'POST') return res.status(405).end()
 
   const { userId, assertion } = req.body
@@ -95,12 +96,25 @@ export default async function handler(req, res) {
     last_used_at:      new Date().toISOString(),
   }).eq('user_id', userId)
 
-  const { data: sessionData, error: sessionErr } = await admin.auth.admin.createSession({ user_id: userId })
-  if (sessionErr) return res.status(500).json({ error: 'Session creation failed' })
+  // Get user email to generate a one-time token for the client
+  const { data: userData, error: userErr } = await admin.auth.admin.getUserById(userId)
+  if (userErr || !userData?.user) return res.status(500).json({ error: 'Could not retrieve user' })
+
+  const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
+    type:  'magiclink',
+    email: userData.user.email,
+  })
+  if (linkErr || !linkData?.properties?.hashed_token) {
+    return res.status(500).json({ error: 'Failed to create session token' })
+  }
 
   res.json({
-    verified:      true,
-    access_token:  sessionData.session.access_token,
-    refresh_token: sessionData.session.refresh_token,
+    verified:     true,
+    token_hash:   linkData.properties.hashed_token,
+    email:        userData.user.email,
   })
+  } catch (e) {
+    console.error("[biometric-verify]", e)
+    if (!res.headersSent) res.status(500).json({ error: e.message || "Internal error" })
+  }
 }

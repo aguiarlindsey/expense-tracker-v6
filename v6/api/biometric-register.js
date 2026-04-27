@@ -11,6 +11,7 @@ const admin = createClient(
 )
 
 export default async function handler(req, res) {
+  try {
   if (req.method !== 'POST' && req.method !== 'DELETE') return res.status(405).end()
 
   // DELETE — remove enrollment
@@ -71,4 +72,8 @@ export default async function handler(req, res) {
   await admin.from('registration_challenges').delete().eq('user_id', user.id)
 
   res.json({ verified: true })
+  } catch (e) {
+    console.error("[biometric-register]", e)
+    if (!res.headersSent) res.status(500).json({ error: e.message || "Internal error" })
+  }
 }

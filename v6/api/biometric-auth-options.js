@@ -10,6 +10,7 @@ const admin = createClient(
 )
 
 export default async function handler(req, res) {
+  try {
   if (req.method !== 'POST') return res.status(405).end()
 
   const { userId } = req.body
@@ -42,4 +43,8 @@ export default async function handler(req, res) {
     .eq('user_id', userId)
 
   res.json(options)
+  } catch (e) {
+    console.error("[biometric-auth-options]", e)
+    if (!res.headersSent) res.status(500).json({ error: e.message || "Internal error" })
+  }
 }
