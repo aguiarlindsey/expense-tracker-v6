@@ -157,12 +157,12 @@ export default function LockScreen({ onUnlocked }) {
               className="lock-otp-input"
               type="text"
               inputMode="numeric"
-              maxLength={6}
-              placeholder="000000"
+              maxLength={8}
+              placeholder="00000000"
               value={otp}
               onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
               autoFocus
-              onKeyDown={e => e.key === 'Enter' && otp.length === 6 && handleVerifyOtp()}
+              onKeyDown={e => e.key === 'Enter' && otp.length >= 6 && handleVerifyOtp()}
             />
 
             <button className="lock-btn" onClick={handleVerifyOtp}
