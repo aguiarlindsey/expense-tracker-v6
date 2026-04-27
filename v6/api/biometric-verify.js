@@ -42,10 +42,12 @@ export default async function handler(req, res) {
   const { userId, assertion } = req.body
   if (!userId || !assertion) return res.status(400).json({ error: 'Missing fields' })
 
+  // Match the specific credential used (assertion.id = the credential that signed)
   const { data: cred } = await admin
     .from('biometric_credentials')
     .select('*')
     .eq('user_id', userId)
+    .eq('id', assertion.id)
     .single()
 
   if (!cred) return res.status(404).json({ error: 'No credential found' })
