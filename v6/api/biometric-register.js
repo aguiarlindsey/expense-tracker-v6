@@ -56,14 +56,22 @@ export default async function handler(req, res) {
   if (!verification.verified) return res.status(400).json({ error: 'Not verified' })
 
   const { credential: cred } = verification.registrationInfo
+  const name = deviceName || 'My Device'
 
-  await admin.from('biometric_credentials').upsert({
+  // Remove any existing credential with the same device name for this user
+  // — prevents stale credentials accumulating on re-enrolment
+  await admin.from('biometric_credentials')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('device_name', name)
+
+  await admin.from('biometric_credentials').insert({
     id:              cred.id,
     user_id:         user.id,
     public_key:      Buffer.from(cred.publicKey).toString('base64'),
     counter:         cred.counter,
     transports:      cred.transports || [],
-    device_name:     deviceName || 'My Device',
+    device_name:     name,
     failed_attempts: 0,
     locked_until:    null,
     last_used_at:    new Date().toISOString(),
