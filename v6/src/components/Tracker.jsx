@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react'
 import { useStorage } from '../hooks/useStorage'
 import { useDebounce } from '../hooks/useDebounce'
 import { CATS, CM, CG, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS, FALLBACK_RATES } from '../utils/constants'
-import { makeExpense, makeIncome, makeDedupContext, matchesSearch, stableId } from '../utils/dataHelpers'
+import { makeExpense, makeIncome, makeDedupContext, matchesSearch, stableId, detectAnomaly } from '../utils/dataHelpers'
 import { migrateV5Data, validateV5File } from '../utils/migrateV5'
 import { useNotifications } from '../hooks/useNotifications'
 
@@ -33,6 +33,49 @@ function calculateSafeToSpend(monthIncINR, fixedExpINR, savingsGoalINR, todayStr
   const dailyAllowance = discretionary > 0 ? discretionary / daysInMonth : 0
   const daysRemaining = daysInMonth - parseInt(parts[2]) + 1
   return { dailyAllowance, daysRemaining, discretionary }
+}
+
+// ─── Anomaly Panel ────────────────────────────────────────
+
+function AnomalyPanel(expenses, anomalyHistory, fmtINR) {
+  const threeMonthsAgo = new Date()
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+  const recentExp = (expenses || []).filter(e => new Date(e.date + 'T12:00:00') >= threeMonthsAgo)
+  const monitoredCats = [...new Set(recentExp.map(e => e.category))]
+    .filter(cat => recentExp.filter(e => e.category === cat).length >= 2)
+
+  return (
+    <div className="chart-card anomaly-panel">
+      <div className="chart-title">
+        ⚠️ Anomaly Detection
+        <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-muted)', marginLeft: 8 }}>
+          — flags new expenses 30%+ above your 3-month category average
+        </span>
+      </div>
+      <div className="anomaly-status" style={{ marginTop: 8 }}>
+        {monitoredCats.length === 0
+          ? <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Add at least 2 expenses in the same category to enable monitoring.</span>
+          : <span style={{ color: 'var(--color-inc)', fontSize: '0.88rem' }}>🟢 Monitoring {monitoredCats.length} categor{monitoredCats.length === 1 ? 'y' : 'ies'}: <strong>{monitoredCats.join(', ')}</strong></span>
+        }
+      </div>
+      {anomalyHistory.length === 0
+        ? <div style={{ color: 'var(--text-muted)', fontSize: '0.84rem', marginTop: 8 }}>No anomalies flagged yet.</div>
+        : (
+          <div className="anomaly-list" style={{ marginTop: 10 }}>
+            {anomalyHistory.slice(0, 5).map((a, i) => (
+              <div key={i} className="anomaly-row">
+                <span className="anomaly-date">{a.date}</span>
+                <span className="anomaly-desc">{a.description}</span>
+                <span className="anomaly-cat">{a.category}</span>
+                <span className="anomaly-deviation">+{a.deviationPct}%</span>
+                <span className="anomaly-amt">{fmtINR(a.thisAmount)} <span className="anomaly-avg">avg {fmtINR(a.avgAmount)}</span></span>
+              </div>
+            ))}
+          </div>
+        )
+      }
+    </div>
+  )
 }
 
 // ─── Toast System ─────────────────────────────────────────
@@ -1027,6 +1070,8 @@ export default function Tracker({ session }) {
   const [importing,     setImporting]     = useState(false)
   const [v5Report,      setV5Report]      = useState(null)
   const [v5Importing,   setV5Importing]   = useState(false)
+  const [anomalyHistory, setAnomalyHistory] = useState([])
+  const checkedAnomalyIds = useRef(new Set())
 
   // ── Safe-to-Spend ─────────────────────────────────────
   const [savingsGoal, setSavingsGoal] = useState(() => parseFloat(localStorage.getItem('et_v6_sts_goal') || '0') || 0)
@@ -1313,6 +1358,22 @@ export default function Tracker({ session }) {
       setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 220)
     }, duration)
   }, [])
+  // ── Anomaly detection — after addToast is defined ────────
+  useEffect(() => {
+    if (expenses.length < 2) return
+    expenses.forEach(newExp => {
+      if (newExp._pending) return
+      if (checkedAnomalyIds.current.has(newExp.id)) return
+      checkedAnomalyIds.current.add(newExp.id)
+      const anomaly = detectAnomaly(newExp, expenses.filter(e => e.id !== newExp.id))
+      if (anomaly) {
+        setAnomalyHistory(prev => [{ ...anomaly, id: newExp.id }, ...prev].slice(0, 20))
+        addToast('warn', '⚠️', `${anomaly.category} unusually high`,
+          `${fmtINR(anomaly.thisAmount)} vs avg ${fmtINR(anomaly.avgAmount)} (${anomaly.deviationPct}% above average)`, 8000)
+      }
+    })
+  }, [expenses]) // addToast/fmtINR intentionally omitted — both are stable refs
+
   const dismissToast = useCallback(id => {
     setToasts(prev => prev.map(t => t.id === id ? { ...t, exiting: true } : t))
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 220)
@@ -1811,7 +1872,11 @@ export default function Tracker({ session }) {
   const selectedCount = Object.keys(selectedIds).length
 
   // ── CRUD handlers ─────────────────────────────────────
-  const handleAddExpense  = f => { const e = makeExpense(f, 'manual'); if (!makeDedupContext(expenses).isDuplicate(e)) addExpense(e) }
+  const handleAddExpense = f => {
+    const e = makeExpense(f, 'manual')
+    if (makeDedupContext(expenses).isDuplicate(e)) return
+    addExpense(e)
+  }
   const handleEditExpense = f => { editExpense({ ...editExpTarget, ...f }); setEditExpTarget(null) }
   const handleAddIncome   = f => addIncome(makeIncome(f, 'manual'))
   const handleEditIncome  = f => { editIncome({ ...editIncTarget, ...f }); setEditIncTarget(null) }
@@ -2419,6 +2484,9 @@ export default function Tracker({ session }) {
       {/* ══════════ INSIGHTS ══════════ */}
       {tab === 'insights' && (
         <main>
+          {/* Anomaly Detection — always visible at top */}
+          {AnomalyPanel(expenses, anomalyHistory, fmtINR)}
+
           {expenses.length === 0 ? (
             <div className="empty-state"><div className="empty-icon">💡</div><h3>No data yet</h3><p>Add some expenses to see insights.</p></div>
           ) : (

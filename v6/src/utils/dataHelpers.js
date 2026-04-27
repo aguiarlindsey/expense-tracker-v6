@@ -113,6 +113,35 @@ export function makeIncome(partial = {}, source = 'manual') {
   }
 }
 
+// ── Anomaly Detection ─────────────────────────────────────
+export function detectAnomaly(newExpense, allExpenses, thresholdPct = 0.30, minSamples = 2) {
+  const threeMonthsAgo = new Date()
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+
+  const similar = allExpenses.filter(e =>
+    e.category === newExpense.category &&
+    new Date(e.date + 'T12:00:00') >= threeMonthsAgo &&
+    e.id !== newExpense.id
+  )
+
+  if (similar.length < minSamples) return null
+
+  const avg = similar.reduce((s, e) => s + (e.amountINR || e.amount || 0), 0) / similar.length
+  const thisAmt = newExpense.amountINR || newExpense.amount || 0
+  const deviation = avg > 0 ? (thisAmt - avg) / avg : 0
+
+  if (deviation <= thresholdPct) return null
+
+  return {
+    category:    newExpense.category,
+    description: newExpense.description,
+    date:        newExpense.date,
+    avgAmount:   avg,
+    thisAmount:  thisAmt,
+    deviationPct: Math.round(deviation * 100),
+  }
+}
+
 // ── Search ────────────────────────────────────────────────
 export function matchesSearch(item, q) {
   if (!q || !q.trim()) return true
