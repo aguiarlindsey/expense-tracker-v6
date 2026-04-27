@@ -2,13 +2,17 @@ import { useState } from 'react'
 import { useBiometric } from '../hooks/useBiometric'
 import { supabase } from '../utils/supabase'
 
-const EMAIL_KEY = 'et_v6_user_email'
+const EMAIL_KEY        = 'et_v6_user_email'
+const BACKUP_EMAIL_KEY = 'et_v6_backup_email'
 
 export default function LockScreen({ onUnlocked }) {
   const { authenticate, authenticating, error, setError } = useBiometric()
 
   const [mode, setMode]           = useState('biometric') // 'biometric' | 'otp-send' | 'otp-verify'
-  const [email]                   = useState(() => localStorage.getItem(EMAIL_KEY) || '')
+  const [email] = useState(() => {
+    const backup = localStorage.getItem(BACKUP_EMAIL_KEY)
+    return backup || localStorage.getItem(EMAIL_KEY) || ''
+  })
   const [otp, setOtp]             = useState('')
   const [otpLoading, setOtpLoading] = useState(false)
   const [otpError, setOtpError]   = useState(null)

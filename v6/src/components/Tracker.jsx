@@ -82,16 +82,27 @@ function AnomalyPanel(expenses, anomalyHistory, fmtINR) {
 
 // ─── Biometric Settings ───────────────────────────────────
 
+const BACKUP_EMAIL_KEY = 'et_v6_backup_email'
+
 function BiometricSettings({ session }) {
   const { enroll, removeEnrollment, enrolling, error, isEnrolled, setError } = useBiometric()
-  const [enrolled, setEnrolled] = useState(isEnrolled())
-  const [deviceName, setDeviceName] = useState('')
-  const [msg, setMsg] = useState(null)
+  const [enrolled, setEnrolled]       = useState(isEnrolled())
+  const [deviceName, setDeviceName]   = useState('')
+  const [backupEmail, setBackupEmail] = useState(() => localStorage.getItem(BACKUP_EMAIL_KEY) || '')
+  const [msg, setMsg]                 = useState(null)
 
   async function handleEnroll() {
     setMsg(null); setError(null)
+    if (backupEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(backupEmail)) {
+      setError('Please enter a valid backup email address.'); return
+    }
     const result = await enroll(session, deviceName || 'My Device')
-    if (result.success) { setEnrolled(true); setMsg('Biometric lock enabled. You will be prompted to verify on next sign-in.') }
+    if (result.success) {
+      if (backupEmail) localStorage.setItem(BACKUP_EMAIL_KEY, backupEmail)
+      else localStorage.removeItem(BACKUP_EMAIL_KEY)
+      setEnrolled(true)
+      setMsg('Biometric lock enabled. You will be prompted to verify on next sign-in.')
+    }
   }
 
   async function handleRemove() {
@@ -101,19 +112,43 @@ function BiometricSettings({ session }) {
     setMsg('Biometric lock removed.')
   }
 
+  async function handleUpdateBackupEmail() {
+    setMsg(null); setError(null)
+    if (backupEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(backupEmail)) {
+      setError('Please enter a valid backup email address.'); return
+    }
+    if (backupEmail) localStorage.setItem(BACKUP_EMAIL_KEY, backupEmail)
+    else localStorage.removeItem(BACKUP_EMAIL_KEY)
+    setMsg('Backup email updated.')
+  }
+
   return (
     <div className="settings-section">
       <h3>🔐 Security</h3>
       {msg && <div className="settings-msg">{msg}</div>}
       {error && <div className="settings-msg settings-msg-err">{error}</div>}
       {enrolled ? (
-        <div className="settings-row">
-          <div className="settings-row-label">
-            <strong>Biometric Lock</strong>
-            <span>🟢 Enabled — app requires biometric / device PIN on every sign-in.</span>
+        <>
+          <div className="settings-row">
+            <div className="settings-row-label">
+              <strong>Biometric Lock</strong>
+              <span>🟢 Enabled — app requires biometric / device PIN on every sign-in.</span>
+            </div>
+            <button className="btn-danger-sm" onClick={handleRemove}>Remove</button>
           </div>
-          <button className="btn-danger-sm" onClick={handleRemove}>Remove</button>
-        </div>
+          <div className="settings-row">
+            <div className="settings-row-label">
+              <strong>Backup OTP Email</strong>
+              <span>If biometrics fail, the one-time code goes here instead of your login email.</span>
+            </div>
+          </div>
+          <div className="settings-row">
+            <input className="input-sm" type="email" placeholder="backup@example.com"
+              value={backupEmail} onChange={e => setBackupEmail(e.target.value)}
+              style={{ flex: 1 }} />
+            <button className="btn-primary-sm" onClick={handleUpdateBackupEmail}>Save</button>
+          </div>
+        </>
       ) : (
         <>
           <div className="settings-row">
@@ -124,10 +159,21 @@ function BiometricSettings({ session }) {
           </div>
           <div className="settings-row">
             <input className="input-sm" placeholder="Device name (optional)" value={deviceName}
-              onChange={e => setDeviceName(e.target.value)} style={{ maxWidth: 200 }} />
+              onChange={e => setDeviceName(e.target.value)} style={{ maxWidth: 180 }} />
             <button className="btn-primary-sm" onClick={handleEnroll} disabled={enrolling}>
               {enrolling ? 'Setting up…' : 'Enable Biometric Lock'}
             </button>
+          </div>
+          <div className="settings-row">
+            <div className="settings-row-label">
+              <strong>Backup OTP Email</strong>
+              <span>OTP fallback will go here instead of your login email. Leave blank to use login email.</span>
+            </div>
+          </div>
+          <div className="settings-row">
+            <input className="input-sm" type="email" placeholder="backup@example.com (optional)"
+              value={backupEmail} onChange={e => setBackupEmail(e.target.value)}
+              style={{ flex: 1 }} />
           </div>
         </>
       )}
