@@ -1,5 +1,20 @@
 import { VALID_CATS, PAY_METHODS, INC_SOURCES } from './constants'
 
+// ── Date utilities ────────────────────────────────────────
+// All dates stored as YYYY-MM-DD; always append T12:00:00 to avoid timezone day shifts
+export function toISODate(date) {
+  if (!date) return ''
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) return date
+  const d = new Date(date)
+  return isNaN(d) ? '' : d.toISOString().split('T')[0]
+}
+export function isValidISODate(str) {
+  return /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(str)
+}
+export function safeDate(str) {
+  return new Date((str || '') + 'T12:00:00')
+}
+
 // ── Fingerprint / dedup ───────────────────────────────────
 function djb2(str) {
   let h = 5381

@@ -1827,14 +1827,14 @@ export default function Tracker({ session }) {
     // 2. Savings rate
     if (allIncINR > 0) {
       const r = ((allExpINR / allIncINR) * 100).toFixed(0), sv = allIncINR - allExpINR
-      res.push({ title: '📊 Savings Rate', text: `You spent ${r}% of income. ${sv >= 0 ? 'Saved ' + fmtINR(sv) + '! 🎉' : 'Overspent by ' + fmtINR(Math.abs(sv)) + ' ⚠️'}` })
+      res.push({ title: '📊 Savings Rate', text: `${r}% of income was spent. ${sv >= 0 ? 'Saved ' + fmtINR(sv) + '! 🎉' : 'Overspent by ' + fmtINR(Math.abs(sv)) + ' ⚠️'}` })
     }
 
     // 3. Peak day of week
     const dow = Array(7).fill(0)
     expenses.forEach(e => { const d = new Date(e.date + 'T12:00:00'); if (!isNaN(d)) dow[d.getDay()] += toINR(e) })
     const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], pk = dow.indexOf(Math.max(...dow))
-    if (dow[pk] > 0) res.push({ title: '📅 Peak Spend Day', text: `You spend most on ${DAYS[pk]}s (${fmtINR(dow[pk])} total, ${(dow[pk] / allExpINR * 100).toFixed(0)}% of spend).` })
+    if (dow[pk] > 0) res.push({ title: '📅 Peak Spend Day', text: `Spending is highest on ${DAYS[pk]}s (${fmtINR(dow[pk])} total, ${(dow[pk] / allExpINR * 100).toFixed(0)}% of spend).` })
 
     // 4. Monthly trend
     if (monthlyExpData.length >= 2) {
@@ -1872,7 +1872,7 @@ export default function Tracker({ session }) {
     const splits = expenses.filter(e => e.splitWith && e.splitParts > 1)
     if (splits.length) {
       const shareTotal = splits.reduce((s, e) => s + toINR(e) / e.splitParts, 0)
-      res.push({ title: '👥 Split Expenses', text: `${splits.length} split expense${splits.length > 1 ? 's' : ''}. Your total share: ${fmtINR(shareTotal)} (full amount: ${fmtINR(splits.reduce((s, e) => s + toINR(e), 0))}).` })
+      res.push({ title: '👥 Split Expenses', text: `${splits.length} split expense${splits.length > 1 ? 's' : ''}. Total share: ${fmtINR(shareTotal)} (full amount: ${fmtINR(splits.reduce((s, e) => s + toINR(e), 0))}).` })
     }
 
     // 10. Fixed vs variable
@@ -1891,7 +1891,7 @@ export default function Tracker({ session }) {
       const wkndAvg = wkndTotal / wkndDays, wkdyAvg = wkdyTotal / wkdyDays
       const heavier = wkndAvg > wkdyAvg ? 'weekends' : 'weekdays'
       const ratio = (Math.max(wkndAvg, wkdyAvg) / (Math.min(wkndAvg, wkdyAvg) || 1)).toFixed(1)
-      res.push({ title: '🗓️ Weekend vs Weekday', text: `You spend ${ratio}× more on ${heavier}. Weekend avg: ${fmtINR(wkndAvg)}/day, weekday avg: ${fmtINR(wkdyAvg)}/day.` })
+      res.push({ title: '🗓️ Weekend vs Weekday', text: `Spending is ${ratio}× higher on ${heavier}. Weekend avg: ${fmtINR(wkndAvg)}/day, weekday avg: ${fmtINR(wkdyAvg)}/day.` })
     }
 
     // 12. Category month-over-month trend
@@ -1918,7 +1918,7 @@ export default function Tracker({ session }) {
         const diff = Math.round((new Date(sortedDates[i] + 'T12:00:00') - new Date(sortedDates[i - 1] + 'T12:00:00')) / 864e5)
         if (diff === 1) { cur++; if (cur > maxStreak) { maxStreak = cur; streakEnd = sortedDates[i] } } else cur = 1
       }
-      if (maxStreak >= 3) res.push({ title: '🔥 Longest Spending Streak', text: `${maxStreak} consecutive days ending ${streakEnd}. You logged expenses every single day during this streak.` })
+      if (maxStreak >= 3) res.push({ title: '🔥 Longest Spending Streak', text: `${maxStreak} consecutive days ending ${streakEnd}. Expenses were logged every single day during this streak.` })
     }
 
     // 14. Best & worst month by savings rate
@@ -1948,7 +1948,7 @@ export default function Tracker({ session }) {
       const variance = incVals.reduce((s, v) => s + Math.pow(v - avgInc, 2), 0) / incVals.length
       const cv = (Math.sqrt(variance) / avgInc * 100).toFixed(0)
       const consistency = cv < 20 ? 'very consistent' : cv < 40 ? 'moderately consistent' : 'variable'
-      res.push({ title: '💵 Income Consistency', text: `Your monthly income is ${consistency} (CV: ${cv}%). Average: ${fmtINR(avgInc)}/month across ${incVals.length} months.` })
+      res.push({ title: '💵 Income Consistency', text: `Monthly income is ${consistency} (CV: ${cv}%). Average: ${fmtINR(avgInc)}/month across ${incVals.length} months.` })
     }
 
     // 17. Burn rate acceleration
@@ -1961,11 +1961,11 @@ export default function Tracker({ session }) {
     // 18. Budget runway
     if (burnRate.runwayDays !== null) {
       if (burnRate.runwayDays <= 0) {
-        res.push({ title: '🚨 Budget Exhausted', text: `Monthly budget of ${fmtINR(budgets.monthly)} already exceeded. You've spent ${fmtINR(burnRate.spentSoFar)} this month.` })
+        res.push({ title: '🚨 Budget Exhausted', text: `Monthly budget of ${fmtINR(budgets.monthly)} already exceeded. Spent ${fmtINR(burnRate.spentSoFar)} this month.` })
       } else if (burnRate.willExceedBudget) {
-        res.push({ title: '⚠️ Budget Runway', text: `At current pace (${fmtINR(burnRate.dailyRate)}/d), your ${fmtINR(budgets.monthly)} budget runs out in ${burnRate.runwayDays} days (${burnRate.runwayDate}).` })
+        res.push({ title: '⚠️ Budget Runway', text: `At current pace (${fmtINR(burnRate.dailyRate)}/d), the ${fmtINR(budgets.monthly)} budget runs out in ${burnRate.runwayDays} days (${burnRate.runwayDate}).` })
       } else {
-        res.push({ title: '✅ Budget on Track', text: `Projected month-end spend: ${fmtINR(burnRate.projected)}. That leaves ${fmtINR(budgets.monthly - burnRate.projected)} under your ${fmtINR(budgets.monthly)} monthly budget.` })
+        res.push({ title: '✅ Budget on Track', text: `Projected month-end spend: ${fmtINR(burnRate.projected)}. That's ${fmtINR(budgets.monthly - burnRate.projected)} under the ${fmtINR(budgets.monthly)} monthly budget.` })
       }
     }
 

@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js'
 import { verifyAuthenticationResponse } from '@simplewebauthn/server'
 import nodemailer from 'nodemailer'
 
-const RP_ID       = 'expense-tracker-v6.vercel.app'
-const ORIGIN      = 'https://expense-tracker-v6.vercel.app'
+const RP_ID  = process.env.WEBAUTHN_RP_ID  || 'expense-tracker-v6.vercel.app'
+const ORIGIN = process.env.WEBAUTHN_ORIGIN || 'https://expense-tracker-v6.vercel.app'
 const MAX_ATTEMPTS = 3
 const LOCK_MINUTES = 15
 

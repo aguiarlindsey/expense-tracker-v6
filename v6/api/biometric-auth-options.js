@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { generateAuthenticationOptions } from '@simplewebauthn/server'
 
-const RP_ID = 'expense-tracker-v6.vercel.app'
+const RP_ID = process.env.WEBAUTHN_RP_ID || 'expense-tracker-v6.vercel.app'
 
 const admin = createClient(
   process.env.SUPABASE_URL,
