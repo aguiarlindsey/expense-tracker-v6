@@ -4,6 +4,7 @@ import { supabase } from '../utils/supabase'
 
 const EMAIL_KEY        = 'et_v6_user_email'
 const BACKUP_EMAIL_KEY = 'et_v6_backup_email'
+const USER_ID_KEY      = 'et_v6_user_id'
 
 function maskEmail(email) {
   if (!email) return ''
@@ -17,18 +18,15 @@ function maskEmail(email) {
 export default function LockScreen({ onUnlocked }) {
   const { authenticate, authenticating, error, setError } = useBiometric()
 
-  // The actual OTP email (backup if set, else login email)
-  const [otpEmail] = useState(() => {
-    const backup = localStorage.getItem(BACKUP_EMAIL_KEY)
-    return backup || localStorage.getItem(EMAIL_KEY) || ''
-  })
+  const [backupEmail] = useState(() => localStorage.getItem(BACKUP_EMAIL_KEY) || localStorage.getItem(EMAIL_KEY) || '')
+  const [userId]      = useState(() => localStorage.getItem(USER_ID_KEY) || '')
 
-  const [mode, setMode]               = useState('biometric') // 'biometric' | 'otp-confirm' | 'otp-verify'
+  const [mode, setMode]                 = useState('biometric') // 'biometric' | 'otp-confirm' | 'otp-verify'
   const [confirmInput, setConfirmInput] = useState('')
   const [confirmError, setConfirmError] = useState(null)
-  const [otp, setOtp]                 = useState('')
-  const [otpLoading, setOtpLoading]   = useState(false)
-  const [otpError, setOtpError]       = useState(null)
+  const [otp, setOtp]                   = useState('')
+  const [otpLoading, setOtpLoading]     = useState(false)
+  const [otpError, setOtpError]         = useState(null)
 
   async function handleUnlock() {
     setError(null)
@@ -36,27 +34,42 @@ export default function LockScreen({ onUnlocked }) {
     if (result.success) onUnlocked()
   }
 
-  function handleConfirmEmail() {
+  async function handleConfirmEmail() {
     setConfirmError(null)
-    if (confirmInput.trim().toLowerCase() !== otpEmail.toLowerCase()) {
+    if (confirmInput.trim().toLowerCase() !== backupEmail.toLowerCase()) {
       setConfirmError('Email does not match. Please try again.')
       return
     }
-    handleSendOtp()
-  }
-
-  async function handleSendOtp() {
     setOtpLoading(true)
-    setOtpError(null)
     try {
-      const { error: e } = await supabase.auth.signInWithOtp({
-        email: otpEmail,
-        options: { shouldCreateUser: false },
+      const res = await fetch('/api/backup-otp-send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, backupEmail }),
       })
-      if (e) throw new Error(e.message)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to send code')
       setMode('otp-verify')
     } catch (e) {
       setConfirmError(e.message || 'Failed to send code. Try again.')
+    } finally {
+      setOtpLoading(false)
+    }
+  }
+
+  async function handleResendOtp() {
+    setOtpLoading(true)
+    setOtpError(null)
+    try {
+      const res = await fetch('/api/backup-otp-send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, backupEmail }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to resend code')
+    } catch (e) {
+      setOtpError(e.message)
     } finally {
       setOtpLoading(false)
     }
@@ -66,12 +79,20 @@ export default function LockScreen({ onUnlocked }) {
     setOtpLoading(true)
     setOtpError(null)
     try {
-      const { error: e } = await supabase.auth.verifyOtp({
-        email: otpEmail,
-        token: otp.trim(),
+      const res = await fetch('/api/backup-otp-verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, code: otp.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Verification failed')
+
+      // Restore MAIN account session using the hashed token
+      const { error: otpErr } = await supabase.auth.verifyOtp({
+        token_hash: data.token_hash,
         type: 'email',
       })
-      if (e) throw new Error(e.message)
+      if (otpErr) throw new Error('Failed to restore session: ' + otpErr.message)
       onUnlocked()
     } catch (e) {
       setOtpError(e.message || 'Invalid or expired code. Try again.')
@@ -115,7 +136,7 @@ export default function LockScreen({ onUnlocked }) {
             </p>
 
             <div className="lock-email-hint">
-              {maskEmail(otpEmail)}
+              {maskEmail(backupEmail)}
             </div>
 
             {confirmError && <div className="lock-error">{confirmError}</div>}
@@ -147,7 +168,7 @@ export default function LockScreen({ onUnlocked }) {
         {mode === 'otp-verify' && (
           <>
             <p className="lock-otp-desc">
-              Code sent to <strong>{maskEmail(otpEmail)}</strong>.<br />
+              Code sent to <strong>{maskEmail(backupEmail)}</strong>.<br />
               Check your inbox and enter it below.
             </p>
 
@@ -172,7 +193,7 @@ export default function LockScreen({ onUnlocked }) {
                 : 'Verify Code'}
             </button>
 
-            <button className="lock-fallback-link" onClick={handleSendOtp} disabled={otpLoading}>
+            <button className="lock-fallback-link" onClick={handleResendOtp} disabled={otpLoading}>
               Resend code
             </button>
           </>

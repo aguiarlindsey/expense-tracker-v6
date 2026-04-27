@@ -1,0 +1,69 @@
+import { createClient } from '@supabase/supabase-js'
+import nodemailer from 'nodemailer'
+
+const admin = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  { auth: { persistSession: false } }
+)
+
+export default async function handler(req, res) {
+  try {
+    if (req.method !== 'POST') return res.status(405).end()
+
+    const { userId, backupEmail } = req.body
+    if (!userId || !backupEmail) return res.status(400).json({ error: 'Missing fields' })
+
+    // Get the main account email
+    const { data: userData, error: userErr } = await admin.auth.admin.getUserById(userId)
+    if (userErr || !userData?.user) return res.status(404).json({ error: 'User not found' })
+
+    const mainEmail = userData.user.email
+
+    // Generate OTP for the main account
+    const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
+      type:  'magiclink',
+      email: mainEmail,
+    })
+    if (linkErr || !linkData?.properties) {
+      return res.status(500).json({ error: 'Failed to generate OTP' })
+    }
+
+    const { email_otp, hashed_token } = linkData.properties
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+
+    // Store OTP + token_hash in current_challenge (JSON)
+    await admin.from('biometric_credentials')
+      .update({
+        current_challenge: JSON.stringify({ otp: email_otp, token_hash: hashed_token, expires_at: expiresAt }),
+      })
+      .eq('user_id', userId)
+
+    // Send OTP to backup email via Gmail
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
+    })
+
+    await transporter.sendMail({
+      from:    `"LA Expense Tracker" <${process.env.GMAIL_USER}>`,
+      to:      backupEmail,
+      subject: '🔐 Your LA Expense Tracker sign-in code',
+      html: `
+        <div style="font-family:sans-serif;max-width:400px;margin:auto">
+          <h2>LA Expense Tracker — Sign In Code</h2>
+          <p>Your one-time sign-in code is:</p>
+          <h1 style="font-size:2.5rem;letter-spacing:0.4em;font-family:monospace;color:#2563eb">${email_otp}</h1>
+          <p>Enter this code on the lock screen. It expires in <strong>10 minutes</strong>.</p>
+          <hr/>
+          <p style="color:#888;font-size:0.82rem">If you didn't request this, someone may be trying to access your account.</p>
+        </div>
+      `,
+    })
+
+    res.json({ sent: true })
+  } catch (e) {
+    console.error('[backup-otp-send]', e)
+    if (!res.headersSent) res.status(500).json({ error: e.message || 'Internal error' })
+  }
+}
