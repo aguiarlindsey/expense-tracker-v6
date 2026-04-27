@@ -1130,7 +1130,9 @@ export default function Tracker({ session }) {
   const [v5Report,      setV5Report]      = useState(null)
   const [v5Importing,   setV5Importing]   = useState(false)
   const [anomalyHistory, setAnomalyHistory] = useState([])
-  const checkedAnomalyIds = useRef(new Set())
+  const checkedAnomalyIds = useRef(new Set(
+    JSON.parse(localStorage.getItem('et_v6_anomaly_checked') || '[]')
+  ))
 
   // ── Safe-to-Spend ─────────────────────────────────────
   const [savingsGoal, setSavingsGoal] = useState(() => parseFloat(localStorage.getItem('et_v6_sts_goal') || '0') || 0)
@@ -1424,6 +1426,7 @@ export default function Tracker({ session }) {
       if (newExp._pending) return
       if (checkedAnomalyIds.current.has(newExp.id)) return
       checkedAnomalyIds.current.add(newExp.id)
+      try { localStorage.setItem('et_v6_anomaly_checked', JSON.stringify([...checkedAnomalyIds.current].slice(-500))) } catch {}
       const anomaly = detectAnomaly(newExp, expenses.filter(e => e.id !== newExp.id))
       if (anomaly) {
         setAnomalyHistory(prev => [{ ...anomaly, id: newExp.id }, ...prev].slice(0, 20))
