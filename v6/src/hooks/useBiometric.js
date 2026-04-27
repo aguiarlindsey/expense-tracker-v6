@@ -18,7 +18,7 @@ export function useBiometric() {
   const isEnrolled  = () => localStorage.getItem(ENROLLED_KEY) === 'true'
   const storedUserId = () => localStorage.getItem(USER_ID_KEY)
 
-  const enroll = useCallback(async (session, deviceName) => {
+  const enroll = useCallback(async (session, deviceName, backupEmail) => {
     setEnrolling(true)
     setError(null)
     try {
@@ -39,7 +39,7 @@ export function useBiometric() {
       const regRes = await fetch('/api/biometric-register', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credential, deviceName }),
+        body: JSON.stringify({ credential, deviceName, backupEmail: backupEmail || '', mainEmail: session.user.email }),
       })
       if (!regRes.ok) {
         const d = await safeJson(regRes)

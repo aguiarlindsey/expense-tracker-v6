@@ -30,7 +30,7 @@ export default async function handler(req, res) {
   const { data: { user }, error: authErr } = await admin.auth.getUser(token)
   if (authErr || !user) return res.status(401).json({ error: 'Unauthorized' })
 
-  const { credential, deviceName } = req.body
+  const { credential, deviceName, backupEmail, mainEmail } = req.body
 
   const { data: row } = await admin
     .from('registration_challenges')
@@ -72,7 +72,10 @@ export default async function handler(req, res) {
     counter:         cred.counter,
     transports:      cred.transports || [],
     device_name:     name,
+    main_email:      mainEmail  || user.email || null,
+    backup_email:    backupEmail || null,
     failed_attempts: 0,
+    otp_attempts:    0,
     locked_until:    null,
     last_used_at:    new Date().toISOString(),
   })

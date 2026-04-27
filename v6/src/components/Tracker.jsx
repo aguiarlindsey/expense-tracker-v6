@@ -96,7 +96,7 @@ function BiometricSettings({ session }) {
     if (backupEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(backupEmail)) {
       setError('Please enter a valid backup email address.'); return
     }
-    const result = await enroll(session, deviceName || 'My Device')
+    const result = await enroll(session, deviceName || 'My Device', backupEmail)
     if (result.success) {
       if (backupEmail) localStorage.setItem(BACKUP_EMAIL_KEY, backupEmail)
       else localStorage.removeItem(BACKUP_EMAIL_KEY)

@@ -23,34 +23,65 @@ export default async function handler(req, res) {
   try {
     if (req.method !== 'POST') return res.status(405).end()
 
-    const { userId, backupEmail, mainEmail } = req.body
-    if (!userId || !backupEmail || !mainEmail) return res.status(400).json({ error: 'Missing fields' })
+    const { userId, backupEmail } = req.body
+    if (!userId || !backupEmail) return res.status(400).json({ error: 'Missing fields' })
 
-    // Parallel: verify credential exists + generate session link for main account
-    const [credResult, linkResult] = await Promise.all([
-      admin.from('biometric_credentials').select('id').eq('user_id', userId).limit(1).single(),
+    // Get stored credential — includes server-side backup_email and main_email
+    const { data: cred } = await admin
+      .from('biometric_credentials')
+      .select('id, backup_email, main_email, last_otp_sent_at, otp_locked_until')
+      .eq('user_id', userId)
+      .limit(1)
+      .single()
+
+    if (!cred) return res.status(404).json({ error: 'No credential enrolled for this account' })
+
+    // ── Server-side backup email validation ─────────────
+    if (cred.backup_email && backupEmail.toLowerCase() !== cred.backup_email.toLowerCase()) {
+      return res.status(403).json({ error: 'Email does not match our records.' })
+    }
+
+    // ── OTP lock check ───────────────────────────────────
+    if (cred.otp_locked_until && new Date(cred.otp_locked_until) > new Date()) {
+      return res.status(423).json({
+        error: `Too many failed attempts. Try again after ${new Date(cred.otp_locked_until).toLocaleTimeString()}.`,
+      })
+    }
+
+    // ── Rate limit: max 1 send per 60 seconds ────────────
+    if (cred.last_otp_sent_at) {
+      const secondsSince = (Date.now() - new Date(cred.last_otp_sent_at).getTime()) / 1000
+      if (secondsSince < 60) {
+        const wait = Math.ceil(60 - secondsSince)
+        return res.status(429).json({ error: `Please wait ${wait}s before requesting another code.` })
+      }
+    }
+
+    // Get main email — use stored value, fall back to getUserById for old credentials
+    const mainEmail = cred.main_email || (await admin.auth.admin.getUserById(userId)).data?.user?.email
+    if (!mainEmail) return res.status(500).json({ error: 'Could not determine account email' })
+
+    // Generate session link + OTP in parallel with rate limit update
+    const [linkResult] = await Promise.all([
       admin.auth.admin.generateLink({ type: 'magiclink', email: mainEmail }),
+      admin.from('biometric_credentials').update({ last_otp_sent_at: new Date().toISOString() }).eq('user_id', userId),
     ])
 
-    if (!credResult.data) return res.status(404).json({ error: 'No credential enrolled for this account' })
-    if (linkResult.error || !linkResult.data?.properties) return res.status(500).json({ error: 'Failed to generate session token' })
+    if (linkResult.error || !linkResult.data?.properties) {
+      return res.status(500).json({ error: 'Failed to generate session token' })
+    }
 
     const otpCode   = generateOTP(8)
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
-    const challenge = JSON.stringify({
-      otp:        otpCode,
-      token_hash: linkResult.data.properties.hashed_token,
-      expires_at: expiresAt,
-    })
+    const challenge = JSON.stringify({ otp: otpCode, token_hash: linkResult.data.properties.hashed_token, expires_at: expiresAt })
+    const sendTo    = cred.backup_email || backupEmail
 
-    // Parallel: save challenge to DB + send email
+    // Parallel: save challenge + send email
     await Promise.all([
-      admin.from('biometric_credentials')
-        .update({ current_challenge: challenge })
-        .eq('user_id', userId),
+      admin.from('biometric_credentials').update({ current_challenge: challenge, otp_attempts: 0 }).eq('user_id', userId),
       transporter.sendMail({
         from:    `"LA Expense Tracker" <${process.env.GMAIL_USER}>`,
-        to:      backupEmail,
+        to:      sendTo,
         subject: '🔐 Your LA Expense Tracker sign-in code',
         html: `
           <div style="font-family:sans-serif;max-width:400px;margin:auto">

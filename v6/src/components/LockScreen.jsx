@@ -45,7 +45,7 @@ export default function LockScreen({ onUnlocked }) {
       const res = await fetch('/api/backup-otp-send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, backupEmail, mainEmail: localStorage.getItem('et_v6_user_email') || '' }),
+        body: JSON.stringify({ userId, backupEmail }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to send code')
@@ -64,7 +64,7 @@ export default function LockScreen({ onUnlocked }) {
       const res = await fetch('/api/backup-otp-send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, backupEmail, mainEmail: localStorage.getItem('et_v6_user_email') || '' }),
+        body: JSON.stringify({ userId, backupEmail }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to resend code')
