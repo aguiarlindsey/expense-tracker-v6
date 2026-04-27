@@ -3073,7 +3073,7 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title">💸 Expense Tracker V6</div>
               <div className="about-meta">
-                <span className="about-badge">v7.4.0</span>
+                <span className="about-badge">v7.5.0</span>
                 <span className="about-badge">Incognito Mode</span>
                 <span className="about-badge">Rate Fallbacks</span>
                 <span className="about-badge">122 Currencies</span>
@@ -3083,7 +3083,7 @@ export default function Tracker({ session }) {
               </div>
               <div className="about-row"><span>Architecture</span><span>Vite + React + Supabase</span></div>
               <div className="about-row"><span>Auth</span><span>Magic-link email (Supabase Auth)</span></div>
-              <div className="about-row"><span>Database</span><span>Supabase Postgres + RLS</span></div>
+              <div className="about-row"><span>Database</span><span>Supabase Postgres + RLS · SQL views for aggregations</span></div>
               <div className="about-row"><span>Deployment</span><span>Vercel CDN · auto-deploy on push</span></div>
               <div className="about-row"><span>Offline</span><span>Retry queue — changes sync automatically on reconnect</span></div>
               <div className="about-row"><span>PWA</span><span>Installable · service worker · auto-updates</span></div>
