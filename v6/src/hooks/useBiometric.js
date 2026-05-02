@@ -99,11 +99,13 @@ export function useBiometric() {
         throw new Error(`Biometric not recognised.${left > 0 ? ` ${left} attempt(s) remaining.` : ''}`)
       }
 
-      // Restore session using the one-time token from the server
+      // Flag prevents App.jsx from signing out while session is being restored
+      localStorage.setItem('et_v6_unlocking', '1')
       const { error: otpErr } = await supabase.auth.verifyOtp({
         token_hash: verData.token_hash,
         type: 'email',
       })
+      localStorage.removeItem('et_v6_unlocking')
       if (otpErr) throw new Error('Failed to restore session: ' + otpErr.message)
 
       return { success: true }

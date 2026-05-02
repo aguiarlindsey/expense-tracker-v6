@@ -90,11 +90,13 @@ export default function LockScreen({ onUnlocked }) {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Verification failed')
 
-      // Restore MAIN account session using the hashed token
+      // Flag prevents App.jsx from signing out while session is being restored
+      localStorage.setItem('et_v6_unlocking', '1')
       const { error: otpErr } = await supabase.auth.verifyOtp({
         token_hash: data.token_hash,
         type: 'email',
       })
+      localStorage.removeItem('et_v6_unlocking')
       if (otpErr) throw new Error('Failed to restore session: ' + otpErr.message)
       onUnlocked()
     } catch (e) {

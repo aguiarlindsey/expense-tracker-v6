@@ -22,6 +22,8 @@ export default function App() {
 
   useEffect(() => {
     if (session && localStorage.getItem(ENROLLED_KEY) === 'true' && biometricLocked) {
+      // Skip sign-out if biometric/OTP unlock is actively restoring the session
+      if (localStorage.getItem('et_v6_unlocking') === '1') return
       localStorage.setItem(USER_ID_KEY, session.user.id)
       localStorage.setItem(EMAIL_KEY, session.user.email)
       setSigningOut(true)
