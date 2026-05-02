@@ -38,10 +38,12 @@ export default async function handler(req, res) {
       })
     }
 
+    // No allowCredentials = discoverable credential mode.
+    // Each device's browser uses its own locally stored credential for this RP.
+    // Prevents the browser offering cross-device Bluetooth auth when multiple devices are enrolled.
     const options = await generateAuthenticationOptions({
       rpID: RP_ID,
       userVerification: 'required',
-      allowCredentials: activeCreds.map(c => ({ id: c.id, type: 'public-key', transports: c.transports || [] })),
     })
 
     // Store challenge on all credentials for this user
