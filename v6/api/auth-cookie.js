@@ -28,10 +28,11 @@ function cookieHeader(value, maxAge) {
 
 export default function handler(req, res) {
   // GET — return session value from cookie (read by custom storage adapter on init)
+  // parseCookies already decodeURIComponent's the value — do NOT decode again
   if (req.method === 'GET') {
     const cookies = parseCookies(req)
-    const value   = cookies[COOKIE_NAME]
-    return res.status(200).json({ value: value ? decodeURIComponent(value) : null })
+    const value   = cookies[COOKIE_NAME] || null
+    return res.status(200).json({ value })
   }
 
   // POST — set session in HttpOnly cookie (called on sign-in / token refresh)
