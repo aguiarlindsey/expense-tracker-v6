@@ -83,7 +83,7 @@ export default async function handler(req, res) {
       lockPayload.otp_locked_until = null
       lockPayload.otp_attempts     = 0
     }
-    await admin.from('biometric_credentials').update(lockPayload).eq('user_id', userId)
+    await admin.from('biometric_credentials').update(lockPayload).eq('id', cred.id)
 
     if (shouldLock) { try { await sendAlertEmail(newAttempts) } catch {} }
 
@@ -102,7 +102,7 @@ export default async function handler(req, res) {
     locked_until:      null,
     current_challenge: null,
     last_used_at:      new Date().toISOString(),
-  }).eq('user_id', userId)
+  }).eq('id', cred.id)
 
   // Get user email to generate a one-time token for the client
   const { data: userData, error: userErr } = await admin.auth.admin.getUserById(userId)
