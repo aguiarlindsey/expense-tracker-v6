@@ -17,13 +17,16 @@ async function getItem(key) {
 
 async function setItem(key, value) {
   try {
-    await fetch('/api/auth-cookie', {
+    const res = await fetch('/api/auth-cookie', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ key, value }),
     })
-  } catch {}
+    if (!res.ok) console.warn('[cookieStorage] setItem failed:', res.status)
+  } catch (e) {
+    console.warn('[cookieStorage] setItem error — session may not persist on reload:', e.message)
+  }
 }
 
 async function removeItem(key) {

@@ -37,7 +37,10 @@ export default async function handler(req, res) {
     if (!cred) return res.status(404).json({ error: 'No credential enrolled for this account' })
 
     // ── Server-side backup email validation ─────────────
-    if (cred.backup_email && backupEmail.toLowerCase() !== cred.backup_email.toLowerCase()) {
+    // Must match stored backup_email OR main_email — prevents bypass when backup_email is empty
+    const inputEmail = backupEmail.toLowerCase()
+    const validEmails = [cred.backup_email, cred.main_email].filter(Boolean).map(e => e.toLowerCase())
+    if (validEmails.length === 0 || !validEmails.includes(inputEmail)) {
       return res.status(403).json({ error: 'Email does not match our records.' })
     }
 

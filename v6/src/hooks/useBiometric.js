@@ -100,13 +100,17 @@ export function useBiometric() {
       }
 
       // Flag prevents App.jsx from signing out while session is being restored
+      // try/finally guarantees removal even if verifyOtp throws
       localStorage.setItem('et_v6_unlocking', '1')
-      const { error: otpErr } = await supabase.auth.verifyOtp({
-        token_hash: verData.token_hash,
-        type: 'email',
-      })
-      localStorage.removeItem('et_v6_unlocking')
-      if (otpErr) throw new Error('Failed to restore session: ' + otpErr.message)
+      try {
+        const { error: otpErr } = await supabase.auth.verifyOtp({
+          token_hash: verData.token_hash,
+          type: 'email',
+        })
+        if (otpErr) throw new Error('Failed to restore session: ' + otpErr.message)
+      } finally {
+        localStorage.removeItem('et_v6_unlocking')
+      }
 
       return { success: true }
     } catch (e) {

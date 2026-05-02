@@ -377,6 +377,7 @@ export function useStorage(userId) {
         if (!data || data.length === 0) {
           const { data: dbRow } = await supabase.from('expenses').select('*').eq('id', payload.id).single()
           if (dbRow) addConflict('expenses', payload, expenseFromDb(dbRow))
+          else setError('This expense was deleted on another device.')
           break
         }
         setExpenses(prev => prev.map(e => e.id === payload.id ? expenseFromDb(data[0]) : e))
@@ -402,6 +403,7 @@ export function useStorage(userId) {
         if (!data || data.length === 0) {
           const { data: dbRow } = await supabase.from('income').select('*').eq('id', payload.id).single()
           if (dbRow) addConflict('income', payload, incomeFromDb(dbRow))
+          else setError('This income entry was deleted on another device.')
           break
         }
         setIncome(prev => prev.map(i => i.id === payload.id ? incomeFromDb(data[0]) : i))
@@ -520,9 +522,9 @@ export function useStorage(userId) {
       return
     }
     if (!data || data.length === 0) {
-      // Version mismatch — fetch current DB state and surface conflict
       const { data: dbRow } = await supabase.from('expenses').select('*').eq('id', exp.id).single()
       if (dbRow) addConflict('expenses', exp, expenseFromDb(dbRow))
+      else setError('This expense was deleted on another device.')
       setExpenses(prev => prev.map(e => e.id === exp.id ? { ...e, _pending: false } : e))
       return
     }
@@ -580,6 +582,7 @@ export function useStorage(userId) {
     if (!data || data.length === 0) {
       const { data: dbRow } = await supabase.from('income').select('*').eq('id', inc.id).single()
       if (dbRow) addConflict('income', inc, incomeFromDb(dbRow))
+      else setError('This income entry was deleted on another device.')
       setIncome(prev => prev.map(i => i.id === inc.id ? { ...i, _pending: false } : i))
       return
     }
@@ -686,6 +689,7 @@ export function useStorage(userId) {
     if (!data || data.length === 0) {
       const { data: dbRow } = await supabase.from('trips').select('*').eq('id', trip.id).single()
       if (dbRow) addConflict('trips', trip, tripFromDb(dbRow))
+      else setError('This trip was deleted on another device.')
       setTrips(prev => prev.map(t => t.id === trip.id ? { ...t, _pending: false } : t))
       return
     }
