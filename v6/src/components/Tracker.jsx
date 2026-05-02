@@ -7,6 +7,7 @@ import { migrateV5Data, validateV5File } from '../utils/migrateV5'
 import { useNotifications } from '../hooks/useNotifications'
 import { useInsightViews } from '../hooks/useInsightViews'
 import { useBiometric } from '../hooks/useBiometric'
+import ConflictModal from './ConflictModal'
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -1132,6 +1133,7 @@ export default function Tracker({ session }) {
     expenses, income, budgets, goals, contributions, trips,
     loading, error,
     pendingCount, syncing, online, realtimeStatus,
+    conflicts, resolveConflict, dismissConflict,
     addExpense, editExpense, deleteExpense, deleteManyExpenses,
     addIncome,  editIncome,  deleteIncome,
     saveBudgets,
@@ -2131,6 +2133,11 @@ export default function Tracker({ session }) {
               'Live sync offline'
             }
           />
+          {conflicts.length > 0 && (
+            <span className="conflict-badge" title={`${conflicts.length} sync conflict${conflicts.length !== 1 ? 's' : ''} need attention`}>
+              ⚠️ {conflicts.length}
+            </span>
+          )}
           <button className="btn-ghost btn-sm" title="D" onClick={() => setDark(m => !m)}>{dark ? '🌙' : '☀️'}</button>
           <button className="btn-ghost btn-sm" title="Colorblind mode" onClick={() => setColorblind(m => !m)} style={{ opacity: colorblind ? 1 : 0.5 }}>👁️</button>
           <button className="btn-ghost btn-sm" title={incognito ? 'Show amounts' : 'Hide amounts'} onClick={() => setIncognito(m => !m)} style={{ opacity: incognito ? 1 : 0.5 }}>🙈</button>
@@ -3220,7 +3227,7 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title">💸 Expense Tracker V6</div>
               <div className="about-meta">
-                <span className="about-badge">v7.7.1</span>
+                <span className="about-badge">v7.8.0</span>
                 <span className="about-badge">Incognito Mode</span>
                 <span className="about-badge">Rate Fallbacks</span>
                 <span className="about-badge">122 Currencies</span>
@@ -3238,7 +3245,7 @@ export default function Tracker({ session }) {
               <div className="about-row"><span>Features</span><span>10 tabs · 18 insights · anomaly detection · burn-rate forecast · trip tracking · 259-color palette · live FX rates</span></div>
               <div className="about-row"><span>Mobile</span><span>Fully responsive · UPI/Wallet selectors · horizontal tab scroll</span></div>
               <div className="about-row"><span>V5 parity</span><span>100% — all V5 features ported + Goals/Budgets/Offline added</span></div>
-              <div className="about-row"><span>Last updated</span><span>2026-04-27 (v7.7.1)</span></div>
+              <div className="about-row"><span>Last updated</span><span>2026-05-02 (v7.8.0)</span></div>
             </div>
           </div>
         </main>
@@ -3347,6 +3354,14 @@ export default function Tracker({ session }) {
       {contribGoal && <AddContributionModal goal={contribGoal} goalContribs={contributions.filter(c => c.goalId === contribGoal.id)} onSave={c => addContribution(contribGoal.id, c)} onClose={() => setContribGoal(null)} />}
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
+
+      {conflicts.length > 0 && (
+        <ConflictModal
+          conflicts={conflicts}
+          onResolve={resolveConflict}
+          onDismiss={dismissConflict}
+        />
+      )}
     </div>
   )
 }

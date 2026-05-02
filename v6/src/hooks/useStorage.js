@@ -72,6 +72,7 @@ function expenseFromDb(row) {
     migratedFrom:       row.migrated_from || '',
     importedFrom:       row.imported_from || '',
     version:            6,
+    _rowVersion:        row.row_version || 1,
   }
 }
 
@@ -115,6 +116,7 @@ function incomeFromDb(row) {
     importedFrom:    row.imported_from || '',
     type:            'income',
     version:         6,
+    _rowVersion:     row.row_version || 1,
   }
 }
 
@@ -134,13 +136,14 @@ function tripToDb(t, userId) {
 
 function tripFromDb(row) {
   return {
-    id:        row.id,
-    name:      row.name,
-    startDate: row.start_date,
-    endDate:   row.end_date,
-    currency:  row.currency,
-    notes:     row.notes || '',
-    createdAt: row.created_at || '',
+    id:          row.id,
+    name:        row.name,
+    startDate:   row.start_date,
+    endDate:     row.end_date,
+    currency:    row.currency,
+    notes:       row.notes || '',
+    createdAt:   row.created_at || '',
+    _rowVersion: row.row_version || 1,
   }
 }
 
@@ -157,8 +160,21 @@ export function useStorage(userId) {
   const [error,         setError]         = useState(null)
   const [syncing,         setSyncing]         = useState(false)
   const [realtimeStatus,  setRealtimeStatus]  = useState('connecting')
+  const [conflicts,       setConflicts]       = useState([])
 
   const { queue, online, enqueue, remove, bumpAttempts, dropExhausted } = useRetryQueue()
+
+  // ── Conflict helpers ──────────────────────────────────
+  function makeConflictId() {
+    return `c_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+  }
+
+  function addConflict(table, local, remote) {
+    setConflicts(prev => {
+      if (prev.some(c => c.table === table && c.local.id === local.id)) return prev
+      return [...prev, { id: makeConflictId(), table, local, remote, detectedAt: new Date().toISOString() }]
+    })
+  }
 
   // ── Initial load ──────────────────────────────────────
   useEffect(() => {
@@ -353,9 +369,17 @@ export function useStorage(userId) {
         break
       }
       case 'editExpense': {
-        const { error: err } = await supabase.from('expenses').update(expenseToDb(payload, userId)).eq('id', payload.id)
+        const rowVersion = payload._rowVersion || 1
+        const { data, error: err } = await supabase
+          .from('expenses').update(expenseToDb(payload, userId))
+          .eq('id', payload.id).eq('row_version', rowVersion).select()
         if (err) throw new Error(err.message)
-        setExpenses(prev => prev.map(e => e.id === payload.id ? { ...e, _pending: false } : e))
+        if (!data || data.length === 0) {
+          const { data: dbRow } = await supabase.from('expenses').select('*').eq('id', payload.id).single()
+          if (dbRow) addConflict('expenses', payload, expenseFromDb(dbRow))
+          break
+        }
+        setExpenses(prev => prev.map(e => e.id === payload.id ? expenseFromDb(data[0]) : e))
         break
       }
       case 'deleteExpense': {
@@ -370,9 +394,17 @@ export function useStorage(userId) {
         break
       }
       case 'editIncome': {
-        const { error: err } = await supabase.from('income').update(incomeToDb(payload, userId)).eq('id', payload.id)
+        const rowVersion = payload._rowVersion || 1
+        const { data, error: err } = await supabase
+          .from('income').update(incomeToDb(payload, userId))
+          .eq('id', payload.id).eq('row_version', rowVersion).select()
         if (err) throw new Error(err.message)
-        setIncome(prev => prev.map(i => i.id === payload.id ? { ...i, _pending: false } : i))
+        if (!data || data.length === 0) {
+          const { data: dbRow } = await supabase.from('income').select('*').eq('id', payload.id).single()
+          if (dbRow) addConflict('income', payload, incomeFromDb(dbRow))
+          break
+        }
+        setIncome(prev => prev.map(i => i.id === payload.id ? incomeFromDb(data[0]) : i))
         break
       }
       case 'deleteIncome': {
@@ -475,14 +507,27 @@ export function useStorage(userId) {
     setExpenses(prev => prev.map(e => e.id === exp.id ? { ...exp, _pending: true } : e))
     const deps = () => loadQueueSnapshot().filter(i => i.op === 'addExpense' && i.payload.id === exp.id).map(i => i.id)
     if (!navigator.onLine) { enqueue('editExpense', exp, deps()); return }
-    const { data, error: err } = await supabase.from('expenses').update(expenseToDb(exp, userId)).eq('id', exp.id).select().single()
+    const rowVersion = exp._rowVersion || 1
+    const { data, error: err } = await supabase
+      .from('expenses')
+      .update(expenseToDb(exp, userId))
+      .eq('id', exp.id)
+      .eq('row_version', rowVersion)
+      .select()
     if (err) {
       if (isNetworkError(err)) { enqueue('editExpense', exp, deps()) }
       else { setError(err.message) }
       return
     }
-    setExpenses(prev => prev.map(e => e.id === exp.id ? expenseFromDb(data) : e))
-  }, [userId, enqueue])
+    if (!data || data.length === 0) {
+      // Version mismatch — fetch current DB state and surface conflict
+      const { data: dbRow } = await supabase.from('expenses').select('*').eq('id', exp.id).single()
+      if (dbRow) addConflict('expenses', exp, expenseFromDb(dbRow))
+      setExpenses(prev => prev.map(e => e.id === exp.id ? { ...e, _pending: false } : e))
+      return
+    }
+    setExpenses(prev => prev.map(e => e.id === exp.id ? expenseFromDb(data[0]) : e))
+  }, [userId, enqueue]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const deleteExpense = useCallback(async (id) => {
     setExpenses(prev => prev.filter(e => e.id !== id))
@@ -520,14 +565,26 @@ export function useStorage(userId) {
     setIncome(prev => prev.map(i => i.id === inc.id ? { ...inc, _pending: true } : i))
     const deps = () => loadQueueSnapshot().filter(i => i.op === 'addIncome' && i.payload.id === inc.id).map(i => i.id)
     if (!navigator.onLine) { enqueue('editIncome', inc, deps()); return }
-    const { data, error: err } = await supabase.from('income').update(incomeToDb(inc, userId)).eq('id', inc.id).select().single()
+    const rowVersion = inc._rowVersion || 1
+    const { data, error: err } = await supabase
+      .from('income')
+      .update(incomeToDb(inc, userId))
+      .eq('id', inc.id)
+      .eq('row_version', rowVersion)
+      .select()
     if (err) {
       if (isNetworkError(err)) { enqueue('editIncome', inc, deps()) }
       else { setError(err.message) }
       return
     }
-    setIncome(prev => prev.map(i => i.id === inc.id ? incomeFromDb(data) : i))
-  }, [userId, enqueue])
+    if (!data || data.length === 0) {
+      const { data: dbRow } = await supabase.from('income').select('*').eq('id', inc.id).single()
+      if (dbRow) addConflict('income', inc, incomeFromDb(dbRow))
+      setIncome(prev => prev.map(i => i.id === inc.id ? { ...i, _pending: false } : i))
+      return
+    }
+    setIncome(prev => prev.map(i => i.id === inc.id ? incomeFromDb(data[0]) : i))
+  }, [userId, enqueue]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const deleteIncome = useCallback(async (id) => {
     setIncome(prev => prev.filter(i => i.id !== id))
@@ -618,10 +675,22 @@ export function useStorage(userId) {
 
   const editTrip = useCallback(async (trip) => {
     setTrips(prev => prev.map(t => t.id === trip.id ? { ...trip, _pending: true } : t))
-    const { data, error: err } = await supabase.from('trips').update(tripToDb(trip, userId)).eq('id', trip.id).select().single()
+    const rowVersion = trip._rowVersion || 1
+    const { data, error: err } = await supabase
+      .from('trips')
+      .update(tripToDb(trip, userId))
+      .eq('id', trip.id)
+      .eq('row_version', rowVersion)
+      .select()
     if (err) { setError(err.message); return }
-    setTrips(prev => prev.map(t => t.id === trip.id ? tripFromDb(data) : t))
-  }, [userId])
+    if (!data || data.length === 0) {
+      const { data: dbRow } = await supabase.from('trips').select('*').eq('id', trip.id).single()
+      if (dbRow) addConflict('trips', trip, tripFromDb(dbRow))
+      setTrips(prev => prev.map(t => t.id === trip.id ? { ...t, _pending: false } : t))
+      return
+    }
+    setTrips(prev => prev.map(t => t.id === trip.id ? tripFromDb(data[0]) : t))
+  }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const deleteTrip = useCallback(async (id) => {
     setTrips(prev => prev.filter(t => t.id !== id))
@@ -647,6 +716,34 @@ export function useStorage(userId) {
     setIncome(prev => [...(data || []).map(incomeFromDb), ...prev])
     return { added: (data || []).length, errors: 0 }
   }, [userId])
+
+  // ── Conflict resolution ──────────────────────────────────
+  const resolveConflict = useCallback(async (conflictId, resolution, mergedData) => {
+    let conflict
+    setConflicts(prev => {
+      conflict = prev.find(c => c.id === conflictId)
+      return prev.filter(c => c.id !== conflictId)
+    })
+    if (!conflict) return
+
+    if (resolution === 'theirs') {
+      // Accept DB state — replace local record with remote version
+      if (conflict.table === 'expenses') setExpenses(es => es.map(e => e.id === conflict.remote.id ? conflict.remote : e))
+      if (conflict.table === 'income')   setIncome(is => is.map(i => i.id === conflict.remote.id ? conflict.remote : i))
+      if (conflict.table === 'trips')    setTrips(ts => ts.map(t => t.id === conflict.remote.id ? conflict.remote : t))
+    } else {
+      // 'mine' or 'merge' — re-attempt write using remote's current row_version
+      const base = resolution === 'merge' && mergedData ? mergedData : conflict.local
+      const forceWrite = { ...base, _rowVersion: conflict.remote._rowVersion }
+      if (conflict.table === 'expenses') await editExpense(forceWrite)
+      if (conflict.table === 'income')   await editIncome(forceWrite)
+      if (conflict.table === 'trips')    await editTrip(forceWrite)
+    }
+  }, [editExpense, editIncome, editTrip]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const dismissConflict = useCallback((conflictId) => {
+    setConflicts(prev => prev.filter(c => c.id !== conflictId))
+  }, [])
 
   // ── Clear / danger zone ──────────────────────────────────
   const clearExpenses = useCallback(async () => {
@@ -697,6 +794,7 @@ export function useStorage(userId) {
     syncing,
     online,
     realtimeStatus,
+    conflicts, resolveConflict, dismissConflict,
     addExpense, editExpense, deleteExpense, deleteManyExpenses,
     addIncome,  editIncome,  deleteIncome,
     saveBudgets,

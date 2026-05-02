@@ -1,7 +1,7 @@
 # V7 Implementation Plan — Detailed Step-by-Step
 
 **Based on:** `expensetrackerv6upgrade03APR265.md`
-**Started:** v6.7.0 | **Current:** v7.7.1 | **Last session:** Session 28 (2026-04-27)
+**Started:** v6.7.0 | **Current:** v7.8.0 | **Last session:** Session 29 (2026-05-02)
 **Working dir:** `D:\CLAUDE\EXPENSE_TRACKER\v6`
 
 ---
@@ -10,9 +10,9 @@
 
 | Status | Count |
 |--------|-------|
-| ✅ Complete | 9 |
+| ✅ Complete | 10 |
 | ⏭️ Next up | 1 |
-| 🔲 Remaining | 4 |
+| 🔲 Remaining | 3 |
 
 ---
 
@@ -29,12 +29,12 @@
 | 7 | ~~SQL Views for Insights~~ | ~~v7.5.0~~ | ~~3–4h~~ | ✅ Done — Session 27 |
 | 8 | ~~Sync Queue Optimization~~ | ~~v7.6.0~~ | ~~4–5h~~ | ✅ Done — Session 27 |
 | ~~9~~ | ~~WebAuthn Biometric Lock~~ | ~~v7.7.0~~ | ~~5–6h~~ | ✅ Done — Session 28 |
-| 10 | **Database Versioning + Conflict UI** | v7.8.0 | 6–8h | ⏭️ **NEXT** |
-| 11 | Tesseract.js OCR | v7.9.0 | 6–8h | 🔲 |
+| ~~10~~ | ~~Database Versioning + Conflict UI~~ | ~~v7.8.0~~ | ~~6–8h~~ | ✅ Done — Session 29 |
+| 11 | **Tesseract.js OCR** | v7.9.0 | 6–8h | ⏭️ **NEXT** |
 | 12 | Middleware Protection | v7.10.0 | 4–5h | 🔲 |
 | 13 | HttpOnly Cookie Migration | v7.11.0 | 8–10h | 🔲 |
 
-**Total remaining: ~29–38h across 5 features**
+**Total remaining: ~18–23h across 3 features**
 
 ---
 

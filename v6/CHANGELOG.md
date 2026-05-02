@@ -38,7 +38,47 @@
 | 26b | 2026-04-25 | v7.3.0: Trips expand/collapse — inline expense list (Date·Cat·Desc·Amt), per-day rate, full-width expanded card | 1.5 |
 | 27 | 2026-04-27 | v7.4.0b: DB Maintenance Cron (api/maintenance.js + vercel.json); v7.4.0: Anomaly Detection (detectAnomaly, AnomalyPanel, localStorage persistence); v7.5.0: SQL Views for Insights (3 Postgres views, useInsightViews hook, 5 useMemo replaced); v7.6.0: Sync Queue Optimization (topoSort, dependsOn field, 8 enqueue callsites) | 6.0 |
 | 28 | 2026-04-27 | v7.7.0: WebAuthn Biometric Lock — server-enforced (4 API routes, useBiometric hook, LockScreen, 45-issue break-test audit fixed); OTP email fallback with backup email, server-side validation, rate limiting, alphanumeric OTP, 15-min lockout; v7.7.1: 45 break-test issues fixed (6 critical, 6 high, 6 medium, 3 medium-low, 3 low) | 9.0 |
-| **Total** | | | **~88.0 h** |
+| 29 | 2026-05-02 | v7.8.0: Database Versioning + Conflict UI — row_version column + BEFORE UPDATE trigger on 4 tables; optimistic locking in editExpense/editIncome/editTrip + executeOp replay; ConflictModal with side-by-side diff, Keep Mine / Keep Theirs / Merge mode (per-field radio picker); conflict badge in header | 3.5 |
+| **Total** | | | **~91.5 h** |
+
+---
+
+## [v7.8.0] — Database Versioning + Conflict UI
+_2026-05-02_
+
+**New: `supabase/add_row_versioning.sql`**
+- `row_version INTEGER NOT NULL DEFAULT 1` + `updated_at TIMESTAMPTZ` added to `expenses`, `income`, `trips`, `goals`
+- `bump_row_version()` Postgres function: `NEW.row_version = OLD.row_version + 1; NEW.updated_at = now()`
+- `BEFORE UPDATE` trigger installed on all 4 tables — increment is server-enforced, not client-controlled
+
+**`src/hooks/useStorage.js`**
+- `expenseFromDb`, `incomeFromDb`, `tripFromDb` now map `_rowVersion: row.row_version || 1` into app state
+- `editExpense`, `editIncome`, `editTrip`: `.eq('row_version', rowVersion)` added to UPDATE query; 0-row result = conflict detected
+- On conflict: fetch current DB row, call `addConflict(table, local, remote)` to push to `conflicts[]` state
+- `executeOp` cases `editExpense` + `editIncome` also updated with version check + conflict detection for queued replays
+- `conflicts` state (`useState([])`), `addConflict` helper (dedup by table+id), `resolveConflict(id, resolution, mergedData)`, `dismissConflict(id)`
+- `resolveConflict 'theirs'`: apply remote record to local state, no DB write; `'mine'`/`'merge'`: re-call editXxx with `_rowVersion` set to remote's version (bypass conflict on second attempt)
+- All new state/callbacks exported from hook
+
+**New: `src/components/ConflictModal.jsx`**
+- `FIELD_META` map: defines which fields to diff per table (13 expense fields, 8 income fields, 5 trip fields) with labels and formatters
+- `diffFields(table, local, remote)`: returns only fields that differ (array-aware via JSON.stringify)
+- **Choose mode**: side-by-side table (Your Version in blue | Other Device in purple), timestamp, Dismiss / Keep Theirs / Merge… / Keep Mine buttons
+- **Merge mode**: per-field radio buttons with `mine`/`theirs` tags; "Apply Merge" builds merged object from choices
+- Multi-conflict pager: ‹ N/total › navigation, resets mode on navigate
+- Handles zero visible diffs (re-save without changes)
+
+**`src/components/Tracker.jsx`**
+- `import ConflictModal from './ConflictModal'`
+- Destructures `conflicts`, `resolveConflict`, `dismissConflict` from `useStorage`
+- Conflict badge in header: amber pill `⚠️ N` with count, only shown when `conflicts.length > 0`
+- `<ConflictModal>` rendered at end of component tree, above `<ToastStack>`
+
+**`src/styles/index.css`**
+- `.conflict-badge` — amber pill, dark mode override
+- `.conflict-overlay`, `.conflict-modal`, `.conflict-header`, `.conflict-table` — modal layout
+- `.col-local` (blue) / `.col-remote` (purple) — column colour coding, dark-mode-aware
+- `.merge-field`, `.merge-option`, `.merge-side-tag.mine/.theirs` — per-field radio UI
 
 ---
 
