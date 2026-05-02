@@ -41,7 +41,8 @@
 | 29 | 2026-05-02 | v7.8.0: Database Versioning + Conflict UI — row_version column + BEFORE UPDATE trigger on 4 tables; optimistic locking in editExpense/editIncome/editTrip + executeOp replay; ConflictModal with side-by-side diff, Keep Mine / Keep Theirs / Merge mode (per-field radio picker); conflict badge in header | 3.5 |
 | 30 | 2026-05-02 | Security debug + fixes: OTP backup always accessible after biometric lockout; OTP resend limit (1+2); cross-device Bluetooth auth blocked; per-credential counter/failed_attempts isolation; v7.8.0 conflict UI tested; Supabase Gmail SMTP; v7.10.0 marked complete; HTTP security headers (CSP, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy); Supabase Auth hardening (secure email change, OTP expiry 600s, min password 8, rate limit 10/5min); v7.11.0 HttpOnly Cookie Migration — api/auth-cookie.js (key-aware JSON map, HttpOnly/Secure/SameSite=Lax), cookieStorage.js async adapter, Web Locks bypass, et_v6_unlocking race condition fix; verified: sb_session HttpOnly cookie, no auth token in localStorage, session persists on reload | 9.0 |
 | 31 | 2026-05-02 | v7.11.0 debug: double-decode fix in GET handler; key-aware removeItem to prevent session wipe; Web Locks bypass for async storage lock contention; et_v6_unlocking flag for biometric/OTP race condition in App.jsx | 1.5 |
-| **Total** | | | **~101.5 h** |
+| 32 | 2026-05-02 | Deep audit (30 issues, 7 real): await OTP attempts update (brute-force protection fix); 30s timeout on et_v6_unlocking flag; email format validation in backup-otp-send; assertion format validation in biometric-verify; cookieStorage JSON parse safety; isMounted guard on initial data load; conflict array auto-expiry after 1 hour; CSP cdn.jsdelivr.net removed; deleted-record error messages; backup email validation hardened | 2.0 |
+| **Total** | | | **~103.5 h** |
 
 ---
 
