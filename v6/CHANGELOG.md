@@ -39,7 +39,37 @@
 | 27 | 2026-04-27 | v7.4.0b: DB Maintenance Cron (api/maintenance.js + vercel.json); v7.4.0: Anomaly Detection (detectAnomaly, AnomalyPanel, localStorage persistence); v7.5.0: SQL Views for Insights (3 Postgres views, useInsightViews hook, 5 useMemo replaced); v7.6.0: Sync Queue Optimization (topoSort, dependsOn field, 8 enqueue callsites) | 6.0 |
 | 28 | 2026-04-27 | v7.7.0: WebAuthn Biometric Lock — server-enforced (4 API routes, useBiometric hook, LockScreen, 45-issue break-test audit fixed); OTP email fallback with backup email, server-side validation, rate limiting, alphanumeric OTP, 15-min lockout; v7.7.1: 45 break-test issues fixed (6 critical, 6 high, 6 medium, 3 medium-low, 3 low) | 9.0 |
 | 29 | 2026-05-02 | v7.8.0: Database Versioning + Conflict UI — row_version column + BEFORE UPDATE trigger on 4 tables; optimistic locking in editExpense/editIncome/editTrip + executeOp replay; ConflictModal with side-by-side diff, Keep Mine / Keep Theirs / Merge mode (per-field radio picker); conflict badge in header | 3.5 |
-| **Total** | | | **~91.5 h** |
+| 30 | 2026-05-02 | Security debug + fixes: OTP backup always accessible after biometric lockout (clear otp_locked_until when biometric locks); OTP resend limit (1 initial + 2 resends, counter in LockScreen); cross-device Bluetooth auth blocked (transports forced to internal in register + auth-options); per-credential counter/failed_attempts isolation in biometric-verify (eq user_id → eq cred.id for both success + failure paths); v7.8.0 conflict UI fully tested (Keep Mine, Keep Theirs, Merge verified); Supabase Gmail SMTP configured | 4.5 |
+| **Total** | | | **~96.0 h** |
+
+---
+
+## [Session 30 Fixes] — Biometric Security Hardening
+_2026-05-02_
+
+**Fix: Per-credential counter and failed_attempts isolation (`api/biometric-verify.js`)**
+- Root cause: both success and failure update paths used `.eq('user_id', userId)` → updated ALL enrolled device credentials, not just the authenticating one
+- PC unlocking many times inflated DB counter on phone credential → phone's real counter < DB counter → phone rejected
+- PC failing 3 times locked phone credential too
+- Fix: both paths now use `.eq('id', cred.id)` — each device's counter and lockout state fully isolated
+
+**Fix: Cross-device Bluetooth auth blocked**
+- `biometric-register.js`: transports stored as `['internal']` always — strips `hybrid`/`ble`/`usb` from synced passkeys (Google Account / iCloud Keychain)
+- `biometric-auth-options.js`: `allowCredentials` restored with `transports: ['internal']` forced on every entry — browser never offers Bluetooth cross-device auth
+
+**Fix: OTP backup always accessible after biometric lockout (`api/biometric-verify.js`)**
+- When biometric locks after 3 failures, also resets `otp_locked_until = null` and `otp_attempts = 0`
+- Guarantees OTP backup email path is always open when biometrics fail
+
+**Fix: OTP resend limit (`src/components/LockScreen.jsx`)**
+- `otpSendCount` state tracks total sends (initial + resends)
+- Max 3 total sends (1 initial + 2 resends); resend button shows remaining count
+- After 3rd send: button replaced with "Maximum resends reached" message
+
+**v7.8.0 Conflict UI — fully tested**
+- Keep Mine, Keep Theirs, Merge (per-field picker) all verified working
+- DB trigger confirmed firing for app-initiated saves (row_version=6 on PC credential after 5 unlocks)
+- Cross-device conflict correctly detected and resolved
 
 ---
 
