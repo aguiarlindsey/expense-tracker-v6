@@ -10,6 +10,9 @@ export const supabase = createClient(
       persistSession:     true,
       autoRefreshToken:   true,
       detectSessionInUrl: true,
+      // Bypass Web Locks API — avoids AbortError lock contention caused by async
+      // cookie storage holding the lock longer than synchronous localStorage would
+      lock: async (_name, _acquireTimeout, fn) => fn(),
     },
   }
 )
