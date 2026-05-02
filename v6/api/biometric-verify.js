@@ -73,11 +73,17 @@ export default async function handler(req, res) {
   } catch {
     const newAttempts  = (cred.failed_attempts || 0) + 1
     const shouldLock   = newAttempts >= MAX_ATTEMPTS
-    await admin.from('biometric_credentials').update({
-      failed_attempts: newAttempts,
-      locked_until:    shouldLock ? new Date(Date.now() + LOCK_MINUTES * 60 * 1000).toISOString() : null,
+    const lockPayload = {
+      failed_attempts:   newAttempts,
+      locked_until:      shouldLock ? new Date(Date.now() + LOCK_MINUTES * 60 * 1000).toISOString() : null,
       current_challenge: null,
-    }).eq('user_id', userId)
+    }
+    // When biometric locks, clear OTP lockout so backup email path is always accessible
+    if (shouldLock) {
+      lockPayload.otp_locked_until = null
+      lockPayload.otp_attempts     = 0
+    }
+    await admin.from('biometric_credentials').update(lockPayload).eq('user_id', userId)
 
     if (shouldLock) { try { await sendAlertEmail(newAttempts) } catch {} }
 

@@ -27,6 +27,7 @@ export default function LockScreen({ onUnlocked }) {
   const [otp, setOtp]                   = useState('')
   const [otpLoading, setOtpLoading]     = useState(false)
   const [otpError, setOtpError]         = useState(null)
+  const [otpSendCount, setOtpSendCount] = useState(0) // tracks total sends (initial + resends)
 
   async function handleUnlock() {
     setError(null)
@@ -49,6 +50,7 @@ export default function LockScreen({ onUnlocked }) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to send code')
+      setOtpSendCount(1)
       setMode('otp-verify')
     } catch (e) {
       setConfirmError(e.message || 'Failed to send code. Try again.')
@@ -68,6 +70,7 @@ export default function LockScreen({ onUnlocked }) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to resend code')
+      setOtpSendCount(c => c + 1)
     } catch (e) {
       setOtpError(e.message)
     } finally {
@@ -194,9 +197,13 @@ export default function LockScreen({ onUnlocked }) {
                 : 'Verify Code'}
             </button>
 
-            <button className="lock-fallback-link" onClick={handleResendOtp} disabled={otpLoading}>
-              Resend code
-            </button>
+            {otpSendCount < 3 ? (
+              <button className="lock-fallback-link" onClick={handleResendOtp} disabled={otpLoading}>
+                Resend code {otpSendCount > 0 && `(${2 - (otpSendCount - 1)} left)`}
+              </button>
+            ) : (
+              <p className="lock-resend-exhausted">Maximum resends reached. Enter the last code sent or wait 15 min.</p>
+            )}
           </>
         )}
       </div>

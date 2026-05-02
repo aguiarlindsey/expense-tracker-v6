@@ -1206,4 +1206,5 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
   margin-bottom: 1rem; outline: none;
 }
 .lock-otp-confirm-input:focus { border-color: var(--primary); }
+.lock-resend-exhausted { font-size: 0.8rem; color: var(--text-muted); margin-top: 1rem; text-align: center; line-height: 1.4; }
 
