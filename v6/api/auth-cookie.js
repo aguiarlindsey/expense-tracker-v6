@@ -1,51 +1,68 @@
-// HttpOnly cookie endpoint — stores Supabase session server-side
-// JS cannot read HttpOnly cookies directly; this endpoint is the only bridge
+// HttpOnly cookie endpoint — stores Supabase session server-side as a key map
+// Supports multiple keys (Supabase uses one primary key but may set/remove others)
 
 const COOKIE_NAME = 'sb_session'
-const MAX_AGE     = 60 * 60 * 24 * 7 // 7 days — matches Supabase refresh token lifetime
+const MAX_AGE     = 60 * 60 * 24 * 7 // 7 days
 
 function parseCookies(req) {
   const list = {}
   const rc = req.headers.cookie || ''
   rc.split(';').forEach(c => {
-    const [k, ...v] = c.split('=')
-    if (k) list[k.trim()] = decodeURIComponent(v.join('=').trim())
+    const idx = c.indexOf('=')
+    if (idx < 0) return
+    const k = c.slice(0, idx).trim()
+    const v = c.slice(idx + 1).trim()
+    list[k] = v
   })
   return list
 }
 
-function cookieHeader(value, maxAge) {
-  const parts = [
-    `${COOKIE_NAME}=${encodeURIComponent(value)}`,
+function readMap(req) {
+  const cookies = parseCookies(req)
+  const raw = cookies[COOKIE_NAME]
+  if (!raw) return {}
+  try { return JSON.parse(decodeURIComponent(raw)) } catch { return {} }
+}
+
+function setCookieHeader(map, maxAge) {
+  const encoded = encodeURIComponent(JSON.stringify(map))
+  return [
+    `${COOKIE_NAME}=${encoded}`,
     `Max-Age=${maxAge}`,
     'Path=/',
     'HttpOnly',
     'Secure',
     'SameSite=Lax',
-  ]
-  return parts.join('; ')
+  ].join('; ')
 }
 
 export default function handler(req, res) {
-  // GET — return session value from cookie (read by custom storage adapter on init)
-  // parseCookies already decodeURIComponent's the value — do NOT decode again
+  // GET ?key=xxx — return value for a specific key
   if (req.method === 'GET') {
-    const cookies = parseCookies(req)
-    const value   = cookies[COOKIE_NAME] || null
-    return res.status(200).json({ value })
+    const key = req.query?.key
+    if (!key) return res.status(400).json({ error: 'Missing key' })
+    const map = readMap(req)
+    return res.status(200).json({ value: map[key] || null })
   }
 
-  // POST — set session in HttpOnly cookie (called on sign-in / token refresh)
+  // POST { key, value } — set a key in the map
   if (req.method === 'POST') {
-    const { value } = req.body || {}
-    if (!value) return res.status(400).json({ error: 'Missing value' })
-    res.setHeader('Set-Cookie', cookieHeader(value, MAX_AGE))
+    const { key, value } = req.body || {}
+    if (!key || value === undefined) return res.status(400).json({ error: 'Missing key or value' })
+    const map = readMap(req)
+    map[key] = value
+    res.setHeader('Set-Cookie', setCookieHeader(map, MAX_AGE))
     return res.status(200).json({ ok: true })
   }
 
-  // DELETE — clear cookie (called on sign-out)
+  // DELETE ?key=xxx — remove only that key from the map
   if (req.method === 'DELETE') {
-    res.setHeader('Set-Cookie', cookieHeader('', 0))
+    const key = req.query?.key
+    if (!key) return res.status(400).json({ error: 'Missing key' })
+    const map = readMap(req)
+    delete map[key]
+    const maxAge = Object.keys(map).length === 0 ? 0 : MAX_AGE
+    res.setHeader('Set-Cookie', setCookieHeader(map, maxAge))
     return res.status(200).json({ ok: true })
   }
 

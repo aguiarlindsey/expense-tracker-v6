@@ -1,10 +1,12 @@
 // Async storage adapter for Supabase client
-// Replaces localStorage — tokens stored in HttpOnly cookie via /api/auth-cookie
-// Supabase calls getItem/setItem/removeItem with a single key (sb-[ref]-auth-token)
+// Stores tokens in HttpOnly cookie via /api/auth-cookie as a key→value map
+// Each Supabase storage key gets its own entry — removeItem is key-specific
 
-async function getItem() {
+async function getItem(key) {
   try {
-    const res = await fetch('/api/auth-cookie', { credentials: 'include' })
+    const res = await fetch(`/api/auth-cookie?key=${encodeURIComponent(key)}`, {
+      credentials: 'include',
+    })
     if (!res.ok) return null
     const { value } = await res.json()
     return value || null
@@ -13,20 +15,20 @@ async function getItem() {
   }
 }
 
-async function setItem(_key, value) {
+async function setItem(key, value) {
   try {
     await fetch('/api/auth-cookie', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ value }),
+      body: JSON.stringify({ key, value }),
     })
   } catch {}
 }
 
-async function removeItem() {
+async function removeItem(key) {
   try {
-    await fetch('/api/auth-cookie', {
+    await fetch(`/api/auth-cookie?key=${encodeURIComponent(key)}`, {
       method: 'DELETE',
       credentials: 'include',
     })
