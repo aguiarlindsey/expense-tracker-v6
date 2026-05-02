@@ -25,6 +25,7 @@ export default async function handler(req, res) {
 
     const { userId, backupEmail } = req.body
     if (!userId || !backupEmail) return res.status(400).json({ error: 'Missing fields' })
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(backupEmail)) return res.status(400).json({ error: 'Invalid email format' })
 
     // Get stored credential — includes server-side backup_email and main_email
     const { data: cred } = await admin

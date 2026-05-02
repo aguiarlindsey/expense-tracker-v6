@@ -41,6 +41,9 @@ export default async function handler(req, res) {
 
   const { userId, assertion } = req.body
   if (!userId || !assertion) return res.status(400).json({ error: 'Missing fields' })
+  if (typeof assertion !== 'object' || !assertion.id || !assertion.response) {
+    return res.status(400).json({ error: 'Invalid assertion format' })
+  }
 
   // Match the specific credential used (assertion.id = the credential that signed)
   const { data: cred } = await admin

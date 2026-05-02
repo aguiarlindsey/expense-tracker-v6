@@ -77,7 +77,7 @@ export default async function handler(req, res) {
       const newAttempts = (cred.otp_attempts || 0) + 1
       const shouldLock  = newAttempts >= MAX_OTP_ATTEMPTS
 
-      admin.from('biometric_credentials').update({
+      await admin.from('biometric_credentials').update({
         otp_attempts:    newAttempts,
         otp_locked_until: shouldLock ? new Date(Date.now() + LOCK_MINUTES * 60 * 1000).toISOString() : null,
       }).eq('user_id', userId)

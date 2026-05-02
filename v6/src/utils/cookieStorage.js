@@ -8,8 +8,8 @@ async function getItem(key) {
       credentials: 'include',
     })
     if (!res.ok) return null
-    const { value } = await res.json()
-    return value || null
+    const data = await res.json().catch(() => ({}))
+    return data?.value || null
   } catch {
     return null
   }

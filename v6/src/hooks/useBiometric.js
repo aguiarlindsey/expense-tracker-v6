@@ -100,8 +100,9 @@ export function useBiometric() {
       }
 
       // Flag prevents App.jsx from signing out while session is being restored
-      // try/finally guarantees removal even if verifyOtp throws
+      // Timeout ensures flag is cleared even if the browser crashes before finally runs
       localStorage.setItem('et_v6_unlocking', '1')
+      const unlockTimeout = setTimeout(() => localStorage.removeItem('et_v6_unlocking'), 30000)
       try {
         const { error: otpErr } = await supabase.auth.verifyOtp({
           token_hash: verData.token_hash,
@@ -109,6 +110,7 @@ export function useBiometric() {
         })
         if (otpErr) throw new Error('Failed to restore session: ' + otpErr.message)
       } finally {
+        clearTimeout(unlockTimeout)
         localStorage.removeItem('et_v6_unlocking')
       }
 

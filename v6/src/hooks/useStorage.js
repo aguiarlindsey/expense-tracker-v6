@@ -162,6 +162,16 @@ export function useStorage(userId) {
   const [realtimeStatus,  setRealtimeStatus]  = useState('connecting')
   const [conflicts,       setConflicts]       = useState([])
 
+  // Auto-expire conflicts older than 1 hour to prevent unbounded memory growth
+  useEffect(() => {
+    if (conflicts.length === 0) return
+    const t = setTimeout(() => {
+      const cutoff = Date.now() - 60 * 60 * 1000
+      setConflicts(prev => prev.filter(c => new Date(c.detectedAt).getTime() > cutoff))
+    }, 60 * 60 * 1000)
+    return () => clearTimeout(t)
+  }, [conflicts.length])
+
   const { queue, online, enqueue, remove, bumpAttempts, dropExhausted } = useRetryQueue()
 
   // ── Conflict helpers ──────────────────────────────────
@@ -179,6 +189,7 @@ export function useStorage(userId) {
   // ── Initial load ──────────────────────────────────────
   useEffect(() => {
     if (!userId) return
+    let mounted = true
     setLoading(true)
     setError(null)
     Promise.all([
@@ -186,6 +197,7 @@ export function useStorage(userId) {
       supabase.from('income').select('*').eq('user_id', userId).order('date', { ascending: false }),
       supabase.from('budgets').select('*').eq('user_id', userId).maybeSingle(),
     ]).then(([expRes, incRes, budRes]) => {
+      if (!mounted) return
       if (expRes.error) setError(expRes.error.message)
       if (incRes.error) setError(incRes.error.message)
       setExpenses((expRes.data || []).map(expenseFromDb))
@@ -200,6 +212,7 @@ export function useStorage(userId) {
       }
       setLoading(false)
     })
+    return () => { mounted = false }
   }, [userId])
 
   useEffect(() => {
