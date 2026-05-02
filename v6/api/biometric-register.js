@@ -70,7 +70,7 @@ export default async function handler(req, res) {
     user_id:         user.id,
     public_key:      Buffer.from(cred.publicKey).toString('base64'),
     counter:         cred.counter,
-    transports:      cred.transports || [],
+    transports:      ['internal'], // platform-only — strip hybrid/ble/usb from synced passkeys
     device_name:     name,
     main_email:      mainEmail  || user.email || null,
     backup_email:    backupEmail || null,
