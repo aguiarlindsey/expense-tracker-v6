@@ -19,14 +19,20 @@ export default function LockScreen({ onUnlocked }) {
   const { authenticate, authenticating, error, setError } = useBiometric()
 
   const [backupEmail] = useState(() => localStorage.getItem(BACKUP_EMAIL_KEY) || localStorage.getItem(EMAIL_KEY) || '')
+  const [mainEmail]   = useState(() => localStorage.getItem(EMAIL_KEY) || '')
   const [userId]      = useState(() => localStorage.getItem(USER_ID_KEY) || '')
 
-  const [mode, setMode]                 = useState('biometric') // 'biometric' | 'otp-confirm' | 'otp-verify'
+  const [mode, setMode]                 = useState('biometric') // 'biometric' | 'otp-confirm' | 'otp-verify' | 'magic-link'
   const [confirmInput, setConfirmInput] = useState('')
   const [confirmError, setConfirmError] = useState(null)
   const [otp, setOtp]                   = useState('')
   const [otpLoading, setOtpLoading]     = useState(false)
   const [otpError, setOtpError]         = useState(null)
+
+  const [magicEmail,   setMagicEmail]   = useState(() => localStorage.getItem(EMAIL_KEY) || '')
+  const [magicLoading, setMagicLoading] = useState(false)
+  const [magicSent,    setMagicSent]    = useState(false)
+  const [magicError,   setMagicError]   = useState(null)
 
   async function handleUnlock() {
     setError(null)
@@ -72,6 +78,23 @@ export default function LockScreen({ onUnlocked }) {
       setOtpError(e.message)
     } finally {
       setOtpLoading(false)
+    }
+  }
+
+  async function handleSendMagicLink() {
+    setMagicLoading(true)
+    setMagicError(null)
+    try {
+      const { error: err } = await supabase.auth.signInWithOtp({
+        email: magicEmail.trim().toLowerCase(),
+        options: { emailRedirectTo: window.location.origin },
+      })
+      if (err) throw new Error(err.message)
+      setMagicSent(true)
+    } catch (e) {
+      setMagicError(e.message || 'Failed to send link. Try again.')
+    } finally {
+      setMagicLoading(false)
     }
   }
 
@@ -123,7 +146,11 @@ export default function LockScreen({ onUnlocked }) {
 
             <button className="lock-fallback-link"
               onClick={() => { setError(null); setConfirmError(null); setConfirmInput(''); setMode('otp-confirm') }}>
-              Can't use biometrics? Sign in with email
+              Can't use biometrics? Use backup email code
+            </button>
+            <button className="lock-fallback-link"
+              onClick={() => { setError(null); setMagicError(null); setMagicSent(false); setMode('magic-link') }}>
+              Send a magic link to my email
             </button>
           </>
         )}
@@ -159,6 +186,55 @@ export default function LockScreen({ onUnlocked }) {
 
             <button className="lock-fallback-link"
               onClick={() => { setConfirmError(null); setConfirmInput(''); setMode('biometric') }}>
+              ← Back to biometrics
+            </button>
+            <button className="lock-fallback-link"
+              onClick={() => { setMagicError(null); setMagicSent(false); setMode('magic-link') }}>
+              Don't know your backup email? Send a magic link
+            </button>
+          </>
+        )}
+
+        {/* ── Magic link mode ── */}
+        {mode === 'magic-link' && (
+          <>
+            {!magicSent ? (
+              <>
+                <p className="lock-otp-desc">
+                  Enter your account email and we'll send you a sign-in link. No backup email needed.
+                </p>
+
+                {magicError && <div className="lock-error">{magicError}</div>}
+
+                <input
+                  className="lock-otp-confirm-input"
+                  type="email"
+                  placeholder="your@email.com"
+                  value={magicEmail}
+                  onChange={e => { setMagicEmail(e.target.value); setMagicError(null) }}
+                  autoFocus
+                  onKeyDown={e => e.key === 'Enter' && magicEmail.trim() && handleSendMagicLink()}
+                />
+
+                <button className="lock-btn" onClick={handleSendMagicLink}
+                  disabled={magicLoading || !magicEmail.trim()}>
+                  {magicLoading
+                    ? <><span className="lock-spinner" /> Sending…</>
+                    : '✉️ Send Magic Link'}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="lock-magic-sent">✅</div>
+                <p className="lock-otp-desc">
+                  Magic link sent to <strong>{magicEmail}</strong>.<br />
+                  Check your inbox and click the link — this window will unlock automatically.
+                </p>
+              </>
+            )}
+
+            <button className="lock-fallback-link"
+              onClick={() => { setMagicError(null); setMagicSent(false); setMode('biometric') }}>
               ← Back to biometrics
             </button>
           </>
