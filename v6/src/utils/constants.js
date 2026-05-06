@@ -147,9 +147,9 @@ export const CATS = {
   'Health':        { icon: '💊', color: '#ef4444', subs: ['Medicine','Doctor','Lab Tests','Hospital','Wellness','Dental'] },
   'Entertainment': { icon: '🎬', color: '#ec4899', subs: ['Movies','OTT/Streaming','Gaming','Events','Hobbies','Sports'] },
   'Utilities':     { icon: '💡', color: '#f59e0b', subs: ['Electricity','Water','Gas','Internet','Phone','Cable'] },
-  'Housing':       { icon: '🏠', color: '#10b981', subs: ['Rent','EMI','Maintenance','Repairs','Security','Interior'] },
+  'Housing':       { icon: '🏠', color: '#10b981', subs: ['Rent','EMI','Maintenance','Repairs','Housekeeping','Pest Control','Security','Interior'] },
   'Education':     { icon: '📚', color: '#06b6d4', subs: ['Fees','Books','Courses','Stationery','Coaching','Exams'] },
-  'Personal':      { icon: '💆', color: '#84cc16', subs: ['Haircut','Skincare','Gym','Spa','Personal Care','Fashion'] },
+  'Personal':      { icon: '💆', color: '#84cc16', subs: ['Haircut','Skincare','Gym','Spa','Personal Care','Laundry','Dry Cleaning','Fashion'] },
   'Travel':        { icon: '✈️', color: '#6366f1', subs: ['Hotel','Sightseeing','Visa','Insurance','Souvenirs','Transport'] },
   'Finance':       { icon: '💰', color: '#14b8a6', subs: ['Insurance','Tax','Loan Payment','Investment','Bank Fees','Savings'] },
   'Social':        { icon: '🎉', color: '#f43f5e', subs: ['Gifts','Parties','Donations','Subscriptions','Events','Dining Out'] },
@@ -240,7 +240,7 @@ export const FALLBACK_RATES = {
   TMT: 0.04178,  KGS: 1.0400,
 }
 
-export const PAY_METHODS    = ['Cash','Credit Card','Debit Card','UPI/QR','Net Banking','Wallet','Cheque','EMI','Other']
+export const PAY_METHODS    = ['Cash','Credit Card','Debit Card','Forex Card','UPI/QR','Net Banking','Wallet','Cheque','EMI','Other']
 export const UPI_APPS       = ['','GPay','PhonePe','Paytm','PayZapp','BHIM','Amazon Pay','WhatsApp Pay','Cred','Slice','Other']
 export const WALLET_APPS    = ['','Amazon Pay','Paytm','PhonePe','Mobikwik','Freecharge','Ola Money','Jio Money','Other']
 export const INC_SOURCES    = ['Salary','Freelance','Business','Rental','Dividends','Interest','Bonus','Gift','Refund','Side Income','Other']

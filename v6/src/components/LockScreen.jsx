@@ -90,8 +90,6 @@ export default function LockScreen({ onUnlocked }) {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Verification failed')
 
-      // Flag prevents App.jsx from signing out while session is being restored
-      // Timeout ensures flag is cleared even if the browser crashes before finally runs
       localStorage.setItem('et_v6_unlocking', '1')
       const unlockTimeout = setTimeout(() => localStorage.removeItem('et_v6_unlocking'), 30000)
       try {
@@ -100,10 +98,13 @@ export default function LockScreen({ onUnlocked }) {
           type: 'email',
         })
         if (otpErr) throw new Error('Failed to restore session: ' + otpErr.message)
+        clearTimeout(unlockTimeout)
+        // Flag cleared by App.jsx handleUnlocked() after React commits biometricLocked=false
         onUnlocked()
-      } finally {
+      } catch (e) {
         clearTimeout(unlockTimeout)
         localStorage.removeItem('et_v6_unlocking')
+        throw e
       }
     } catch (e) {
       setOtpError(e.message || 'Invalid or expired code. Try again.')

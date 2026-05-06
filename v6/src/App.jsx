@@ -31,7 +31,12 @@ export default function App() {
     }
   }, [session, biometricLocked])
 
-  function handleUnlocked() { setBiometricLocked(false) }
+  function handleUnlocked() {
+    setBiometricLocked(false)
+    // Clear after React commits biometricLocked=false — prevents sign-out effect
+    // from seeing session=valid + biometricLocked=true + flag=null between state updates
+    requestAnimationFrame(() => localStorage.removeItem('et_v6_unlocking'))
+  }
 
   async function handleSignOut() { await supabase.auth.signOut() }
 

@@ -109,9 +109,15 @@ export function useBiometric() {
           type: 'email',
         })
         if (otpErr) throw new Error('Failed to restore session: ' + otpErr.message)
-      } finally {
+        clearTimeout(unlockTimeout)
+        // Flag intentionally NOT cleared here — App.jsx handleUnlocked() clears it via
+        // requestAnimationFrame, after setBiometricLocked(false) is committed by React.
+        // This prevents a race where the session-change effect fires between verifyOtp and
+        // the biometricLocked state update, triggering a spurious sign-out.
+      } catch (e) {
         clearTimeout(unlockTimeout)
         localStorage.removeItem('et_v6_unlocking')
+        throw e
       }
 
       return { success: true }
