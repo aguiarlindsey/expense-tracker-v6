@@ -149,7 +149,7 @@ export const CATS = {
   'Utilities':     { icon: '💡', color: '#f59e0b', subs: ['Electricity','Water','Gas','Internet','Phone','Cable'] },
   'Housing':       { icon: '🏠', color: '#10b981', subs: ['Rent','EMI','Maintenance','Repairs','Housekeeping','Pest Control','Security','Interior'] },
   'Education':     { icon: '📚', color: '#06b6d4', subs: ['Fees','Books','Courses','Stationery','Coaching','Exams'] },
-  'Personal':      { icon: '💆', color: '#84cc16', subs: ['Haircut','Skincare','Gym','Spa','Personal Care','Laundry','Dry Cleaning','Fashion'] },
+  'Personal':      { icon: '💆', color: '#84cc16', subs: ['Haircut','Skincare','Gym','Spa','Personal Care','Laundry','Dry Cleaning','Ironing','Fashion'] },
   'Travel':        { icon: '✈️', color: '#6366f1', subs: ['Hotel','Sightseeing','Visa','Insurance','Souvenirs','Transport'] },
   'Finance':       { icon: '💰', color: '#14b8a6', subs: ['Insurance','Tax','Loan Payment','Investment','Bank Fees','Savings'] },
   'Social':        { icon: '🎉', color: '#f43f5e', subs: ['Gifts','Parties','Donations','Subscriptions','Events','Dining Out'] },
