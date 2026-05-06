@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   try {
     if (req.method !== 'POST') return res.status(405).end()
 
-    const { userId } = req.body
+    const { userId, credentialId } = req.body
     if (!userId) return res.status(400).json({ error: 'userId required' })
 
     // Fetch ALL credentials for this user (multi-device support)
@@ -38,22 +38,31 @@ export default async function handler(req, res) {
       })
     }
 
-    // Force transports: ['internal'] on every credential so the browser never offers
-    // cross-device Bluetooth auth, even if a credential was registered with hybrid transport.
+    // If the client sends its enrolled credential ID, use only that one.
+    // This makes each device independent: challenges are stored per-credential so
+    // PC generating auth options can't overwrite the phone's pending challenge.
+    const matchedCred = credentialId && activeCreds.find(c => c.id === credentialId)
+    const deviceCreds = matchedCred ? [matchedCred] : activeCreds
+
+    // Force transports: ['internal'] so the browser never offers cross-device Bluetooth auth.
     const options = await generateAuthenticationOptions({
       rpID: RP_ID,
       userVerification: 'required',
-      allowCredentials: activeCreds.map(c => ({
+      allowCredentials: deviceCreds.map(c => ({
         id:         c.id,
         type:       'public-key',
         transports: ['internal'],
       })),
     })
 
-    // Store challenge on all credentials for this user
-    await admin.from('biometric_credentials')
+    // Store challenge only on this device's credential row — not on every credential.
+    // Storing on all rows caused the "biometric not recognised" bug: if PC generated
+    // options after phone, phone's stored challenge was overwritten before phone verified.
+    const challengeUpdate = admin.from('biometric_credentials')
       .update({ current_challenge: options.challenge })
-      .eq('user_id', userId)
+    await (deviceCreds.length === 1
+      ? challengeUpdate.eq('id', deviceCreds[0].id)
+      : challengeUpdate.eq('user_id', userId))
 
     res.json(options)
   } catch (e) {

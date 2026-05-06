@@ -2,9 +2,10 @@ import { useState, useCallback } from 'react'
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser'
 import { supabase } from '../utils/supabase'
 
-const ENROLLED_KEY = 'et_v6_biometric_enrolled'
-const USER_ID_KEY  = 'et_v6_user_id'
-const EMAIL_KEY    = 'et_v6_user_email'
+const ENROLLED_KEY      = 'et_v6_biometric_enrolled'
+const USER_ID_KEY       = 'et_v6_user_id'
+const EMAIL_KEY         = 'et_v6_user_email'
+const CREDENTIAL_ID_KEY = 'et_v6_credential_id'
 
 async function safeJson(res) {
   try { return await res.json() } catch { return {} }
@@ -49,6 +50,7 @@ export function useBiometric() {
       localStorage.setItem(ENROLLED_KEY, 'true')
       localStorage.setItem(USER_ID_KEY, session.user.id)
       localStorage.setItem(EMAIL_KEY, session.user.email)
+      localStorage.setItem(CREDENTIAL_ID_KEY, credential.id)
       return { success: true }
     } catch (e) {
       const msg = e.name === 'NotAllowedError' ? 'Biometric cancelled or not available on this device.' : e.message
@@ -73,7 +75,7 @@ export function useBiometric() {
       const optRes = await fetch('/api/biometric-auth-options', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ userId, credentialId: localStorage.getItem(CREDENTIAL_ID_KEY) }),
       })
       if (optRes.status === 423) {
         const d = await safeJson(optRes)
@@ -142,6 +144,7 @@ export function useBiometric() {
     localStorage.removeItem(ENROLLED_KEY)
     localStorage.removeItem(USER_ID_KEY)
     localStorage.removeItem(EMAIL_KEY)
+    localStorage.removeItem(CREDENTIAL_ID_KEY)
     // Sign out current session so user must re-authenticate via magic link
     await supabase.auth.signOut()
   }, [])
