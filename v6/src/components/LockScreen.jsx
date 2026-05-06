@@ -93,11 +93,11 @@ export default function LockScreen({ onUnlocked }) {
       localStorage.setItem('et_v6_unlocking', '1')
       const unlockTimeout = setTimeout(() => localStorage.removeItem('et_v6_unlocking'), 30000)
       try {
-        const { error: sessionErr } = await supabase.auth.setSession({
-          access_token:  data.access_token,
-          refresh_token: data.refresh_token,
+        const { error: otpErr } = await supabase.auth.verifyOtp({
+          token_hash: data.token_hash,
+          type:       'email',
         })
-        if (sessionErr) throw new Error('Failed to restore session: ' + sessionErr.message)
+        if (otpErr) throw new Error('Failed to restore session: ' + otpErr.message)
         clearTimeout(unlockTimeout)
         // Flag cleared by App.jsx handleUnlocked() after React commits biometricLocked=false
         onUnlocked()

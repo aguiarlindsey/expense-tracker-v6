@@ -99,25 +99,26 @@ export function useBiometric() {
       const verData = await safeJson(verRes)
       if (!verRes.ok) {
         if (verData.locked) throw new Error('Account locked after too many attempts. A security alert has been sent to your email.')
-        const left = verData.attemptsLeft
-        throw new Error(`Biometric not recognised.${left > 0 ? ` ${left} attempt(s) remaining.` : ''}`)
+        // Only show attempt count when it's an actual biometric mismatch (attemptsLeft present)
+        if (typeof verData.attemptsLeft === 'number') {
+          const left = verData.attemptsLeft
+          throw new Error(`Biometric not recognised.${left > 0 ? ` ${left} attempt(s) remaining.` : ''}`)
+        }
+        // Any other server error — show the real message, not "biometric not recognised"
+        throw new Error(verData.error || 'Verification failed. Please try again.')
       }
 
-      // Flag prevents App.jsx from signing out while session is being restored
-      // Timeout ensures flag is cleared even if the browser crashes before finally runs
       localStorage.setItem('et_v6_unlocking', '1')
       const unlockTimeout = setTimeout(() => localStorage.removeItem('et_v6_unlocking'), 30000)
       try {
-        const { error: sessionErr } = await supabase.auth.setSession({
-          access_token:  verData.access_token,
-          refresh_token: verData.refresh_token,
+        const { error: otpErr } = await supabase.auth.verifyOtp({
+          token_hash: verData.token_hash,
+          type:       'email',
         })
-        if (sessionErr) throw new Error('Failed to restore session: ' + sessionErr.message)
+        if (otpErr) throw new Error('Failed to restore session: ' + otpErr.message)
         clearTimeout(unlockTimeout)
         // Flag intentionally NOT cleared here — App.jsx handleUnlocked() clears it via
         // requestAnimationFrame, after setBiometricLocked(false) is committed by React.
-        // This prevents a race where the session-change effect fires between verifyOtp and
-        // the biometricLocked state update, triggering a spurious sign-out.
       } catch (e) {
         clearTimeout(unlockTimeout)
         localStorage.removeItem('et_v6_unlocking')

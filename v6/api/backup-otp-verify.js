@@ -109,22 +109,18 @@ export default async function handler(req, res) {
     // Clear challenge in background (non-critical)
     admin.from('biometric_credentials').update({ current_challenge: null }).eq('id', cred.id)
 
-    // Create session directly — no extra verifyOtp round trip needed on the client
-    const sessionRes = await fetch(
-      `${process.env.SUPABASE_URL}/auth/v1/admin/users/${userId}/sessions`,
-      {
-        method:  'POST',
-        headers: {
-          'apikey':        process.env.SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-          'Content-Type':  'application/json',
-        },
-      }
-    )
-    if (!sessionRes.ok) return res.status(500).json({ error: 'Failed to create session' })
-    const { access_token, refresh_token } = await sessionRes.json()
+    const { data: userData, error: userErr } = await admin.auth.admin.getUserById(userId)
+    if (userErr || !userData?.user) return res.status(500).json({ error: 'Could not retrieve user' })
 
-    res.json({ verified: true, access_token, refresh_token })
+    const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
+      type:  'magiclink',
+      email: userData.user.email,
+    })
+    if (linkErr || !linkData?.properties?.hashed_token) {
+      return res.status(500).json({ error: 'Failed to create session token' })
+    }
+
+    res.json({ verified: true, token_hash: linkData.properties.hashed_token })
   } catch (e) {
     console.error('[backup-otp-verify]', e)
     if (!res.headersSent) res.status(500).json({ error: e.message || 'Internal error' })
