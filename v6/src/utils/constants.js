@@ -147,7 +147,7 @@ export const CATS = {
   'Health':        { icon: '💊', color: '#ef4444', subs: ['Medicine','Doctor','Lab Tests','Hospital','Wellness','Dental'] },
   'Entertainment': { icon: '🎬', color: '#ec4899', subs: ['Movies','OTT/Streaming','Gaming','Events','Hobbies','Sports'] },
   'Utilities':     { icon: '💡', color: '#f59e0b', subs: ['Electricity','Water','Gas','Internet','Phone','Cable'] },
-  'Housing':       { icon: '🏠', color: '#10b981', subs: ['Rent','EMI','Maintenance','Repairs','Housekeeping','Maid','Pest Control','Security','Interior'] },
+  'Housing':       { icon: '🏠', color: '#10b981', subs: ['Rent','EMI','Maintenance','Repairs','Housekeeping','House Maid','Pest Control','Security','Interior'] },
   'Education':     { icon: '📚', color: '#06b6d4', subs: ['Fees','Books','Courses','Stationery','Coaching','Exams'] },
   'Personal':      { icon: '💆', color: '#84cc16', subs: ['Haircut','Skincare','Gym','Spa','Personal Care','Laundry','Dry Cleaning','Ironing','Fashion'] },
   'Travel':        { icon: '✈️', color: '#6366f1', subs: ['Hotel','Sightseeing','Visa','Insurance','Souvenirs','Transport'] },
