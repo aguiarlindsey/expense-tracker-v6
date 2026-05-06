@@ -5,6 +5,7 @@ import { supabase } from '../utils/supabase'
 const ENROLLED_KEY      = 'et_v6_biometric_enrolled'
 const USER_ID_KEY       = 'et_v6_user_id'
 const EMAIL_KEY         = 'et_v6_user_email'
+const BACKUP_EMAIL_KEY  = 'et_v6_backup_email'
 const CREDENTIAL_ID_KEY = 'et_v6_credential_id'
 
 async function safeJson(res) {
@@ -51,6 +52,7 @@ export function useBiometric() {
       localStorage.setItem(USER_ID_KEY, session.user.id)
       localStorage.setItem(EMAIL_KEY, session.user.email)
       localStorage.setItem(CREDENTIAL_ID_KEY, credential.id)
+      if (backupEmail) localStorage.setItem(BACKUP_EMAIL_KEY, backupEmail)
       return { success: true }
     } catch (e) {
       const msg = e.name === 'NotAllowedError' ? 'Biometric cancelled or not available on this device.' : e.message
@@ -138,14 +140,15 @@ export function useBiometric() {
         await fetch('/api/biometric-register', {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ credentialId: localStorage.getItem(CREDENTIAL_ID_KEY) }),
         })
       }
     } catch {}
     localStorage.removeItem(ENROLLED_KEY)
     localStorage.removeItem(USER_ID_KEY)
     localStorage.removeItem(EMAIL_KEY)
+    localStorage.removeItem(BACKUP_EMAIL_KEY)
     localStorage.removeItem(CREDENTIAL_ID_KEY)
-    // Sign out current session so user must re-authenticate via magic link
     await supabase.auth.signOut()
   }, [])
 

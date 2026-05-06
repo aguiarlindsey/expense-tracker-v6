@@ -14,13 +14,15 @@ export default async function handler(req, res) {
   try {
   if (req.method !== 'POST' && req.method !== 'DELETE') return res.status(405).end()
 
-  // DELETE — remove enrollment
+  // DELETE — remove this device's credential only
   if (req.method === 'DELETE') {
     const token = (req.headers.authorization || '').replace('Bearer ', '')
     if (!token) return res.status(401).json({ error: 'Unauthorized' })
     const { data: { user }, error: authErr } = await admin.auth.getUser(token)
     if (authErr || !user) return res.status(401).json({ error: 'Unauthorized' })
-    await admin.from('biometric_credentials').delete().eq('user_id', user.id)
+    const { credentialId } = req.body || {}
+    const q = admin.from('biometric_credentials').delete().eq('user_id', user.id)
+    await (credentialId ? q.eq('id', credentialId) : q)
     return res.json({ removed: true })
   }
 
