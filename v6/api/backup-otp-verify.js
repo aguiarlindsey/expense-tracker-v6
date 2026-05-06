@@ -99,7 +99,22 @@ export default async function handler(req, res) {
     // Clear challenge in background
     admin.from('biometric_credentials').update({ current_challenge: null }).eq('user_id', userId)
 
-    res.json({ verified: true, token_hash: challenge.token_hash })
+    // Create session directly — avoids the extra verifyOtp round trip on the client
+    const sessionRes = await fetch(
+      `${process.env.SUPABASE_URL}/auth/v1/admin/users/${userId}/sessions`,
+      {
+        method:  'POST',
+        headers: {
+          'apikey':        process.env.SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type':  'application/json',
+        },
+      }
+    )
+    if (!sessionRes.ok) return res.status(500).json({ error: 'Failed to create session' })
+    const { access_token, refresh_token } = await sessionRes.json()
+
+    res.json({ verified: true, access_token, refresh_token })
   } catch (e) {
     console.error('[backup-otp-verify]', e)
     if (!res.headersSent) res.status(500).json({ error: e.message || 'Internal error' })

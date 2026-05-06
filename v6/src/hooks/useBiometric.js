@@ -104,11 +104,11 @@ export function useBiometric() {
       localStorage.setItem('et_v6_unlocking', '1')
       const unlockTimeout = setTimeout(() => localStorage.removeItem('et_v6_unlocking'), 30000)
       try {
-        const { error: otpErr } = await supabase.auth.verifyOtp({
-          token_hash: verData.token_hash,
-          type: 'email',
+        const { error: sessionErr } = await supabase.auth.setSession({
+          access_token:  verData.access_token,
+          refresh_token: verData.refresh_token,
         })
-        if (otpErr) throw new Error('Failed to restore session: ' + otpErr.message)
+        if (sessionErr) throw new Error('Failed to restore session: ' + sessionErr.message)
         clearTimeout(unlockTimeout)
         // Flag intentionally NOT cleared here — App.jsx handleUnlocked() clears it via
         // requestAnimationFrame, after setBiometricLocked(false) is committed by React.
