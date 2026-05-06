@@ -27,32 +27,31 @@ export default async function handler(req, res) {
     if (!userId || !backupEmail) return res.status(400).json({ error: 'Missing fields' })
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(backupEmail)) return res.status(400).json({ error: 'Invalid email format' })
 
-    // Get stored credential — includes server-side backup_email and main_email
-    const { data: cred } = await admin
+    // Fetch ALL credentials — .limit(1) picks the wrong row when PC + phone are both enrolled
+    const { data: creds } = await admin
       .from('biometric_credentials')
-      .select('id, backup_email, main_email, last_otp_sent_at, otp_locked_until')
+      .select('id, backup_email, main_email, last_otp_sent_at, otp_locked_until, otp_attempts')
       .eq('user_id', userId)
-      .limit(1)
-      .single()
 
-    if (!cred) return res.status(404).json({ error: 'No credential enrolled for this account' })
-
-    // ── Server-side backup email validation ─────────────
-    // Must match stored backup_email OR main_email — prevents bypass when backup_email is empty
-    const inputEmail = backupEmail.toLowerCase()
-    const validEmails = [cred.backup_email, cred.main_email].filter(Boolean).map(e => e.toLowerCase())
-    if (validEmails.length === 0 || !validEmails.includes(inputEmail)) {
-      return res.status(403).json({ error: 'Email does not match our records.' })
+    if (!creds || creds.length === 0) {
+      return res.status(404).json({ error: 'No credential enrolled for this account' })
     }
 
-    // ── OTP lock check ───────────────────────────────────
+    // Find the credential whose backup_email or main_email matches the input
+    const inputEmail = backupEmail.toLowerCase()
+    const cred = creds.find(c =>
+      [c.backup_email, c.main_email].filter(Boolean).some(e => e.toLowerCase() === inputEmail)
+    )
+    if (!cred) return res.status(403).json({ error: 'Email does not match our records.' })
+
+    // OTP lock check
     if (cred.otp_locked_until && new Date(cred.otp_locked_until) > new Date()) {
       return res.status(423).json({
         error: `Too many failed attempts. Try again after ${new Date(cred.otp_locked_until).toLocaleTimeString()}.`,
       })
     }
 
-    // ── Rate limit: max 1 per 60s and max 10 per day ─────
+    // Rate limit: max 1 per 60s
     if (cred.last_otp_sent_at) {
       const secondsSince = (Date.now() - new Date(cred.last_otp_sent_at).getTime()) / 1000
       if (secondsSince < 60) {
@@ -60,34 +59,21 @@ export default async function handler(req, res) {
         return res.status(429).json({ error: `Please wait ${wait}s before requesting another code.` })
       }
     }
-    // Daily cap stored as JSON in current_challenge temporarily — check otp_attempts as proxy
-    // (otp_attempts resets on success; if it somehow reaches 10 without success → daily cap hit)
     if ((cred.otp_attempts || 0) >= 10) {
       return res.status(429).json({ error: 'Daily OTP limit reached. Try again tomorrow or use biometrics.' })
     }
 
-    // Get main email — use stored value, fall back to getUserById for old credentials
-    const mainEmail = cred.main_email || (await admin.auth.admin.getUserById(userId)).data?.user?.email
-    if (!mainEmail) return res.status(500).json({ error: 'Could not determine account email' })
-
-    // Generate session link + OTP in parallel with rate limit update
-    const [linkResult] = await Promise.all([
-      admin.auth.admin.generateLink({ type: 'magiclink', email: mainEmail }),
-      admin.from('biometric_credentials').update({ last_otp_sent_at: new Date().toISOString() }).eq('user_id', userId),
-    ])
-
-    if (linkResult.error || !linkResult.data?.properties) {
-      return res.status(500).json({ error: 'Failed to generate session token' })
-    }
-
     const otpCode   = generateOTP(8)
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
-    const challenge = JSON.stringify({ otp: otpCode, token_hash: linkResult.data.properties.hashed_token, expires_at: expiresAt })
+    // No token_hash stored — backup-otp-verify creates the session directly via admin API
+    const challenge = JSON.stringify({ otp: otpCode, expires_at: expiresAt })
     const sendTo    = cred.backup_email || backupEmail
 
-    // Parallel: save challenge + send email
+    // Store OTP only on the matching credential row — not all user credentials
     await Promise.all([
-      admin.from('biometric_credentials').update({ current_challenge: challenge, otp_attempts: 0 }).eq('user_id', userId),
+      admin.from('biometric_credentials')
+        .update({ current_challenge: challenge, otp_attempts: 0, last_otp_sent_at: new Date().toISOString() })
+        .eq('id', cred.id),
       transporter.sendMail({
         from:    `"LA Expense Tracker" <${process.env.GMAIL_USER}>`,
         to:      sendTo,

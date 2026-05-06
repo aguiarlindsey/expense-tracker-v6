@@ -43,24 +43,33 @@ export default async function handler(req, res) {
     const { userId, code } = req.body
     if (!userId || !code) return res.status(400).json({ error: 'Missing fields' })
 
-    const { data: cred } = await admin
+    // Fetch ALL credentials — .limit(1) picks the wrong row when multiple devices are enrolled
+    const { data: creds } = await admin
       .from('biometric_credentials')
-      .select('current_challenge, otp_attempts, otp_locked_until')
+      .select('id, current_challenge, otp_attempts, otp_locked_until')
       .eq('user_id', userId)
-      .limit(1)
-      .single()
 
-    if (!cred) return res.status(404).json({ error: 'No credential found' })
+    if (!creds || creds.length === 0) return res.status(404).json({ error: 'No credential found' })
 
-    // Check OTP lockout
+    // Find the credential that has an active OTP challenge (JSON with 'otp' field)
+    // This is distinct from a WebAuthn challenge (plain base64 string)
+    const cred = creds.find(c => {
+      if (!c.current_challenge) return false
+      try {
+        const ch = JSON.parse(c.current_challenge)
+        return typeof ch.otp === 'string' && typeof ch.expires_at === 'string'
+      } catch { return false }
+    })
+
+    if (!cred) return res.status(400).json({ error: 'No OTP found. Please request a new code.' })
+
+    // Check OTP lockout on the specific credential
     if (cred.otp_locked_until && new Date(cred.otp_locked_until) > new Date()) {
       return res.status(423).json({
         error: `Too many failed attempts. Try again after ${new Date(cred.otp_locked_until).toLocaleTimeString()}.`,
         locked: true,
       })
     }
-
-    if (!cred.current_challenge) return res.status(400).json({ error: 'No OTP found. Please request a new code.' })
 
     let challenge
     try { challenge = JSON.parse(cred.current_challenge) } catch {
@@ -77,10 +86,11 @@ export default async function handler(req, res) {
       const newAttempts = (cred.otp_attempts || 0) + 1
       const shouldLock  = newAttempts >= MAX_OTP_ATTEMPTS
 
+      // Update only this credential — never .eq('user_id') which touches all devices
       await admin.from('biometric_credentials').update({
-        otp_attempts:    newAttempts,
+        otp_attempts:     newAttempts,
         otp_locked_until: shouldLock ? new Date(Date.now() + LOCK_MINUTES * 60 * 1000).toISOString() : null,
-      }).eq('user_id', userId)
+      }).eq('id', cred.id)
 
       if (shouldLock) sendOtpLockAlert()
 
@@ -91,15 +101,15 @@ export default async function handler(req, res) {
       })
     }
 
-    // Reset attempts + lock (awaited — must clear before responding to prevent false lockout)
+    // Success — reset attempts and clear the OTP challenge on this credential only
     await admin.from('biometric_credentials').update({
       otp_attempts:     0,
       otp_locked_until: null,
-    }).eq('user_id', userId)
-    // Clear challenge in background
-    admin.from('biometric_credentials').update({ current_challenge: null }).eq('user_id', userId)
+    }).eq('id', cred.id)
+    // Clear challenge in background (non-critical)
+    admin.from('biometric_credentials').update({ current_challenge: null }).eq('id', cred.id)
 
-    // Create session directly — avoids the extra verifyOtp round trip on the client
+    // Create session directly — no extra verifyOtp round trip needed on the client
     const sessionRes = await fetch(
       `${process.env.SUPABASE_URL}/auth/v1/admin/users/${userId}/sessions`,
       {
