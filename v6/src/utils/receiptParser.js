@@ -142,15 +142,15 @@ function extractAmount(text) {
   const values = [];
 
   // Priority: look near "total" keywords first
-  const totalPat = /(?:grand\s*total|bill\s*total|total\s*amount|amount\s*paid|net\s*amount|bill\s*amount|sale\s*amount|billed\s*amount|net\s*payable|payable|total)[^\d₹Rs¥]{0,15}(?:₹|Rs\.?|INR|¥)?\s*([\d,]+(?:\.\d{1,2})?)/gi;
+  const totalPat = /(?:grand\s*total|bill\s*total|total\s*amount|amount\s*paid|net\s*amount|bill\s*amount|sale\s*amount|billed\s*amount|net\s*payable|payable|total)[^\d₹Rs¥€£]{0,15}(?:₹|Rs\.?|INR|¥|€|£)?\s*([\d,]+(?:\.\d{1,2})?)/gi;
   let m;
   while ((m = totalPat.exec(text)) !== null) {
     const v = parseFloat(m[1].replace(/,/g, ''));
     if (!isNaN(v) && v > 0) values.push(v);
   }
 
-  // Secondary: any ₹ / Rs / ¥ amount (OCR often misreads ₹ as ¥)
-  const symPat = /(?:₹|Rs\.?|INR|¥)\s*([\d,]+(?:\.\d{1,2})?)/gi;
+  // Secondary: any ₹/Rs/¥/€/£ amount — OCR frequently misreads ₹ as ¥, €, or £
+  const symPat = /(?:₹|Rs\.?|INR|¥|€|£)\s*([\d,]+(?:\.\d{1,2})?)/gi;
   while ((m = symPat.exec(text)) !== null) {
     const v = parseFloat(m[1].replace(/,/g, ''));
     if (!isNaN(v) && v > 0) values.push(v);
@@ -308,6 +308,8 @@ function extractPaymentMethod(text) {
 
   if (/\b(visa|master|mastercard|rupay|credit\s*card)\b/i.test(lower)) return { paymentMethod: 'Credit Card', paymentDescription: '' };
   if (/\bdebit\s*card\b/i.test(lower))                                  return { paymentMethod: 'Debit Card', paymentDescription: '' };
+  // "MOP CARD" / "From CARD" on fuel receipts = card payment (type unknown, default credit)
+  if (/\b(mop\s*card|from\s*card|paid\s*by\s*card|card\s*payment)\b/i.test(lower)) return { paymentMethod: 'Credit Card', paymentDescription: '' };
   if (/\b(net\s*banking|netbanking|neft|imps|rtgs)\b/i.test(lower))    return { paymentMethod: 'Net Banking', paymentDescription: '' };
   if (/\bwallet\b/i.test(lower))                                         return { paymentMethod: 'Wallet', paymentDescription: '' };
 
@@ -349,24 +351,36 @@ function extractTaxes(text) {
 }
 
 // ── Fuel data extraction ──────────────────────────────────────────────────────
-function extractFuelData(text) {
-  // Rate per litre: "Rate Per Litre 103.50" / "Rate/Ltr 103.50" / "Price Per Litre 103.50"
-  const rateRe = /(?:rate\s*(?:per\s*)?(?:lit(?:re|er)?|ltr|l)|price\s*per\s*lit(?:re|er)?)[^\d]*(\d+(?:[.,]\d+)?)/i;
-  const rateM  = text.match(rateRe);
-  const fuelRate = rateM ? parseFloat(rateM[1].replace(',', '.')) : null;
+// Normalise OCR space-as-decimal: "103 80" → "103.80", "19 36" → "19.36"
+// Only treats a space as decimal when the fraction part is 1-2 digits (rate) or 1-3 digits (qty)
+function normaliseDecimal(str, maxFracDigits = 3) {
+  const re = new RegExp(`^(\\d+)\\s+(\\d{1,${maxFracDigits}})$`);
+  return str.replace(re, '$1.$2').replace(',', '.');
+}
 
-  // Quantity: "Sale Quantity 19.401" — OCR often gives "19 401" (space instead of decimal)
+function round2(n) { return Math.round(n * 100) / 100; }
+
+function extractFuelData(text) {
+  // Rate per litre: handles "103.80", "103 80", "103,80"
+  const rateRe = /(?:rate\s*(?:per\s*)?(?:lit(?:re|er)?|ltr|l)|price\s*per\s*lit(?:re|er)?)[^\d]*(\d+[\s.,]\d+|\d+)/i;
+  const rateM  = text.match(rateRe);
+  let fuelRate = null;
+  if (rateM) {
+    const v = parseFloat(normaliseDecimal(rateM[1], 2));
+    if (!isNaN(v) && v > 0 && v < 500) fuelRate = round2(v);
+  }
+
+  // Quantity: handles "19.401", "19 363", "19 36:3" (OCR noise stripped)
+  // Capture digits + separator + digits; trailing OCR junk (:3, etc.) is outside the group
   const qtyRe = /(?:sale\s*quant(?:ity)?|qty|quantity|volume|litres?\s*filled?|liter(?:s)?)[^\d]*(\d+[\s.,]\d+)/i;
   const qtyM  = text.match(qtyRe);
   let fuelQuantity = null;
   if (qtyM) {
-    // normalise "19 401" → "19.401" (3-digit fractional part after a space is a decimal)
-    const raw = qtyM[1].replace(/(\d+)\s+(\d{1,3})$/, '$1.$2').replace(',', '.');
-    fuelQuantity = parseFloat(raw);
-    if (isNaN(fuelQuantity) || fuelQuantity > 1000) fuelQuantity = null; // sanity cap
+    const v = parseFloat(normaliseDecimal(qtyM[1], 3));
+    if (!isNaN(v) && v > 0 && v < 1000) fuelQuantity = round2(v);
   }
 
-  // Fuel type: "Product Name Petrol" / "Product Diesel"
+  // Fuel type: "Product Name Petrol" / "Product Diesel" / "MOP Petrol"
   const typeM = text.match(/(?:product\s*(?:name|type)?|fuel\s*type)[^\w]*(petrol|diesel|cng|lpg|premium|speed|power)/i);
   const fuelType = typeM ? typeM[1].charAt(0).toUpperCase() + typeM[1].slice(1).toLowerCase() : null;
 
