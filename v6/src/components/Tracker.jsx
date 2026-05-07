@@ -8,6 +8,7 @@ import { useNotifications } from '../hooks/useNotifications'
 import { useInsightViews } from '../hooks/useInsightViews'
 import { useBiometric } from '../hooks/useBiometric'
 import ConflictModal from './ConflictModal'
+import ReceiptScanner from './ReceiptScanner'
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -469,7 +470,23 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
   })
   const [showPalette, setShowPalette] = useState(false)
   const [rateFetching, setRateFetching] = useState(false)
+  const [showScanner, setShowScanner] = useState(false)
   const s = (k, v) => setForm(p => ({ ...p, [k]: v }))
+
+  const applyOcr = (parsed) => {
+    if (parsed.amount)      s('amount', parsed.amount)
+    if (parsed.date)        s('date', parsed.date)
+    if (parsed.description) s('description', parsed.description)
+    if (parsed.category && CATS[parsed.category]) {
+      s('category', parsed.category)
+      if (parsed.subcategory) s('subcategory', parsed.subcategory)
+    }
+    if (parsed.paymentMethod && PAY_METHODS.includes(parsed.paymentMethod)) {
+      s('paymentMethod', parsed.paymentMethod)
+      if (parsed.paymentDescription) s('paymentDescription', parsed.paymentDescription)
+    }
+    if (parsed.diningApp) s('diningApp', parsed.diningApp)
+  }
 
   // ── Historical rate sync ───────────────────────────────
   useEffect(() => {
@@ -552,11 +569,17 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
   const inrPreview = isForeign && form.amount ? parseFloat(form.amount) * (parseFloat(form.conversionRate) || 1) : null
 
   return (
+    <>
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
           <h2>{initialData ? '✏️ Edit Expense' : '➕ Add Expense'}</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            {!initialData && (
+              <button type="button" className="btn-primary-sm" onClick={() => setShowScanner(true)}>📷 Scan</button>
+            )}
+            <button className="modal-close" onClick={onClose}>✕</button>
+          </div>
         </div>
         <form onSubmit={sub} className="form">
           <div className="form-row">
@@ -784,6 +807,8 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
         </form>
       </div>
     </div>
+    {showScanner && <ReceiptScanner onResult={applyOcr} onClose={() => setShowScanner(false)} />}
+    </>
   )
 }
 
