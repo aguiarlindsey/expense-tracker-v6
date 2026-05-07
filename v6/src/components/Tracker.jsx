@@ -1550,6 +1550,11 @@ export default function Tracker({ session }) {
       setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 220)
     }, duration)
   }, [])
+  // ── Surface storage errors as toasts ─────────────────────
+  useEffect(() => {
+    if (error) addToast('danger', '❌', 'Save failed', error, 10000)
+  }, [error]) // addToast intentionally omitted — stable ref
+
   // ── Anomaly detection — after addToast is defined ────────
   useEffect(() => {
     if (expenses.length < 2) return
