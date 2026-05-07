@@ -61,33 +61,33 @@ async function preprocessImage(blobUrl, cropPct) {
 }
 
 // ─── Crop Tool ────────────────────────────────────────────────────────────────
+// imgRef wraps only the <img> element — no letterbox bars.
+// All percentages are calculated relative to the img element itself so
+// the crop coordinates exactly match image pixel coordinates.
 function CropTool({ imgSrc, onConfirm }) {
-  const containerRef = useRef(null);
-  // Start with a slight inset so handles are visible immediately
+  const imgRef  = useRef(null);
   const [crop, setCrop] = useState({ x1: 3, y1: 3, x2: 97, y2: 97 });
   const dragRef = useRef(null);
 
+  // Always measure against the img element, not any outer container.
   const getPos = (e) => {
-    const rect = containerRef.current.getBoundingClientRect();
+    const rect = imgRef.current.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     return {
-      x: Math.max(0, Math.min(100, (clientX - rect.left) / rect.width * 100)),
+      x: Math.max(0, Math.min(100, (clientX - rect.left) / rect.width  * 100)),
       y: Math.max(0, Math.min(100, (clientY - rect.top)  / rect.height * 100)),
     };
   };
 
-  const onDown = (e, handle) => {
-    e.preventDefault(); e.stopPropagation();
-    dragRef.current = { handle };
-  };
+  const onDown = (e, h) => { e.preventDefault(); e.stopPropagation(); dragRef.current = { h }; };
 
   const onMove = useCallback((e) => {
-    if (!dragRef.current || !containerRef.current) return;
+    if (!dragRef.current || !imgRef.current) return;
     e.preventDefault();
     const { x, y } = getPos(e);
     const MIN = 10;
-    const h = dragRef.current.handle;
+    const h = dragRef.current.h;
     setCrop(prev => {
       const n = { ...prev };
       if (h === 'tl') { n.x1 = Math.min(x, prev.x2 - MIN); n.y1 = Math.min(y, prev.y2 - MIN); }
@@ -118,24 +118,18 @@ function CropTool({ imgSrc, onConfirm }) {
   }, [onMove, onUp]);
 
   const { x1, y1, x2, y2 } = crop;
-  const HS = 26; // handle size px
+  const HS = 26;
 
-  const handle = (id, hx, hy, cursor) => (
+  const mkHandle = (id, hx, hy, cursor) => (
     <div key={id}
       onMouseDown={e => onDown(e, id)}
       onTouchStart={e => onDown(e, id)}
       style={{
-        position: 'absolute',
-        left: `${hx}%`, top: `${hy}%`,
-        width: HS, height: HS,
-        marginLeft: -HS / 2, marginTop: -HS / 2,
-        background: '#fff',
-        border: '2.5px solid var(--primary, #863bff)',
-        borderRadius: 5,
-        cursor,
-        touchAction: 'none',
-        zIndex: 4,
-        boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
+        position: 'absolute', left: `${hx}%`, top: `${hy}%`,
+        width: HS, height: HS, marginLeft: -HS / 2, marginTop: -HS / 2,
+        background: '#fff', border: '2.5px solid var(--primary, #863bff)',
+        borderRadius: 5, cursor, touchAction: 'none', zIndex: 4,
+        boxShadow: '0 1px 4px rgba(0,0,0,0.5)',
       }}
     />
   );
@@ -146,34 +140,37 @@ function CropTool({ imgSrc, onConfirm }) {
         Drag the handles to frame the receipt, then tap <strong>Scan</strong>.
       </p>
 
-      <div ref={containerRef} style={{ position: 'relative', userSelect: 'none', touchAction: 'none', background: '#000', borderRadius: 8, overflow: 'hidden' }}>
-        <img src={imgSrc} alt="Crop" draggable={false}
-          style={{ display: 'block', width: '100%', maxHeight: 340, objectFit: 'contain', pointerEvents: 'none' }} />
+      {/* Outer: dark background, centres the image */}
+      <div style={{ background: '#111', borderRadius: 8, overflow: 'hidden', display: 'flex', justifyContent: 'center', userSelect: 'none' }}>
+        {/* Inner: shrinks to exactly the rendered img size — no letterbox bars */}
+        <div style={{ position: 'relative', display: 'inline-block', touchAction: 'none', lineHeight: 0 }}>
+          <img
+            ref={imgRef}
+            src={imgSrc}
+            alt="Crop"
+            draggable={false}
+            style={{ display: 'block', maxWidth: '100%', maxHeight: 340, pointerEvents: 'none' }}
+          />
 
-        {/* Dark mask outside crop */}
-        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-          {/* top */}
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: `${y1}%`, background: 'rgba(0,0,0,0.55)' }} />
-          {/* bottom */}
-          <div style={{ position: 'absolute', top: `${y2}%`, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.55)' }} />
-          {/* left */}
-          <div style={{ position: 'absolute', top: `${y1}%`, left: 0, width: `${x1}%`, height: `${y2 - y1}%`, background: 'rgba(0,0,0,0.55)' }} />
-          {/* right */}
-          <div style={{ position: 'absolute', top: `${y1}%`, left: `${x2}%`, right: 0, height: `${y2 - y1}%`, background: 'rgba(0,0,0,0.55)' }} />
-          {/* crop border */}
-          <div style={{ position: 'absolute', top: `${y1}%`, left: `${x1}%`, width: `${x2 - x1}%`, height: `${y2 - y1}%`, border: '2px solid rgba(255,255,255,0.9)', boxSizing: 'border-box' }} />
+          {/* Dark mask outside crop area */}
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: `${y1}%`,        background: 'rgba(0,0,0,0.55)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', top: `${y2}%`, left: 0, right: 0, bottom: 0,        background: 'rgba(0,0,0,0.55)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', top: `${y1}%`, left: 0, width: `${x1}%`,            height: `${y2-y1}%`, background: 'rgba(0,0,0,0.55)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', top: `${y1}%`, left: `${x2}%`, right: 0,            height: `${y2-y1}%`, background: 'rgba(0,0,0,0.55)', pointerEvents: 'none' }} />
+
+          {/* Crop border */}
+          <div style={{ position: 'absolute', top: `${y1}%`, left: `${x1}%`, width: `${x2-x1}%`, height: `${y2-y1}%`, border: '2px solid rgba(255,255,255,0.9)', boxSizing: 'border-box', pointerEvents: 'none' }} />
+
+          {/* Handles */}
+          {mkHandle('tl', x1, y1, 'nw-resize')}
+          {mkHandle('tr', x2, y1, 'ne-resize')}
+          {mkHandle('bl', x1, y2, 'sw-resize')}
+          {mkHandle('br', x2, y2, 'se-resize')}
+          {mkHandle('t',  (x1+x2)/2, y1,        'n-resize')}
+          {mkHandle('b',  (x1+x2)/2, y2,        's-resize')}
+          {mkHandle('l',  x1,        (y1+y2)/2, 'w-resize')}
+          {mkHandle('r',  x2,        (y1+y2)/2, 'e-resize')}
         </div>
-
-        {/* Corner handles */}
-        {handle('tl', x1, y1, 'nw-resize')}
-        {handle('tr', x2, y1, 'ne-resize')}
-        {handle('bl', x1, y2, 'sw-resize')}
-        {handle('br', x2, y2, 'se-resize')}
-        {/* Edge handles */}
-        {handle('t', (x1 + x2) / 2, y1, 'n-resize')}
-        {handle('b', (x1 + x2) / 2, y2, 's-resize')}
-        {handle('l', x1, (y1 + y2) / 2, 'w-resize')}
-        {handle('r', x2, (y1 + y2) / 2, 'e-resize')}
       </div>
 
       <div style={{ display: 'flex', gap: '0.5rem' }}>
