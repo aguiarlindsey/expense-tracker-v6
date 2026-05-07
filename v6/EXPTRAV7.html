@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EXPTRAV7 — Expense Tracker V7 Feature Reference</title>
+<style>
+  :root {
+    --primary: #863bff;
+    --primary-light: #a06bff;
+    --bg: #f8f6ff;
+    --surface: #ffffff;
+    --surface2: #f3f0ff;
+    --border: #e2d9f3;
+    --text: #1a1030;
+    --text-muted: #6b5a8a;
+    --text-faint: #9b88bb;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --radius: 10px;
+    --shadow: 0 2px 12px rgba(134,59,255,0.08);
+  }
+  html.dark {
+    --bg: #0f0a1e;
+    --surface: #1a1030;
+    --surface2: #231844;
+    --border: #2e2050;
+    --text: #ede8ff;
+    --text-muted: #9b88cc;
+    --text-faint: #6b5a8a;
+    --shadow: 0 2px 12px rgba(0,0,0,0.4);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  /* ── Layout ── */
+  .layout { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 1.25rem 0;
+  }
+  .sidebar-brand {
+    padding: 0 1.25rem 1rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0.75rem;
+  }
+  .sidebar-brand h1 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  .sidebar-brand p {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .toc-list { list-style: none; }
+  .toc-item a {
+    display: block;
+    padding: 0.35rem 1.25rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .toc-item a:hover, .toc-item a.active {
+    color: var(--primary);
+    border-left-color: var(--primary);
+    background: var(--surface2);
+  }
+  .main {
+    flex: 1;
+    max-width: 860px;
+    padding: 2rem 2.5rem;
+    min-width: 0;
+  }
+
+  /* ── Header ── */
+  .page-header {
+    background: linear-gradient(135deg, var(--primary) 0%, #5b21b6 100%);
+    color: #fff;
+    padding: 2rem 2.5rem;
+    border-radius: var(--radius);
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .page-header::after {
+    content: '🧾';
+    position: absolute;
+    right: 2rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 5rem;
+    opacity: 0.15;
+  }
+  .page-header h1 { font-size: 1.8rem; font-weight: 800; }
+  .page-header .meta { font-size: 0.85rem; opacity: 0.85; margin-top: 0.4rem; }
+  .page-header .badges { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+  .badge {
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 99px;
+    padding: 2px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  /* ── Dark mode toggle ── */
+  .dark-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    box-shadow: var(--shadow);
+    z-index: 100;
+    transition: all 0.15s;
+  }
+  .dark-toggle:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* ── Sections ── */
+  .section {
+    margin-bottom: 2.5rem;
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .section-header {
+    padding: 1rem 1.5rem;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .section-num {
+    background: var(--primary);
+    color: #fff;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .section-header h2 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .section-body { padding: 1.25rem 1.5rem; }
+
+  /* ── Typography ── */
+  h3 { font-size: 0.92rem; font-weight: 700; color: var(--primary); margin: 1.25rem 0 0.5rem; }
+  h3:first-child { margin-top: 0; }
+  p { margin-bottom: 0.75rem; color: var(--text); }
+  p:last-child { margin-bottom: 0; }
+  ul, ol { padding-left: 1.4rem; margin-bottom: 0.75rem; }
+  li { margin-bottom: 0.25rem; color: var(--text); }
+  li:last-child { margin-bottom: 0; }
+  strong { color: var(--text); }
+  code {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-family: 'SF Mono', 'Cascadia Code', Consolas, monospace;
+    font-size: 0.82em;
+    color: var(--primary);
+  }
+
+  /* ── Tables ── */
+  .table-wrap { overflow-x: auto; margin: 0.75rem 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th {
+    background: var(--surface2);
+    padding: 0.6rem 0.9rem;
+    text-align: left;
+    font-weight: 700;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    border-bottom: 2px solid var(--border);
+  }
+  td {
+    padding: 0.55rem 0.9rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+
+  /* ── Call-out boxes ── */
+  .callout {
+    border-left: 3px solid var(--primary);
+    background: var(--surface2);
+    border-radius: 0 8px 8px 0;
+    padding: 0.75rem 1rem;
+    margin: 0.75rem 0;
+    font-size: 0.87rem;
+  }
+  .callout.tip  { border-color: var(--success); }
+  .callout.warn { border-color: var(--warning); }
+  .callout.info { border-color: #3b82f6; }
+  .callout .callout-title {
+    font-weight: 700;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+  }
+
+  /* ── Tags / chips ── */
+  .tag {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin: 2px;
+  }
+  .tag.primary { background: rgba(134,59,255,0.12); border-color: rgba(134,59,255,0.3); color: var(--primary); }
+
+  /* ── Keyboard keys ── */
+  kbd {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: inherit;
+    font-size: 0.82em;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* ── New badge ── */
+  .new-badge {
+    background: linear-gradient(135deg, var(--primary), #5b21b6);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    border-radius: 99px;
+    padding: 1px 7px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    vertical-align: middle;
+    margin-left: 6px;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .main { padding: 1rem; }
+    .page-header { padding: 1.25rem; }
+    .page-header h1 { font-size: 1.3rem; }
+  }
+
+  /* ── Scroll-to-top ── */
+  .to-top {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1rem;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    box-shadow: 0 2px 8px rgba(134,59,255,0.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 99;
+  }
+  .to-top.visible { display: flex; }
+</style>
+</head>
+<body>
+
+<button class="dark-toggle" onclick="toggleDark()">🌙 Dark</button>
+<button class="to-top" id="toTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<div class="layout">
+
+  <!-- Sidebar TOC -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <h1>EXPTRAV7</h1>
+      <p>Expense Tracker V7 · v7.9.0</p>
+    </div>
+    <ul class="toc-list" id="toc">
+      <li class="toc-item"><a href="#s1">1. Getting Started</a></li>
+      <li class="toc-item"><a href="#s2">2. Overview Tab</a></li>
+      <li class="toc-item"><a href="#s3">3. Income Tab</a></li>
+      <li class="toc-item"><a href="#s4">4. Trends Tab</a></li>
+      <li class="toc-item"><a href="#s5">5. Budgets Tab</a></li>
+      <li class="toc-item"><a href="#s6">6. Goals Tab</a></li>
+      <li class="toc-item"><a href="#s7">7. Insights Tab</a></li>
+      <li class="toc-item"><a href="#s8">8. Recurring Tab</a></li>
+      <li class="toc-item"><a href="#s9">9. Trips Tab ✨</a></li>
+      <li class="toc-item"><a href="#s10">10. Exchange Tab</a></li>
+      <li class="toc-item"><a href="#s11">11. Settings Tab</a></li>
+      <li class="toc-item"><a href="#s12">12. Keyboard Shortcuts</a></li>
+      <li class="toc-item"><a href="#s13">13. Adding Expenses</a></li>
+      <li class="toc-item"><a href="#s14">14. Receipt Scanner ✨</a></li>
+      <li class="toc-item"><a href="#s15">15. Adding Income</a></li>
+      <li class="toc-item"><a href="#s16">16. Multi-Currency</a></li>
+      <li class="toc-item"><a href="#s17">17. Incognito Mode ✨</a></li>
+      <li class="toc-item"><a href="#s18">18. Biometric Lock ✨</a></li>
+      <li class="toc-item"><a href="#s19">19. Anomaly Detection ✨</a></li>
+      <li class="toc-item"><a href="#s20">20. Conflict Resolution ✨</a></li>
+      <li class="toc-item"><a href="#s21">21. Offline Mode</a></li>
+      <li class="toc-item"><a href="#s22">22. Real-Time Sync</a></li>
+      <li class="toc-item"><a href="#s23">23. Push Notifications</a></li>
+      <li class="toc-item"><a href="#s24">24. PWA — Install</a></li>
+      <li class="toc-item"><a href="#s25">25. Migrate from V5</a></li>
+      <li class="toc-item"><a href="#s26">26. Export &amp; Import</a></li>
+      <li class="toc-item"><a href="#s27">27. Danger Zone</a></li>
+      <li class="toc-item"><a href="#s28">28. Technical Reference</a></li>
+    </ul>
+  </nav>
+
+  <!-- Main content -->
+  <main class="main">
+
+    <div class="page-header">
+      <h1>EXPTRAV7</h1>
+      <div class="meta">Expense Tracker V7 · Full Feature Reference · Last updated 08-05-2026</div>
+      <div class="badges">
+        <span class="badge">v7.9.0</span>
+        <span class="badge">Vite + React 19</span>
+        <span class="badge">Supabase</span>
+        <span class="badge">Vercel</span>
+        <span class="badge">122 Currencies</span>
+        <span class="badge">OCR Receipt Scanner</span>
+      </div>
+    </div>
+
+    <!-- 1. Getting Started -->
+    <div class="section" id="s1">
+      <div class="section-header"><div class="section-num">1</div><h2>Getting Started</h2></div>
+      <div class="section-body">
+        <h3>Login</h3>
+        <ul>
+          <li>Go to <code>https://expense-tracker-v6.vercel.app</code></li>
+          <li>Enter your email and click <strong>Send Magic Link</strong></li>
+          <li>Open the email, click the link — logged in automatically</li>
+          <li>No password required; the magic link expires after 1 use</li>
+        </ul>
+        <h3>First-time setup (recommended)</h3>
+        <ol>
+          <li><strong>Settings</strong> → set your <strong>Base Currency</strong> (default: INR ₹)</li>
+          <li><strong>Settings → Budgets</strong> → set monthly/daily/weekly spending limits</li>
+          <li><strong>Settings → Security</strong> → enrol biometric (fingerprint / Face ID)</li>
+          <li><strong>Settings → Recurring Reminders</strong> → Enable push notifications</li>
+          <li>If migrating from V5 → <strong>Settings → Migrate from V5</strong></li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- 2. Overview -->
+    <div class="section" id="s2">
+      <div class="section-header"><div class="section-num">2</div><h2>Overview Tab</h2></div>
+      <div class="section-body">
+        <p>Main dashboard. Snapshot of financial health for the current month.</p>
+        <h3>Summary Cards</h3>
+        <div class="table-wrap"><table>
+          <tr><th>Card</th><th>What it shows</th></tr>
+          <tr><td><strong>This Month</strong></td><td>Total expenses in the current calendar month</td></tr>
+          <tr><td><strong>Income</strong></td><td>Total income recorded this month</td></tr>
+          <tr><td><strong>Balance</strong></td><td>Income minus expenses</td></tr>
+          <tr><td><strong>Daily Avg</strong></td><td>Average daily spend this month</td></tr>
+          <tr><td><strong>Daily Allowance</strong></td><td>Safe-to-spend daily budget</td></tr>
+        </table></div>
+        <h3>Pie Chart</h3>
+        <p>Spending split by category for the current month. Tap a slice to see the category name and amount.</p>
+        <h3>Recent Expenses List</h3>
+        <ul>
+          <li>Most recent expenses, sorted by date, with date shown as <strong>DD-MM-YYYY</strong></li>
+          <li><strong>🔄</strong> = recurring · <strong>⏳</strong> = pending sync · <strong>⚠️</strong> = anomaly flagged</li>
+          <li>Tap ✏️ to edit · 🗑️ to delete</li>
+        </ul>
+        <h3>Upcoming Recurring Banner</h3>
+        <p>Appears when recurring expenses are due within 7 days. Red = today/tomorrow · Amber = 2–3 days · Blue = 4–7 days.</p>
+        <h3>Burn-Rate Forecasting Panel <span class="new-badge">NEW</span></h3>
+        <ul>
+          <li>Projects your total spend by end of month based on current daily velocity</li>
+          <li>Shows: projected total, daily burn rate, acceleration (↑ faster / ↓ slowing), runway (days until budget exhausted)</li>
+          <li>Updates live with every new expense</li>
+        </ul>
+        <h3>Safe-to-Spend</h3>
+        <p>Formula: <code>(this month's income − fixed expenses − savings goal) ÷ remaining days</code>. Green = healthy · Amber = tight · Red = over budget. Configure savings goal in <strong>Settings → Safe-to-Spend</strong>.</p>
+      </div>
+    </div>
+
+    <!-- 3. Income -->
+    <div class="section" id="s3">
+      <div class="section-header"><div class="section-num">3</div><h2>Income Tab</h2></div>
+      <div class="section-body">
+        <h3>Adding Income</h3>
+        <p>Click <strong>+ Income</strong> or press <kbd>I</kbd>. Fields: Date, Description, Amount + Currency, Source, Payment Method, Notes, Recurring toggle.</p>
+        <h3>Sources</h3>
+        <p>Salary · Freelance · Business · Rental · Dividends · Interest · Bonus · Gift · Refund · Side Income · Other</p>
+        <h3>Income List</h3>
+        <p>Sorted by date descending, grouped by date headers (DD-MM-YYYY). Recurring entries show 🔄.</p>
+        <h3>Summary Cards</h3>
+        <p>Total (all time) · This month · Monthly average · Top source</p>
+      </div>
+    </div>
+
+    <!-- 4. Trends -->
+    <div class="section" id="s4">
+      <div class="section-header"><div class="section-num">4</div><h2>Trends Tab</h2></div>
+      <div class="section-body">
+        <h3>Heatmap Calendar</h3>
+        <p>90-day grid showing daily spend intensity. Darker = higher spend day. Tap a cell for the exact amount.</p>
+        <h3>Monthly Bar Chart</h3>
+        <p>12-month spending history, colour-coded by category breakdown.</p>
+        <h3>Month-over-Month Comparison</h3>
+        <p>Side-by-side: this month / last month / same month last year. Columns: Expenses · vs Prev · Income · Saved · Transactions.</p>
+        <h3>Yearly Comparison</h3>
+        <p>Year-by-year: total expenses, income, saved amount, transaction count.</p>
+      </div>
+    </div>
+
+    <!-- 5. Budgets -->
+    <div class="section" id="s5">
+      <div class="section-header"><div class="section-num">5</div><h2>Budgets Tab</h2></div>
+      <div class="section-body">
+        <h3>Budget Types</h3>
+        <div class="table-wrap"><table>
+          <tr><th>Type</th><th>Resets</th></tr>
+          <tr><td><strong>Daily</strong></td><td>Midnight every day</td></tr>
+          <tr><td><strong>Weekly</strong></td><td>Every Monday</td></tr>
+          <tr><td><strong>Monthly</strong></td><td>1st of each month</td></tr>
+          <tr><td><strong>Per Category</strong></td><td>Monthly (e.g. Food: ₹8,000/month)</td></tr>
+        </table></div>
+        <h3>Budget Bars</h3>
+        <p>Green = under 50% · Amber = 50–80% · Red = 80–100% · Dark red = over limit</p>
+        <h3>Toast Alerts</h3>
+        <ul>
+          <li>⚡ <strong>50%</strong> — yellow toast · ⚠️ <strong>80%</strong> — orange toast · 🚨 <strong>100%</strong> — red toast</li>
+          <li>Auto-dismiss after 6 seconds</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 6. Goals -->
+    <div class="section" id="s6">
+      <div class="section-header"><div class="section-num">6</div><h2>Goals Tab</h2></div>
+      <div class="section-body">
+        <h3>Creating a Goal</h3>
+        <p>Click <strong>+ New Goal</strong> → Name, Target Amount, Target Date (optional), Icon emoji, Note.</p>
+        <h3>Adding Contributions</h3>
+        <p>Click <strong>+ Add</strong> on any goal card. Enter date, amount, and an optional note. Contributions accumulate toward the goal total.</p>
+        <h3>Goal Progress</h3>
+        <p>Progress bar showing amount saved / target. Milestone toasts at 25%, 50%, 75%, 100%. 🎉 confetti animation at 100%.</p>
+      </div>
+    </div>
+
+    <!-- 7. Insights -->
+    <div class="section" id="s7">
+      <div class="section-header"><div class="section-num">7</div><h2>Insights Tab</h2></div>
+      <div class="section-body">
+        <p>16 analytical cards covering spending behaviour, plus the Anomaly Detection panel.</p>
+        <div class="table-wrap"><table>
+          <tr><th>#</th><th>Card</th><th>What it shows</th></tr>
+          <tr><td>1</td><td>Top Category</td><td>Biggest spending category this month</td></tr>
+          <tr><td>2</td><td>Biggest Transaction</td><td>Largest single expense this month</td></tr>
+          <tr><td>3</td><td>Payment Methods</td><td>Frequency breakdown by method</td></tr>
+          <tr><td>4</td><td>Average Transaction</td><td>Mean expense amount</td></tr>
+          <tr><td>5</td><td>Weekend vs Weekday</td><td>Spend pattern comparison</td></tr>
+          <tr><td>6</td><td>Expense Types</td><td>Variable / Fixed / Luxury / Need / Want / Investment split</td></tr>
+          <tr><td>7</td><td>Day of Week</td><td>Bar chart: which day you spend most</td></tr>
+          <tr><td>8</td><td>Recurring Summary</td><td>Count + total value of recurring templates</td></tr>
+          <tr><td>9</td><td>Split Expenses</td><td>Expenses shared with others</td></tr>
+          <tr><td>10</td><td>MoM Delta</td><td>% change vs last month</td></tr>
+          <tr><td>11</td><td>Dining App Breakdown</td><td>Swiggy / Zomato / other food delivery</td></tr>
+          <tr><td>12</td><td>Tags Analysis</td><td>Grocery/food tag breakdown</td></tr>
+          <tr><td>13</td><td>Category Trend</td><td>Growing vs shrinking categories</td></tr>
+          <tr><td>14</td><td>Income vs Expense</td><td>Savings rate this month</td></tr>
+          <tr><td>15</td><td>Subscription Detective</td><td>Detects recurring charges (same description, regular interval)</td></tr>
+          <tr><td>16</td><td>Zombie Subscriptions</td><td>Subscriptions not used in 45+ days</td></tr>
+        </table></div>
+        <h3>Anomaly Panel <span class="new-badge">NEW</span></h3>
+        <p>Flags unusual expenses that are significantly above your historical average for that category. Shows up to 5 most recent anomalies. Dismiss individually.</p>
+      </div>
+    </div>
+
+    <!-- 8. Recurring -->
+    <div class="section" id="s8">
+      <div class="section-header"><div class="section-num">8</div><h2>Recurring Tab</h2></div>
+      <div class="section-body">
+        <h3>What is Recurring?</h3>
+        <p>A template for a repeating expense or income (e.g. rent, Netflix, salary). Stored once with a next due date. Not auto-duplicated — you add it manually when it's due.</p>
+        <h3>Due Badges</h3>
+        <p>Green = upcoming · Amber = due ≤3 days · Red = overdue</p>
+        <h3>Creating a Recurring Entry</h3>
+        <p>When adding any expense or income, tick <strong>Recurring</strong> and select a period: Daily / Weekly / Bi-weekly / Monthly / Quarterly / Yearly. Next due date is auto-calculated.</p>
+      </div>
+    </div>
+
+    <!-- 9. Trips -->
+    <div class="section" id="s9">
+      <div class="section-header"><div class="section-num">9</div><h2>Trips Tab <span class="new-badge">NEW</span></h2></div>
+      <div class="section-body">
+        <p>Track expenses by travel trip. Expenses are auto-linked to a trip based on date range and currency — no manual assignment needed.</p>
+        <h3>Creating a Trip</h3>
+        <p>Click <strong>+ New Trip</strong> → Name, Start Date, End Date, Currency (the currency you spent in on the trip).</p>
+        <h3>Trip Cards</h3>
+        <ul>
+          <li>Name, date range (DD-MM-YYYY to DD-MM-YYYY), currency flag</li>
+          <li>Total spent · number of expenses · daily average spend · per-day rate</li>
+        </ul>
+        <h3>Linked Expenses</h3>
+        <p>Expand a trip card to see all expenses within the date range that match the trip currency. Each row: Date · Category · Description · Amount.</p>
+        <h3>Editing / Deleting</h3>
+        <p>Edit trip dates or name with ✏️. Deleting a trip removes only the trip record — expenses are kept.</p>
+      </div>
+    </div>
+
+    <!-- 10. Exchange -->
+    <div class="section" id="s10">
+      <div class="section-header"><div class="section-num">10</div><h2>Exchange Tab</h2></div>
+      <div class="section-body">
+        <h3>Rate Table</h3>
+        <p>All 122 supported currencies relative to your base currency. Columns: flag, code, name, 1 base = X foreign, 1 foreign = X base. Rates cached 6 hours.</p>
+        <h3>Currencies Supported — 122 total <span class="new-badge">EXPANDED</span></h3>
+        <p>Includes all major world currencies, regional currencies, and cryptocurrency (BTC, ETH). Key currencies:</p>
+        <p>
+          <span class="tag">INR</span><span class="tag">USD</span><span class="tag">EUR</span><span class="tag">GBP</span>
+          <span class="tag">JPY</span><span class="tag">CHF</span><span class="tag">CAD</span><span class="tag">AUD</span>
+          <span class="tag">SGD</span><span class="tag">AED</span><span class="tag">SAR</span><span class="tag">THB</span>
+          <span class="tag">CNY</span><span class="tag">HKD</span><span class="tag">MYR</span><span class="tag">KRW</span>
+          <span class="tag">ZAR</span><span class="tag">BRL</span><span class="tag">TRY</span><span class="tag">SEK</span>
+          <span class="tag">NOK</span><span class="tag">DKK</span><span class="tag">PLN</span><span class="tag">QAR</span>
+          <span class="tag primary">BTC</span><span class="tag primary">ETH</span>
+          <span class="tag">+ 96 more</span>
+        </p>
+        <h3>Fallback Chain</h3>
+        <p>Live API → cached rates → built-in static rates. Never shows a blank even when the API is unreachable.</p>
+        <h3>Historical Rates</h3>
+        <p>For past-dated expenses, the exchange rate on that exact date is fetched from the Frankfurter API and cached automatically.</p>
+      </div>
+    </div>
+
+    <!-- 11. Settings -->
+    <div class="section" id="s11">
+      <div class="section-header"><div class="section-num">11</div><h2>Settings Tab</h2></div>
+      <div class="section-body">
+        <h3>Appearance</h3>
+        <ul>
+          <li><strong>Dark Mode</strong> — toggle light/dark theme (persisted)</li>
+          <li><strong>Colorblind Mode</strong> — replaces red/green with blue/orange throughout the UI</li>
+        </ul>
+        <h3>Base Currency</h3>
+        <p>Select your primary display currency (default INR ₹). All amounts convert and display in this currency instantly.</p>
+        <h3>Security <span class="new-badge">NEW</span></h3>
+        <p>Enrol biometric (fingerprint / Face ID) for a lock screen on every app open. Set a backup email for OTP recovery. See <a href="#s18">Section 18</a>.</p>
+        <h3>Incognito Mode</h3>
+        <p>Tap 🙈 in the header to blur all monetary amounts. See <a href="#s17">Section 17</a>.</p>
+        <h3>Export Data</h3>
+        <ul>
+          <li><strong>Download JSON</strong> — full backup: expenses, income, budgets, goals, contributions</li>
+          <li><strong>Download CSV</strong> — expenses only, spreadsheet-compatible (Excel / Google Sheets)</li>
+        </ul>
+        <h3>Danger Zone</h3>
+        <div class="table-wrap"><table>
+          <tr><th>Action</th><th>Deletes</th></tr>
+          <tr><td>Clear Expenses</td><td>All expense records</td></tr>
+          <tr><td>Clear Income</td><td>All income records</td></tr>
+          <tr><td>Clear All Data</td><td>Expenses + income</td></tr>
+          <tr><td>Factory Reset</td><td>Everything: expenses, income, budgets, goals, contributions, local settings</td></tr>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- 12. Keyboard -->
+    <div class="section" id="s12">
+      <div class="section-header"><div class="section-num">12</div><h2>Keyboard Shortcuts</h2></div>
+      <div class="section-body">
+        <div class="table-wrap"><table>
+          <tr><th>Key</th><th>Action</th></tr>
+          <tr><td><kbd>1</kbd></td><td>Overview tab</td></tr>
+          <tr><td><kbd>2</kbd></td><td>Income tab</td></tr>
+          <tr><td><kbd>3</kbd></td><td>Trends tab</td></tr>
+          <tr><td><kbd>4</kbd></td><td>Budgets tab</td></tr>
+          <tr><td><kbd>5</kbd></td><td>Goals tab</td></tr>
+          <tr><td><kbd>6</kbd></td><td>Insights tab</td></tr>
+          <tr><td><kbd>7</kbd></td><td>Recurring tab</td></tr>
+          <tr><td><kbd>8</kbd></td><td>Trips tab</td></tr>
+          <tr><td><kbd>9</kbd></td><td>Exchange tab</td></tr>
+          <tr><td><kbd>N</kbd></td><td>Open Add Expense form</td></tr>
+          <tr><td><kbd>I</kbd></td><td>Open Add Income form</td></tr>
+          <tr><td><kbd>D</kbd></td><td>Toggle Dark Mode</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>Close any open modal / form</td></tr>
+        </table></div>
+        <div class="callout info"><div class="callout-title">Note</div>Settings tab has no keyboard shortcut.</div>
+      </div>
+    </div>
+
+    <!-- 13. Adding Expenses -->
+    <div class="section" id="s13">
+      <div class="section-header"><div class="section-num">13</div><h2>Adding Expenses — Full Field Guide</h2></div>
+      <div class="section-body">
+        <p>Click <strong>+ Expense</strong> or press <kbd>N</kbd>. Use <strong>📷 Scan</strong> (top-right of form) to pre-fill fields from a receipt photo.</p>
+        <div class="table-wrap"><table>
+          <tr><th>Field</th><th>Description</th><th>Options / Notes</th></tr>
+          <tr><td><strong>Date</strong></td><td>Transaction date (DD-MM-YYYY display)</td><td>Defaults to today</td></tr>
+          <tr><td><strong>Amount</strong></td><td>How much was spent</td><td>Numeric</td></tr>
+          <tr><td><strong>Currency</strong></td><td>Transaction currency</td><td>122 currencies</td></tr>
+          <tr><td><strong>Conversion Rate</strong></td><td>Auto-filled from live/historical rates</td><td>Editable</td></tr>
+          <tr><td><strong>Description</strong></td><td>What you spent on</td><td>Free text, required</td></tr>
+          <tr><td><strong>Category</strong></td><td>Spending category</td><td>14 categories</td></tr>
+          <tr><td><strong>Subcategory</strong></td><td>Sub-type within category</td><td>4–8 per category</td></tr>
+          <tr><td><strong>Expense Type</strong></td><td>Classification</td><td>Variable / Fixed / Luxury / Need / Want / Investment</td></tr>
+          <tr><td><strong>Payment Method</strong></td><td>How you paid</td><td>Cash / Credit Card / Debit Card / Forex Card / UPI/QR / Net Banking / Wallet / Cheque / EMI / Other</td></tr>
+          <tr><td><strong>UPI App</strong></td><td>Shown when UPI/QR selected</td><td>GPay / PhonePe / Paytm / PayZapp / BHIM / Amazon Pay / WhatsApp Pay / Cred / Slice / Other</td></tr>
+          <tr><td><strong>Dining App</strong></td><td>Shown for Food category</td><td>Swiggy / Zomato / Keta / Dineout / Grab / Blinkit / Zepto / Direct</td></tr>
+          <tr><td><strong>Grocery Tags</strong></td><td>Shown for Food category</td><td>Multi-select chips</td></tr>
+          <tr><td><strong>Receipt / Order ID</strong></td><td>Reference number</td><td>Free text</td></tr>
+          <tr><td><strong>Notes</strong></td><td>Additional details</td><td>Free text</td></tr>
+          <tr><td><strong>Tax / GST Breakdown</strong> ✨</td><td>Individual tax amounts</td><td>SGST / CGST / IGST / VAT / Service Charge / Cess. Collapsed by default; auto-expands when OCR detects taxes</td></tr>
+          <tr><td><strong>Fuel Details</strong> ✨</td><td>Shown for Transport / Fuel</td><td>Rate per Litre (₹/L) · Quantity (Litres) · Fuel Type (Petrol/Diesel/CNG/LPG/Premium)</td></tr>
+          <tr><td><strong>Custom Color</strong></td><td>Override the category dot colour</td><td>259-colour palette</td></tr>
+          <tr><td><strong>Budget Category</strong></td><td>Link to a per-category budget</td><td>Dropdown</td></tr>
+          <tr><td><strong>Split With</strong></td><td>Who you split the bill with</td><td>Free text</td></tr>
+          <tr><td><strong>Recurring</strong></td><td>Mark as recurring template</td><td>Checkbox + period + next due date</td></tr>
+        </table></div>
+
+        <h3>14 Expense Categories</h3>
+        <div class="table-wrap"><table>
+          <tr><th>Category</th><th>Icon</th><th>Subcategories</th></tr>
+          <tr><td>Food</td><td>🍽️</td><td>Groceries · Restaurants · Snacks · Beverages · Sweets · Takeaway</td></tr>
+          <tr><td>Transport</td><td>🚗</td><td>Fuel · Auto/Cab · Bus/Train · Flight · Parking · Vehicle Maintenance</td></tr>
+          <tr><td>Shopping</td><td>🛍️</td><td>Clothes · Electronics · Furniture · Books · Accessories · Appliances</td></tr>
+          <tr><td>Health</td><td>💊</td><td>Medicine · Doctor · Lab Tests · Hospital · Wellness · Dental</td></tr>
+          <tr><td>Entertainment</td><td>🎬</td><td>Movies · OTT/Streaming · Gaming · Events · Hobbies · Sports</td></tr>
+          <tr><td>Utilities</td><td>💡</td><td>Electricity · Water · Gas · Internet · Phone · Cable</td></tr>
+          <tr><td>Housing</td><td>🏠</td><td>Rent · EMI · Maintenance · Repairs · Housekeeping · House Maid · Pest Control · Security · Interior</td></tr>
+          <tr><td>Education</td><td>📚</td><td>Fees · Books · Courses · Stationery · Coaching · Exams</td></tr>
+          <tr><td>Personal</td><td>💆</td><td>Haircut · Skincare · Gym · Spa · Personal Care · Laundry · Dry Cleaning · Ironing · Fashion</td></tr>
+          <tr><td>Travel</td><td>✈️</td><td>Hotel · Sightseeing · Visa · Insurance · Souvenirs · Transport</td></tr>
+          <tr><td>Finance</td><td>💰</td><td>Insurance · Tax · Loan Payment · Investment · Bank Fees · Savings</td></tr>
+          <tr><td>Social</td><td>🎉</td><td>Gifts · Parties · Donations · Subscriptions · Events · Dining Out</td></tr>
+          <tr><td>Administrative</td><td>🗂️</td><td>License Renewal · Passport Renewal · Government Fees · Notary/Legal</td></tr>
+          <tr><td>Other</td><td>📌</td><td>Miscellaneous · Uncategorized · Refund · Transfer</td></tr>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- 14. Receipt Scanner -->
+    <div class="section" id="s14">
+      <div class="section-header"><div class="section-num">14</div><h2>Receipt Scanner (OCR) <span class="new-badge">NEW</span></h2></div>
+      <div class="section-body">
+        <p>Scan a receipt photo and automatically pre-fill the expense form. Powered by <strong>Tesseract.js</strong> running entirely in your browser — no image is ever uploaded to a server.</p>
+
+        <h3>Opening the Scanner</h3>
+        <p>In the Add Expense form, tap the <strong>📷 Scan</strong> button in the top-right of the form header.</p>
+
+        <h3>Single-Photo Scan</h3>
+        <ol>
+          <li>Select <strong>1 Photo</strong></li>
+          <li>Take a photo or upload from gallery</li>
+          <li>Drag the 8 crop handles (corners + edges) to frame the receipt</li>
+          <li>Tap <strong>Scan Selected Area</strong> or <strong>Scan Full Image</strong></li>
+          <li>Progress bar shows Tesseract reading the text (0–100%)</li>
+          <li>Review the results screen, then tap <strong>Apply to Form</strong></li>
+        </ol>
+
+        <h3>Multi-Part Scan — Long Receipts <span class="new-badge">NEW</span></h3>
+        <p>For receipts too tall to photograph clearly in one shot:</p>
+        <ol>
+          <li>Select <strong>Multi-Part</strong></li>
+          <li>Photograph top section → crop → tap <strong>Add Another Part →</strong></li>
+          <li>Photograph bottom section → crop → tap <strong>Add Another Part →</strong> for more, or <strong>Scan N Parts</strong> to finish</li>
+          <li>Progress bar divides evenly across all parts</li>
+          <li>All text is combined in order and parsed as one document</li>
+        </ol>
+        <div class="callout tip"><div class="callout-title">Tip</div>Start each new part slightly above where the previous one ended — a small overlap ensures no lines are missed. No hard limit on the number of parts.</div>
+
+        <h3>What the Scanner Extracts</h3>
+        <div class="table-wrap"><table>
+          <tr><th>Field</th><th>How it's detected</th></tr>
+          <tr><td><strong>Amount</strong></td><td>Looks near "Total", "Bill Total", "Grand Total", "Sale Amount" first; then any ₹/Rs/¥/€/£ symbol</td></tr>
+          <tr><td><strong>Date</strong></td><td>8 format patterns: DD/MM/YYYY · DD-MM-YY · ISO · "12 May 2026" · "May 12, 2026" etc.</td></tr>
+          <tr><td><strong>Merchant</strong></td><td>All-caps lines in the top 4 lines (skips company registration suffixes like PVT LTD); falls back to highest-scoring line</td></tr>
+          <tr><td><strong>Category</strong></td><td>80+ merchant keyword map; then food/fuel content detection from item names</td></tr>
+          <tr><td><strong>Payment Method</strong></td><td>Cash · UPI · GPay · PhonePe · Paytm · VISA · MasterCard · RuPay · Debit Card · MOP CARD · Net Banking</td></tr>
+          <tr><td><strong>SGST / CGST / IGST / VAT / Service Charge / Cess</strong></td><td>Line-by-line regex for each tax type</td></tr>
+          <tr><td><strong>Fuel Rate per Litre</strong></td><td>"Rate Per Litre 103 80" → normalised to 103.80, rounded to 2dp</td></tr>
+          <tr><td><strong>Fuel Quantity</strong></td><td>"Sale Quantity 19 36" → normalised to 19.36, rounded to 2dp</td></tr>
+          <tr><td><strong>Fuel Type</strong></td><td>"Product Name Petrol / Diesel / CNG / LPG"</td></tr>
+        </table></div>
+
+        <h3>Results Screen</h3>
+        <ul>
+          <li>Each field shows <strong>✓</strong> (found with confidence) or <strong>?</strong> (uncertain)</li>
+          <li>Tax chips show individual amounts per tax type</li>
+          <li>Fuel chips show rate, litres, fuel type</li>
+          <li><strong>Show raw OCR text ▼</strong> reveals full extracted text for debugging</li>
+          <li><strong>Re-scan</strong> to try again · <strong>Apply to Form</strong> to pre-fill</li>
+        </ul>
+
+        <div class="callout warn"><div class="callout-title">First Use</div>The first scan downloads Tesseract's English language model (~10 MB from CDN) and caches it in your browser. Subsequent scans are fast. Works best with sharp, well-lit photos of printed receipts.</div>
+      </div>
+    </div>
+
+    <!-- 15. Income guide -->
+    <div class="section" id="s15">
+      <div class="section-header"><div class="section-num">15</div><h2>Adding Income — Full Field Guide</h2></div>
+      <div class="section-body">
+        <p>Click <strong>+ Income</strong> or press <kbd>I</kbd>.</p>
+        <div class="table-wrap"><table>
+          <tr><th>Field</th><th>Options</th></tr>
+          <tr><td>Date</td><td>Defaults to today</td></tr>
+          <tr><td>Description</td><td>Free text</td></tr>
+          <tr><td>Amount + Currency</td><td>122 currencies</td></tr>
+          <tr><td>Conversion Rate</td><td>Auto-filled, editable</td></tr>
+          <tr><td>Source</td><td>Salary · Freelance · Business · Rental · Dividends · Interest · Bonus · Gift · Refund · Side Income · Other</td></tr>
+          <tr><td>Payment Method</td><td>All methods</td></tr>
+          <tr><td>Notes</td><td>Free text</td></tr>
+          <tr><td>Recurring</td><td>Checkbox + period</td></tr>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- 16. Multi-currency -->
+    <div class="section" id="s16">
+      <div class="section-header"><div class="section-num">16</div><h2>Multi-Currency Support</h2></div>
+      <div class="section-body">
+        <ul>
+          <li>Every expense and income can be in any of <strong>122 currencies</strong></li>
+          <li>The app stores the base-currency equivalent alongside the original amount</li>
+          <li>All totals, charts, and summaries show in your chosen base currency</li>
+          <li>For past-dated expenses, the historical rate on that exact date is fetched automatically</li>
+          <li><strong>Fallback chain:</strong> live API → 6-hour cached rates → built-in static rates</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 17. Incognito -->
+    <div class="section" id="s17">
+      <div class="section-header"><div class="section-num">17</div><h2>Incognito Mode <span class="new-badge">NEW</span></h2></div>
+      <div class="section-body">
+        <p>Blurs all monetary amounts throughout the app so sensitive figures aren't visible to bystanders.</p>
+        <h3>Toggling</h3>
+        <p>Tap the <strong>🙈</strong> button in the top-right header. All amounts blur immediately across all tabs. Tap again to reveal all.</p>
+        <h3>Revealing Individual Amounts</h3>
+        <p>While in incognito mode, hover (desktop) or tap (mobile) any blurred amount to reveal just that value temporarily.</p>
+        <h3>Persistence</h3>
+        <p>Incognito state is saved to <code>localStorage</code> — stays on until you toggle it off, even across page reloads.</p>
+      </div>
+    </div>
+
+    <!-- 18. Biometrics -->
+    <div class="section" id="s18">
+      <div class="section-header"><div class="section-num">18</div><h2>Biometric Lock &amp; OTP Fallback <span class="new-badge">NEW</span></h2></div>
+      <div class="section-body">
+        <h3>Enrolment</h3>
+        <ol>
+          <li><strong>Settings → Security → Set Up Biometric</strong></li>
+          <li>Enter your <strong>backup email</strong> (for OTP recovery — different from login email)</li>
+          <li>Follow the browser prompt to register fingerprint or Face ID</li>
+        </ol>
+        <h3>Lock Screen</h3>
+        <p>Every time you open the app, the lock screen appears. Tap <strong>Verify with Biometrics</strong> → authenticate → app unlocks instantly.</p>
+        <h3>OTP Fallback</h3>
+        <p>If biometrics fail: tap <strong>Use Email Code</strong> → 6-digit OTP sent to backup email → enter within 15 minutes. After 3 incorrect attempts, account locks for 15 minutes.</p>
+        <h3>Per-Device Independence</h3>
+        <p>Each device enrols separately. One device's credential does not affect others. Removing biometrics on one device only removes it from that device.</p>
+      </div>
+    </div>
+
+    <!-- 19. Anomaly -->
+    <div class="section" id="s19">
+      <div class="section-header"><div class="section-num">19</div><h2>Anomaly Detection <span class="new-badge">NEW</span></h2></div>
+      <div class="section-body">
+        <h3>How It Works</h3>
+        <p>When a new expense is saved, it is compared to your past expenses in the same category. If significantly above your historical average, it is flagged.</p>
+        <h3>Anomaly Panel</h3>
+        <p>Appears at the top of the Insights tab. Shows up to 5 most recent anomalies: date, description, category, % above average. Dismiss individually with ✕.</p>
+        <h3>Persistence</h3>
+        <p>Dismissed anomaly IDs stored in <code>localStorage</code> (max 500) — dismissed anomalies don't reappear.</p>
+      </div>
+    </div>
+
+    <!-- 20. Conflicts -->
+    <div class="section" id="s20">
+      <div class="section-header"><div class="section-num">20</div><h2>Conflict Resolution <span class="new-badge">NEW</span></h2></div>
+      <div class="section-body">
+        <h3>When It Triggers</h3>
+        <p>When the same expense is edited on two devices simultaneously. The second save detects the database version has changed.</p>
+        <h3>Conflict Modal</h3>
+        <p>Side-by-side diff of your local version vs the server version. Three modes:</p>
+        <ul>
+          <li><strong>Keep Mine</strong> — your local changes win</li>
+          <li><strong>Keep Theirs</strong> — the server version wins</li>
+          <li><strong>Merge</strong> — per-field radio buttons; choose which version of each field to keep</li>
+        </ul>
+        <h3>Conflict Badge</h3>
+        <p>Header shows the count of pending conflicts. Tap to open the conflict resolution modal.</p>
+      </div>
+    </div>
+
+    <!-- 21. Offline -->
+    <div class="section" id="s21">
+      <div class="section-header"><div class="section-num">21</div><h2>Offline Mode</h2></div>
+      <div class="section-body">
+        <p>The app works fully offline. No data is lost when connectivity drops.</p>
+        <ul>
+          <li><strong>Reading</strong> — last-loaded data available; charts and lists work normally</li>
+          <li><strong>Writing</strong> — changes go to a local retry queue, appear in the UI immediately</li>
+          <li><strong>Reconnection</strong> — queued changes sync to Supabase automatically in dependency order</li>
+          <li><strong>⏳ badge</strong> — on items pending cloud confirmation</li>
+          <li>Amber banner shows "You're offline · N changes queued"</li>
+          <li>Blue banner shows while the queue drains after reconnection</li>
+          <li>Items failing 5 retries are dropped to prevent infinite loops</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 22. Real-Time Sync -->
+    <div class="section" id="s22">
+      <div class="section-header"><div class="section-num">22</div><h2>Real-Time Sync</h2></div>
+      <div class="section-body">
+        <p>Changes on one device appear on all other open devices within ~1 second.</p>
+        <h3>Sync Status Indicator (header)</h3>
+        <div class="table-wrap"><table>
+          <tr><th>Indicator</th><th>Meaning</th></tr>
+          <tr><td>🟢 Pulsing green</td><td>Live connection active</td></tr>
+          <tr><td>🟡 Spinning amber</td><td>Connecting / reconnecting</td></tr>
+          <tr><td>🔴 Red</td><td>Sync error (data still saves locally)</td></tr>
+          <tr><td>⚫ Gray</td><td>Offline</td></tr>
+        </table></div>
+        <p>Syncs: Expenses · Income · Budgets · Goals · Goal contributions · Trips</p>
+      </div>
+    </div>
+
+    <!-- 23. Push -->
+    <div class="section" id="s23">
+      <div class="section-header"><div class="section-num">23</div><h2>Push Notifications</h2></div>
+      <div class="section-body">
+        <p>Daily reminders for recurring expenses due within 3 days.</p>
+        <h3>Enabling</h3>
+        <ol>
+          <li><strong>Settings → Recurring Reminders → Enable</strong></li>
+          <li>Approve the browser permission prompt</li>
+        </ol>
+        <h3>How It Works</h3>
+        <p>Fires at <strong>07:00 AM IST</strong> daily. Shows description, amount, days until due. Tapping opens the app to the Recurring tab. Works when the browser/app is closed.</p>
+        <h3>Browser Compatibility</h3>
+        <div class="table-wrap"><table>
+          <tr><th>Browser</th><th>Notes</th></tr>
+          <tr><td>Chrome (Android / PC)</td><td>Works out of the box</td></tr>
+          <tr><td>Brave</td><td>Enable "Use Google services for push messaging" in <code>brave://settings/privacy</code></td></tr>
+          <tr><td>Firefox (desktop)</td><td>Works</td></tr>
+          <tr><td>Safari / iOS</td><td>Requires iOS 16.4+ · app must be installed as PWA (Add to Home Screen)</td></tr>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- 24. PWA -->
+    <div class="section" id="s24">
+      <div class="section-header"><div class="section-num">24</div><h2>PWA — Install on Device</h2></div>
+      <div class="section-body">
+        <div class="table-wrap"><table>
+          <tr><th>Platform</th><th>How to install</th></tr>
+          <tr><td>Android (Chrome / Brave)</td><td>Three-dot menu → <strong>Add to Home Screen</strong> or <strong>Install App</strong></td></tr>
+          <tr><td>iPhone / iPad (Safari)</td><td>Share button → <strong>Add to Home Screen</strong> · Requires iOS 16.4+</td></tr>
+          <tr><td>Windows / Mac (Chrome / Edge)</td><td>Install icon in the address bar → <strong>Install</strong></td></tr>
+        </table></div>
+        <h3>PWA Features</h3>
+        <ul>
+          <li>Works offline (service worker caches the app shell)</li>
+          <li>Auto-updates when a new version is deployed — no manual refresh needed</li>
+          <li>Full screen, no browser chrome</li>
+          <li>Push notifications when enabled</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 25. Migration -->
+    <div class="section" id="s25">
+      <div class="section-header"><div class="section-num">25</div><h2>Data Migration from V5</h2></div>
+      <div class="section-body">
+        <h3>Steps</h3>
+        <ol>
+          <li>Open the old V5 HTML file in a browser</li>
+          <li><strong>Settings → Export Data → Download JSON</strong></li>
+          <li>In V7: <strong>Settings → Migrate from V5 → Choose V5 File</strong></li>
+          <li>Migration runs automatically — no duplicates created</li>
+        </ol>
+        <h3>What Migrates</h3>
+        <p>All expenses and income records (categories, tags, notes, recurring flags, amounts, dates). Fingerprints preserved — re-running is safe.</p>
+        <h3>What Does NOT Migrate</h3>
+        <p>Budgets · Goals · App settings — re-set these manually in V7.</p>
+      </div>
+    </div>
+
+    <!-- 26. Export -->
+    <div class="section" id="s26">
+      <div class="section-header"><div class="section-num">26</div><h2>Export &amp; Import</h2></div>
+      <div class="section-body">
+        <div class="table-wrap"><table>
+          <tr><th>Format</th><th>Contents</th><th>Use for</th></tr>
+          <tr><td><strong>JSON export</strong></td><td>Expenses, income, budgets, goals, contributions</td><td>Full backup, moving devices, archiving</td></tr>
+          <tr><td><strong>CSV export</strong></td><td>Expenses only</td><td>Excel / Google Sheets analysis</td></tr>
+          <tr><td><strong>JSON import</strong></td><td>Upload a V7 JSON backup</td><td>Restore backup; duplicates auto-skipped by fingerprint</td></tr>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- 27. Danger Zone -->
+    <div class="section" id="s27">
+      <div class="section-header"><div class="section-num">27</div><h2>Danger Zone</h2></div>
+      <div class="section-body">
+        <div class="callout warn"><div class="callout-title">Warning</div>All Danger Zone actions are <strong>permanent and cannot be undone</strong>. Each requires a confirmation click.</div>
+        <div class="table-wrap"><table>
+          <tr><th>Action</th><th>What is deleted</th></tr>
+          <tr><td>Clear Expenses</td><td>All expense records</td></tr>
+          <tr><td>Clear Income</td><td>All income records</td></tr>
+          <tr><td>Clear All Data</td><td>All expenses + income</td></tr>
+          <tr><td>Factory Reset</td><td>Everything: expenses, income, budgets, goals, contributions, local settings</td></tr>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- 28. Technical -->
+    <div class="section" id="s28">
+      <div class="section-header"><div class="section-num">28</div><h2>Technical Reference</h2></div>
+      <div class="section-body">
+        <h3>Architecture</h3>
+        <div class="table-wrap"><table>
+          <tr><th>Layer</th><th>Technology</th></tr>
+          <tr><td>Frontend</td><td>Vite + React 19 (SPA, no SSR)</td></tr>
+          <tr><td>Database</td><td>Supabase Postgres with Row-Level Security</td></tr>
+          <tr><td>Auth</td><td>Magic-link email via Supabase Auth (no passwords)</td></tr>
+          <tr><td>Session</td><td>HttpOnly cookie <code>sb_session</code> — no auth tokens in localStorage</td></tr>
+          <tr><td>Hosting</td><td>Vercel CDN (global edge)</td></tr>
+          <tr><td>Offline</td><td>Service worker (Workbox) + localStorage retry queue</td></tr>
+          <tr><td>Real-time</td><td>Supabase Realtime (WebSocket, <code>postgres_changes</code>)</td></tr>
+          <tr><td>Push</td><td>Web Push API + VAPID + Vercel serverless cron</td></tr>
+          <tr><td>OCR</td><td>Tesseract.js v7 (client-side WASM, English model)</td></tr>
+          <tr><td>Biometrics</td><td>WebAuthn (<code>@simplewebauthn/browser</code> + <code>@simplewebauthn/server</code> v13)</td></tr>
+        </table></div>
+
+        <h3>Expense Schema</h3>
+        <p>All fields stored per expense:</p>
+        <p>
+          <code>id</code> <code>date</code> <code>description</code> <code>amount</code> <code>currency</code>
+          <code>conversionRate</code> <code>amountINR</code> <code>category</code> <code>subcategory</code>
+          <code>expenseType</code> <code>paymentMethod</code> <code>paymentDescription</code> <code>diningApp</code>
+          <code>tags[]</code> <code>notes</code> <code>customColor</code> <code>budgetCategory</code>
+          <code>isRecurring</code> <code>recurringPeriod</code> <code>nextDueDate</code>
+          <code>splitWith</code> <code>splitParts</code> <code>receiptRef</code>
+          <code>taxAmount</code> <code>taxBreakdown{}</code>
+          <code>fuelRate</code> <code>fuelQuantity</code> <code>fuelType</code>
+          <code>_fp</code> <code>migratedFrom</code> <code>importedFrom</code>
+          <code>version</code> <code>row_version</code>
+        </p>
+
+        <h3>Supabase Tables</h3>
+        <div class="table-wrap"><table>
+          <tr><th>Table</th><th>Purpose</th></tr>
+          <tr><td><code>expenses</code></td><td>All expense records</td></tr>
+          <tr><td><code>income</code></td><td>All income records</td></tr>
+          <tr><td><code>budgets</code></td><td>One row per user — daily/weekly/monthly/category limits</td></tr>
+          <tr><td><code>goals</code></td><td>Savings goals</td></tr>
+          <tr><td><code>goal_contributions</code></td><td>Individual contributions toward goals</td></tr>
+          <tr><td><code>trips</code></td><td>Travel trip records</td></tr>
+          <tr><td><code>biometric_credentials</code></td><td>WebAuthn credential metadata per user/device</td></tr>
+          <tr><td><code>registration_challenges</code></td><td>Temporary WebAuthn challenge storage</td></tr>
+          <tr><td><code>push_subscriptions</code></td><td>Device push subscription endpoints</td></tr>
+        </table></div>
+
+        <h3>Cron Jobs</h3>
+        <div class="table-wrap"><table>
+          <tr><th>Job</th><th>Schedule</th><th>What it does</th></tr>
+          <tr><td><code>send-reminders</code></td><td>01:30 UTC daily</td><td>Push notifications for recurring expenses due within 3 days</td></tr>
+          <tr><td><code>maintenance</code></td><td>02:00 UTC Sundays</td><td>Cleans up expired challenge records and stale data</td></tr>
+        </table></div>
+
+        <h3>Security Headers</h3>
+        <ul>
+          <li><strong>Content-Security-Policy</strong> — restricts scripts to self + jsDelivr (Tesseract WASM); blocks framing</li>
+          <li><strong>X-Frame-Options: DENY</strong></li>
+          <li><strong>X-Content-Type-Options: nosniff</strong></li>
+          <li><strong>Referrer-Policy: strict-origin-when-cross-origin</strong></li>
+          <li><strong>Permissions-Policy: camera=(self)</strong> — camera allowed only for receipt scanning</li>
+        </ul>
+
+        <h3>Production URLs</h3>
+        <ul>
+          <li><strong>App:</strong> <a href="https://expense-tracker-v6.vercel.app" target="_blank">https://expense-tracker-v6.vercel.app</a></li>
+          <li><strong>GitHub:</strong> <a href="https://github.com/aguiarlindsey/expense-tracker-v6" target="_blank">https://github.com/aguiarlindsey/expense-tracker-v6</a></li>
+          <li><strong>Supabase:</strong> <code>https://tcqwjpirlmjssrowknlm.supabase.co</code></li>
+        </ul>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  // Dark mode
+  function toggleDark() {
+    const isDark = document.documentElement.classList.toggle('dark');
+    document.querySelector('.dark-toggle').textContent = isDark ? '☀️ Light' : '🌙 Dark';
+    localStorage.setItem('exptrav7_dark', isDark ? '1' : '0');
+  }
+  if (localStorage.getItem('exptrav7_dark') === '1') {
+    document.documentElement.classList.add('dark');
+    document.querySelector('.dark-toggle').textContent = '☀️ Light';
+  }
+
+  // Scroll-to-top button
+  const toTop = document.getElementById('toTop');
+  window.addEventListener('scroll', () => {
+    toTop.classList.toggle('visible', window.scrollY > 400);
+  });
+
+  // Active TOC highlight on scroll
+  const sections = document.querySelectorAll('.section');
+  const tocLinks = document.querySelectorAll('.toc-item a');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        tocLinks.forEach(a => {
+          a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
