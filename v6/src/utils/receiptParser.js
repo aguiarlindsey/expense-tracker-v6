@@ -17,12 +17,19 @@ const MERCHANT_MAP = {
   reliance:      { category: 'Food', subcategory: 'Groceries' },
   spencers:      { category: 'Food', subcategory: 'Groceries' },
   lulu:          { category: 'Food', subcategory: 'Groceries' },
-  // Fuel
-  'indian oil':  { category: 'Transport', subcategory: 'Fuel' },
-  indianoil:     { category: 'Transport', subcategory: 'Fuel' },
-  hpcl:          { category: 'Transport', subcategory: 'Fuel' },
-  bpcl:          { category: 'Transport', subcategory: 'Fuel' },
-  iocl:          { category: 'Transport', subcategory: 'Fuel' },
+  // Fuel stations — match brand prefixes that appear on pump receipts
+  'indian oil':       { category: 'Transport', subcategory: 'Fuel' },
+  'indianoil':        { category: 'Transport', subcategory: 'Fuel' },
+  'iocl':             { category: 'Transport', subcategory: 'Fuel' },
+  'hpcl':             { category: 'Transport', subcategory: 'Fuel' },
+  'hp service':       { category: 'Transport', subcategory: 'Fuel' },
+  'hp petrol':        { category: 'Transport', subcategory: 'Fuel' },
+  'hindustan petroleum': { category: 'Transport', subcategory: 'Fuel' },
+  'bpcl':             { category: 'Transport', subcategory: 'Fuel' },
+  'bharat petroleum': { category: 'Transport', subcategory: 'Fuel' },
+  'essar':            { category: 'Transport', subcategory: 'Fuel' },
+  'shell':            { category: 'Transport', subcategory: 'Fuel' },
+  'reliance petrol':  { category: 'Transport', subcategory: 'Fuel' },
   // Transport
   ola:           { category: 'Transport', subcategory: 'Auto/Cab' },
   uber:          { category: 'Transport', subcategory: 'Auto/Cab' },
@@ -135,15 +142,15 @@ function extractAmount(text) {
   const values = [];
 
   // Priority: look near "total" keywords first
-  const totalPat = /(?:grand\s*total|bill\s*total|total\s*amount|amount\s*paid|net\s*amount|bill\s*amount|net\s*payable|payable|total)[^\d₹Rs]{0,15}(?:₹|Rs\.?|INR)?\s*([\d,]+(?:\.\d{1,2})?)/gi;
+  const totalPat = /(?:grand\s*total|bill\s*total|total\s*amount|amount\s*paid|net\s*amount|bill\s*amount|sale\s*amount|billed\s*amount|net\s*payable|payable|total)[^\d₹Rs¥]{0,15}(?:₹|Rs\.?|INR|¥)?\s*([\d,]+(?:\.\d{1,2})?)/gi;
   let m;
   while ((m = totalPat.exec(text)) !== null) {
     const v = parseFloat(m[1].replace(/,/g, ''));
     if (!isNaN(v) && v > 0) values.push(v);
   }
 
-  // Secondary: any ₹ / Rs amount
-  const symPat = /(?:₹|Rs\.?|INR)\s*([\d,]+(?:\.\d{1,2})?)/gi;
+  // Secondary: any ₹ / Rs / ¥ amount (OCR often misreads ₹ as ¥)
+  const symPat = /(?:₹|Rs\.?|INR|¥)\s*([\d,]+(?:\.\d{1,2})?)/gi;
   while ((m = symPat.exec(text)) !== null) {
     const v = parseFloat(m[1].replace(/,/g, ''));
     if (!isNaN(v) && v > 0) values.push(v);
@@ -257,6 +264,14 @@ function isRestaurantContext(text) {
   return /\b(table\s*(no|number|#)?|cover|pax|steward|waiter|server|dine|restaurant|cafe|dhaba|hotel\b|bistro|eatery|lounge)\b/i.test(text);
 }
 
+// Fuel receipt keywords — petrol pump bills always have at least 2 of these
+const FUEL_KW = ['petrol','diesel','cng','lpg','fuel','rate per litre','rate per ltr','sale quantity','nozzle','bay number','pump','litre','liter'];
+
+function hasFuelContent(text) {
+  const lower = text.toLowerCase();
+  return FUEL_KW.filter(kw => lower.includes(kw)).length >= 2;
+}
+
 function extractCategory(merchantName, rawText) {
   // Try known merchant map
   if (merchantName) {
@@ -264,6 +279,11 @@ function extractCategory(merchantName, rawText) {
     for (const key of Object.keys(MERCHANT_MAP)) {
       if (lower.includes(key)) return MERCHANT_MAP[key];
     }
+  }
+
+  // Fallback: detect fuel from receipt body (petrol pump bills)
+  if (rawText && hasFuelContent(rawText)) {
+    return { category: 'Transport', subcategory: 'Fuel' };
   }
 
   // Fallback: detect food items from receipt body
