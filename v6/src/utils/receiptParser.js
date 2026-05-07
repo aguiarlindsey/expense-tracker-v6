@@ -86,29 +86,35 @@ const MERCHANT_MAP = {
 // Lines to skip when scanning for the business name
 const SKIP_LINE_RE = /^(receipt|bill|invoice|tax\s*invoice|kot|order|cash\s*memo|cash\s*receipt|gst|gstin|fssai|table|cover|pax|phone|ph:|tel:|mob:|address|city|pincode|welcome|thank\s*you|wifi|password|subtotal|sub\s*total|total|amount|qty|item|s\.?no|sr\.?\s*no|date|time|operator|cashier|void|duplicate|copy|printed)/i;
 
+// Company registration suffixes — legal entity name, not the brand/restaurant name
+const COMPANY_SUFFIX_RE = /\b(pvt\.?\s*ltd\.?|private\s+limited|limited|llp|llc|inc\.?|corp\.?|co\.?\s*ltd\.?|catering\s+services|hospitality|enterprises|solutions)\b/i;
+
 // Food keywords for fallback category detection when merchant is unknown
 const FOOD_KW = [
   // Indian dishes & ingredients
   'biryani','rice','naan','roti','paratha','chapati','puri','bhatura',
   'chicken','mutton','lamb','fish','prawn','shrimp','crab','keema',
+  'salmon','tuna','sea bass','lobster','squid','octopus',
+  'steak','ribeye','tenderloin','sirloin','brisket','pork','bacon',
   'paneer','dal','curry','masala','tikka','kebab','kabab','tandoori',
   'dosa','idli','vada','uttapam','appam','puttu','pesarattu',
   'samosa','pakora','pakoda','bhajia','chaat','pav','bhaji',
-  'thali','pulao','biryani','fried rice','noodles','hakka','chowmein',
-  'manchurian','spring roll','momos','dumpling','dim sum',
+  'thali','pulao','fried rice','noodles','hakka','chowmein',
+  'manchurian','spring roll','momos','dumpling','dim sum','sushi','sashimi',
   'soup','salad','starter','appetizer','main course','dessert',
-  'kheer','halwa','gulab','jalebi','rasgulla','ice cream',
+  'kheer','halwa','gulab','jalebi','rasgulla','ice cream','tiramisu','mousse',
   'sandwich','burger','pizza','pasta','wrap','roll','frank',
+  'truffle','risotto','bruschetta','carpaccio',
   'coffee','cappuccino','latte','espresso','tea','chai','matcha',
   'juice','lassi','milkshake','smoothie','mocktail','buttermilk',
-  'water','soda','soft drink','cola','pepsi','sprite','beer','wine',
-  'whisky','vodka','rum','gin','cocktail',
+  'water','soda','soft drink','cola','pepsi','sprite',
+  'beer','hoegaarden','heineken','wine','whisky','vodka','rum','gin','cocktail',
   // Receipt context words that imply restaurant
-  'table no','table number','cover','pax','kot','steward','waiter',
-  'half plate','full plate','portion','serving',
+  'table no','table number','table-','cover','pax','kot','steward','waiter',
+  'half plate','full plate','portion','serving','dine in','dine-in',
   // Generic cooking descriptors
-  'grilled','fried','baked','roasted','steamed','tossed','stuffed',
-  'veg ','non-veg','vegan','jain',
+  'grilled','fried','baked','roasted','steamed','tossed','stuffed','flamed','smoked',
+  'veg ','non-veg','vegan','jain','butter','garlic','sauce','gravy',
 ];
 
 // UPI app keyword detection
@@ -129,7 +135,7 @@ function extractAmount(text) {
   const values = [];
 
   // Priority: look near "total" keywords first
-  const totalPat = /(?:grand\s*total|total\s*amount|amount\s*paid|net\s*amount|bill\s*amount|net\s*payable|payable|total)[^\d₹Rs]{0,15}(?:₹|Rs\.?|INR)?\s*([\d,]+(?:\.\d{1,2})?)/gi;
+  const totalPat = /(?:grand\s*total|bill\s*total|total\s*amount|amount\s*paid|net\s*amount|bill\s*amount|net\s*payable|payable|total)[^\d₹Rs]{0,15}(?:₹|Rs\.?|INR)?\s*([\d,]+(?:\.\d{1,2})?)/gi;
   let m;
   while ((m = totalPat.exec(text)) !== null) {
     const v = parseFloat(m[1].replace(/,/g, ''));
@@ -178,47 +184,60 @@ function extractDate(text) {
 }
 
 // ── Merchant name ─────────────────────────────────────────────────────────────
+const ADDR_RE = /\b(road|rd\b|street|st\b|lane|ln\b|nagar|colony|sector|floor|shop|near|opp|opposite|ph:|no\.|door|flat|apt)\b/i;
+
+function isNameCandidate(line) {
+  if (line.length < 3) return false;
+  if (SKIP_LINE_RE.test(line)) return false;
+  if (/^\d/.test(line)) return false;
+  if (/\b\d{10}\b/.test(line)) return false;          // phone number
+  if (/@|www\.|\.com|\.in\b/.test(line)) return false; // email/URL
+  if (ADDR_RE.test(line)) return false;                // address
+  const letters = (line.match(/[a-zA-Z]/g) || []).length;
+  const digits  = (line.match(/\d/g) || []).length;
+  if (letters < 3) return false;
+  if (digits > letters) return false;
+  return true;
+}
+
 function extractMerchantName(text) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   const searchArea = lines.slice(0, 15).join(' ').toLowerCase();
 
-  // 1. Check known merchants first (most reliable)
+  // 1. Known merchant map (highest confidence)
   for (const key of Object.keys(MERCHANT_MAP)) {
     if (searchArea.includes(key)) {
       return key.replace(/\b\w/g, c => c.toUpperCase());
     }
   }
 
-  // 2. Score first 8 lines and pick the best candidate for a business name
+  // 2. Priority pass: first all-caps line in top 5 that isn't metadata or a
+  //    legal company registration line (e.g. "TRIFECTA CATERING SERVICES PVT LTD").
+  //    The actual brand/restaurant name (e.g. "TORII") follows on the next line.
+  for (const line of lines.slice(0, 5)) {
+    if (!isNameCandidate(line)) continue;
+    if (COMPANY_SUFFIX_RE.test(line)) continue;       // skip legal entity names
+    const letters = (line.match(/[a-zA-Z]/g) || []).length;
+    const isAllCaps = line.replace(/[^a-zA-Z]/g, '') === line.replace(/[^a-zA-Z]/g, '').toUpperCase();
+    if (isAllCaps && letters >= 3) return cleanName(line);
+  }
+
+  // 3. Scoring fallback for mixed-case names (e.g. "The Bombay Canteen")
   let best = null, bestScore = -1;
   for (const line of lines.slice(0, 8)) {
-    if (line.length < 3) continue;
-    if (SKIP_LINE_RE.test(line)) continue;
-
+    if (!isNameCandidate(line)) continue;
+    if (COMPANY_SUFFIX_RE.test(line)) continue;
     const letters = (line.match(/[a-zA-Z]/g) || []).length;
-    const digits  = (line.match(/\d/g) || []).length;
-    if (letters < 3) continue;                        // too few letters
-    if (digits > letters) continue;                   // more digits than letters
-    if (/^\d/.test(line)) continue;                   // starts with a digit
-
-    // Skip address-like lines
-    if (/\b(road|rd\b|street|st\b|lane|ln\b|nagar|colony|sector|floor|shop|near|opp|opposite|ph:|no\.|door|flat|apt)\b/i.test(line)) continue;
-    // Skip lines with phone numbers
-    if (/\b\d{10}\b/.test(line)) continue;
-    // Skip lines with email or URL patterns
-    if (/@|www\.|\.com|\.in\b/.test(line)) continue;
-
-    // Scoring: reward longer names, penalise mostly-digit lines
-    let score = letters;
-    // All-caps lines are very likely to be restaurant names (common on Indian receipts)
-    if (line === line.toUpperCase() && letters > 4) score += 10;
-    // Lines that appear early are more likely to be the name
-    score += Math.max(0, 6 - lines.indexOf(line)) * 2;
-
+    let score = letters + Math.max(0, 6 - lines.indexOf(line)) * 2;
     if (score > bestScore) { bestScore = score; best = line; }
   }
 
-  return best;
+  return best ? cleanName(best) : null;
+}
+
+// Strip OCR noise characters from start/end of extracted name (e.g. 'TORII "-' → 'TORII')
+function cleanName(name) {
+  return name.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9\s&'.()\-]+$/g, '').trim();
 }
 
 // ── Category ─────────────────────────────────────────────────────────────────
