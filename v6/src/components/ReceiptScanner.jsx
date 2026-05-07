@@ -117,6 +117,7 @@ export default function ReceiptScanner({ onResult, onClose }) {
   const [parsed, setParsed]           = useState(null);
   const [rawText, setRawText]         = useState('');
   const [showRaw, setShowRaw]         = useState(false);
+  const [errorDetail, setErrorDetail] = useState('');
 
   const fileRef      = useRef(null);
   const cameraRef    = useRef(null);
@@ -147,6 +148,9 @@ export default function ReceiptScanner({ onResult, onClose }) {
 
       setStatusMsg('Loading OCR engine…');
       const worker = await createWorker('eng', 1, {
+        // serve worker from our own domain — avoids CDN/CSP issues entirely
+        workerPath: '/tesseract-worker.min.js',
+        workerBlobURL: false,
         logger: m => {
           if (m.status === 'loading tesseract core')        setStatusMsg('Loading OCR engine…');
           else if (m.status === 'initializing tesseract')   setStatusMsg('Initialising…');
@@ -170,6 +174,7 @@ export default function ReceiptScanner({ onResult, onClose }) {
       setStep('results');
     } catch (err) {
       console.error('OCR error:', err);
+      setErrorDetail(err?.message || String(err) || 'Unknown error');
       setStep('error');
     }
   }, [imgSrc]);
@@ -182,7 +187,7 @@ export default function ReceiptScanner({ onResult, onClose }) {
   const reset = () => {
     setStep('pick'); setImgSrc(null); setProcessedSrc(null);
     setParsed(null); setRawText(''); setShowRaw(false); setProgress(0);
-    processedRef.current = null;
+    setErrorDetail(''); processedRef.current = null;
   };
 
   return (
@@ -294,13 +299,19 @@ export default function ReceiptScanner({ onResult, onClose }) {
 
         {/* ── error ── */}
         {step === 'error' && (
-          <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ fontSize: '2rem' }}>⚠️</div>
-            <p style={{ margin: 0, fontWeight: 600 }}>Scan failed</p>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-              Could not process the image. Try holding the camera closer so the receipt fills the frame, with good lighting.
-            </p>
-            <button className="btn-primary" onClick={reset}>Try Again</button>
+          <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ textAlign: 'center', fontSize: '2rem' }}>⚠️</div>
+            <p style={{ margin: 0, fontWeight: 600, textAlign: 'center' }}>Scan failed</p>
+            {errorDetail ? (
+              <pre style={{ fontSize: '0.72rem', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, padding: '0.75rem', overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: 'var(--text-muted)', margin: 0 }}>
+                {errorDetail}
+              </pre>
+            ) : (
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                Unknown error — try a clearer photo.
+              </p>
+            )}
+            <button className="btn-primary" style={{ alignSelf: 'center' }} onClick={reset}>Try Again</button>
           </div>
         )}
 
