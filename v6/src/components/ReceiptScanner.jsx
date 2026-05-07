@@ -4,68 +4,18 @@ import { parseReceipt } from '../utils/receiptParser.js';
 
 const isMobile = () => typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
-const MAX_DIM = 1500; // phone photos can be 48MP — resize before OCR or it crashes
+const MAX_DIM = 1500;
 
 function resizeToCanvas(img) {
   const scale = Math.min(1, MAX_DIM / Math.max(img.naturalWidth, img.naturalHeight));
   const w = Math.round(img.naturalWidth * scale);
   const h = Math.round(img.naturalHeight * scale);
   const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
+  canvas.width = w; canvas.height = h;
   canvas.getContext('2d').drawImage(img, 0, 0, w, h);
   return canvas;
 }
 
-// Find the rectangular region that looks like a receipt:
-// receipt paper = bright pixels (>170 luminance) with some dark text (>1.5% dark pixels per row/col)
-function detectReceiptBounds(canvas) {
-  const { width, height } = canvas;
-  const { data } = canvas.getContext('2d').getImageData(0, 0, width, height);
-
-  const rowBright = new Float32Array(height);
-  const rowDark   = new Int32Array(height);
-  const colBright = new Float32Array(width);
-  const colDark   = new Int32Array(width);
-
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const i = (y * width + x) * 4;
-      const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-      rowBright[y] += gray;
-      colBright[x] += gray;
-      if (gray < 100) { rowDark[y]++; colDark[x]++; }
-    }
-  }
-
-  // Returns [start, end] of the largest contiguous "receipt" band
-  const findRange = (len, sumArr, darkArr, span) => {
-    const isTarget = Array.from({ length: len }, (_, i) =>
-      sumArr[i] / span > 170 && darkArr[i] / span > 0.015
-    );
-    let bestStart = 0, bestEnd = len - 1, bestLen = 0, curStart = 0;
-    for (let i = 0; i <= len; i++) {
-      if (i < len && isTarget[i]) continue;
-      const bl = i - curStart;
-      if (bl > bestLen) { bestLen = bl; bestStart = curStart; bestEnd = i - 1; }
-      curStart = i + 1;
-    }
-    // Only use the crop if we found something meaningful (>15% of dimension)
-    return bestLen > len * 0.15 ? [bestStart, bestEnd] : [0, len - 1];
-  };
-
-  const [y0, y1] = findRange(height, rowBright, rowDark, width);
-  const [x0, x1] = findRange(width, colBright, colDark, height);
-  const PAD = 25;
-  return {
-    x: Math.max(0, x0 - PAD),
-    y: Math.max(0, y0 - PAD),
-    w: Math.min(width - Math.max(0, x0 - PAD),  x1 - x0 + PAD * 2),
-    h: Math.min(height - Math.max(0, y0 - PAD), y1 - y0 + PAD * 2),
-  };
-}
-
-// Grayscale + auto contrast-stretch — makes receipt text much crisper for Tesseract
 function grayscaleContrast(canvas) {
   const ctx = canvas.getContext('2d');
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -75,9 +25,7 @@ function grayscaleContrast(canvas) {
   for (let p = 0; p < grays.length; p++) {
     const i = p * 4;
     const g = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
-    grays[p] = g;
-    if (g < min) min = g;
-    if (g > max) max = g;
+    grays[p] = g; if (g < min) min = g; if (g > max) max = g;
   }
   const range = max - min || 1;
   for (let p = 0; p < grays.length; p++) {
@@ -88,17 +36,21 @@ function grayscaleContrast(canvas) {
   ctx.putImageData(imageData, 0, 0);
 }
 
-async function preprocessImage(blobUrl) {
+// cropPct: { x1, y1, x2, y2 } — percentages of image dimensions (0–100)
+async function preprocessImage(blobUrl, cropPct) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
       try {
         const resized = resizeToCanvas(img);
-        const { x, y, w, h } = detectReceiptBounds(resized);
+        const { x1 = 0, y1 = 0, x2 = 100, y2 = 100 } = cropPct || {};
+        const cx = Math.round(resized.width  * x1 / 100);
+        const cy = Math.round(resized.height * y1 / 100);
+        const cw = Math.max(1, Math.round(resized.width  * (x2 - x1) / 100));
+        const ch = Math.max(1, Math.round(resized.height * (y2 - y1) / 100));
         const cropped = document.createElement('canvas');
-        cropped.width = w;
-        cropped.height = h;
-        cropped.getContext('2d').drawImage(resized, x, y, w, h, 0, 0, w, h);
+        cropped.width = cw; cropped.height = ch;
+        cropped.getContext('2d').drawImage(resized, cx, cy, cw, ch, 0, 0, cw, ch);
         grayscaleContrast(cropped);
         resolve({ canvas: cropped, dataUrl: cropped.toDataURL('image/png') });
       } catch (e) { reject(e); }
@@ -108,21 +60,151 @@ async function preprocessImage(blobUrl) {
   });
 }
 
+// ─── Crop Tool ────────────────────────────────────────────────────────────────
+function CropTool({ imgSrc, onConfirm }) {
+  const containerRef = useRef(null);
+  // Start with a slight inset so handles are visible immediately
+  const [crop, setCrop] = useState({ x1: 3, y1: 3, x2: 97, y2: 97 });
+  const dragRef = useRef(null);
+
+  const getPos = (e) => {
+    const rect = containerRef.current.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: Math.max(0, Math.min(100, (clientX - rect.left) / rect.width * 100)),
+      y: Math.max(0, Math.min(100, (clientY - rect.top)  / rect.height * 100)),
+    };
+  };
+
+  const onDown = (e, handle) => {
+    e.preventDefault(); e.stopPropagation();
+    dragRef.current = { handle };
+  };
+
+  const onMove = useCallback((e) => {
+    if (!dragRef.current || !containerRef.current) return;
+    e.preventDefault();
+    const { x, y } = getPos(e);
+    const MIN = 10;
+    const h = dragRef.current.handle;
+    setCrop(prev => {
+      const n = { ...prev };
+      if (h === 'tl') { n.x1 = Math.min(x, prev.x2 - MIN); n.y1 = Math.min(y, prev.y2 - MIN); }
+      if (h === 'tr') { n.x2 = Math.max(x, prev.x1 + MIN); n.y1 = Math.min(y, prev.y2 - MIN); }
+      if (h === 'bl') { n.x1 = Math.min(x, prev.x2 - MIN); n.y2 = Math.max(y, prev.y1 + MIN); }
+      if (h === 'br') { n.x2 = Math.max(x, prev.x1 + MIN); n.y2 = Math.max(y, prev.y1 + MIN); }
+      if (h === 't')  { n.y1 = Math.min(y, prev.y2 - MIN); }
+      if (h === 'b')  { n.y2 = Math.max(y, prev.y1 + MIN); }
+      if (h === 'l')  { n.x1 = Math.min(x, prev.x2 - MIN); }
+      if (h === 'r')  { n.x2 = Math.max(x, prev.x1 + MIN); }
+      return n;
+    });
+  }, []);
+
+  const onUp = useCallback(() => { dragRef.current = null; }, []);
+
+  useEffect(() => {
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onUp);
+    };
+  }, [onMove, onUp]);
+
+  const { x1, y1, x2, y2 } = crop;
+  const HS = 26; // handle size px
+
+  const handle = (id, hx, hy, cursor) => (
+    <div key={id}
+      onMouseDown={e => onDown(e, id)}
+      onTouchStart={e => onDown(e, id)}
+      style={{
+        position: 'absolute',
+        left: `${hx}%`, top: `${hy}%`,
+        width: HS, height: HS,
+        marginLeft: -HS / 2, marginTop: -HS / 2,
+        background: '#fff',
+        border: '2.5px solid var(--primary, #863bff)',
+        borderRadius: 5,
+        cursor,
+        touchAction: 'none',
+        zIndex: 4,
+        boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
+      }}
+    />
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+        Drag the handles to frame the receipt, then tap <strong>Scan</strong>.
+      </p>
+
+      <div ref={containerRef} style={{ position: 'relative', userSelect: 'none', touchAction: 'none', background: '#000', borderRadius: 8, overflow: 'hidden' }}>
+        <img src={imgSrc} alt="Crop" draggable={false}
+          style={{ display: 'block', width: '100%', maxHeight: 340, objectFit: 'contain', pointerEvents: 'none' }} />
+
+        {/* Dark mask outside crop */}
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+          {/* top */}
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: `${y1}%`, background: 'rgba(0,0,0,0.55)' }} />
+          {/* bottom */}
+          <div style={{ position: 'absolute', top: `${y2}%`, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.55)' }} />
+          {/* left */}
+          <div style={{ position: 'absolute', top: `${y1}%`, left: 0, width: `${x1}%`, height: `${y2 - y1}%`, background: 'rgba(0,0,0,0.55)' }} />
+          {/* right */}
+          <div style={{ position: 'absolute', top: `${y1}%`, left: `${x2}%`, right: 0, height: `${y2 - y1}%`, background: 'rgba(0,0,0,0.55)' }} />
+          {/* crop border */}
+          <div style={{ position: 'absolute', top: `${y1}%`, left: `${x1}%`, width: `${x2 - x1}%`, height: `${y2 - y1}%`, border: '2px solid rgba(255,255,255,0.9)', boxSizing: 'border-box' }} />
+        </div>
+
+        {/* Corner handles */}
+        {handle('tl', x1, y1, 'nw-resize')}
+        {handle('tr', x2, y1, 'ne-resize')}
+        {handle('bl', x1, y2, 'sw-resize')}
+        {handle('br', x2, y2, 'se-resize')}
+        {/* Edge handles */}
+        {handle('t', (x1 + x2) / 2, y1, 'n-resize')}
+        {handle('b', (x1 + x2) / 2, y2, 's-resize')}
+        {handle('l', x1, (y1 + y2) / 2, 'w-resize')}
+        {handle('r', x2, (y1 + y2) / 2, 'e-resize')}
+      </div>
+
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <button className="btn-secondary" style={{ flex: 1 }}
+          onClick={() => onConfirm({ x1: 0, y1: 0, x2: 100, y2: 100 })}>
+          Scan Full Image
+        </button>
+        <button className="btn-primary" style={{ flex: 2 }}
+          onClick={() => onConfirm(crop)}>
+          Scan Selected Area
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 export default function ReceiptScanner({ onResult, onClose }) {
-  const [step, setStep]               = useState('pick');
-  const [imgSrc, setImgSrc]           = useState(null);
+  const [step, setStep]                 = useState('pick');
+  const [imgSrc, setImgSrc]             = useState(null);
   const [processedSrc, setProcessedSrc] = useState(null);
-  const [progress, setProgress]       = useState(0);
-  const [statusMsg, setStatusMsg]     = useState('');
-  const [parsed, setParsed]           = useState(null);
-  const [rawText, setRawText]         = useState('');
-  const [showRaw, setShowRaw]         = useState(false);
-  const [errorDetail, setErrorDetail] = useState('');
+  const [progress, setProgress]         = useState(0);
+  const [statusMsg, setStatusMsg]       = useState('');
+  const [parsed, setParsed]             = useState(null);
+  const [rawText, setRawText]           = useState('');
+  const [showRaw, setShowRaw]           = useState(false);
+  const [errorDetail, setErrorDetail]   = useState('');
 
   const fileRef      = useRef(null);
   const cameraRef    = useRef(null);
   const objUrlRef    = useRef(null);
-  const processedRef = useRef(null);
 
   useEffect(() => () => { if (objUrlRef.current) URL.revokeObjectURL(objUrlRef.current); }, []);
 
@@ -133,27 +215,25 @@ export default function ReceiptScanner({ onResult, onClose }) {
     objUrlRef.current = url;
     setImgSrc(url);
     setProcessedSrc(null);
-    setStep('preview');
+    setStep('crop');
   }, []);
 
-  const runOcr = useCallback(async () => {
+  const runOcr = useCallback(async (cropPct) => {
     if (!imgSrc) return;
     setStep('scanning');
     setProgress(0);
-    setStatusMsg('Detecting receipt area…');
+    setStatusMsg('Preparing image…');
     try {
-      const { canvas, dataUrl } = await preprocessImage(imgSrc);
-      processedRef.current = canvas;
+      const { canvas, dataUrl } = await preprocessImage(imgSrc, cropPct);
       setProcessedSrc(dataUrl);
 
       setStatusMsg('Loading OCR engine…');
       const worker = await createWorker('eng', 1, {
-        // serve worker from our own domain — avoids CDN/CSP issues entirely
         workerPath: '/tesseract-worker.min.js',
         workerBlobURL: false,
         logger: m => {
-          if (m.status === 'loading tesseract core')        setStatusMsg('Loading OCR engine…');
-          else if (m.status === 'initializing tesseract')   setStatusMsg('Initialising…');
+          if (m.status === 'loading tesseract core')           setStatusMsg('Loading OCR engine…');
+          else if (m.status === 'initializing tesseract')      setStatusMsg('Initialising…');
           else if (m.status === 'loading language traineddata') setStatusMsg('Loading language data (first use ~10 MB)…');
           else if (m.status === 'recognizing text') {
             setStatusMsg('Reading text…');
@@ -161,8 +241,6 @@ export default function ReceiptScanner({ onResult, onClose }) {
           }
         },
       });
-
-      // PSM 6 = single uniform text block — best for receipts
       try { await worker.setParameters({ tessedit_pageseg_mode: '6' }); } catch (_) {}
 
       const { data: { text } } = await worker.recognize(canvas);
@@ -186,8 +264,8 @@ export default function ReceiptScanner({ onResult, onClose }) {
 
   const reset = () => {
     setStep('pick'); setImgSrc(null); setProcessedSrc(null);
-    setParsed(null); setRawText(''); setShowRaw(false); setProgress(0);
-    setErrorDetail(''); processedRef.current = null;
+    setParsed(null); setRawText(''); setShowRaw(false);
+    setProgress(0); setErrorDetail('');
   };
 
   return (
@@ -202,7 +280,7 @@ export default function ReceiptScanner({ onResult, onClose }) {
         {step === 'pick' && (
           <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-              Photograph or upload a receipt. The bill area is auto-detected and cropped before scanning.
+              Take a photo or upload an image. You'll be able to crop to the receipt before scanning.
             </p>
             {isMobile() && (
               <>
@@ -220,24 +298,17 @@ export default function ReceiptScanner({ onResult, onClose }) {
             </button>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
               onChange={e => loadFile(e.target.files[0])} />
-            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-              Tip: fill the frame with the receipt for best results.
-            </p>
           </div>
         )}
 
-        {/* ── preview ── */}
-        {step === 'preview' && imgSrc && (
-          <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <img src={imgSrc} alt="Receipt preview"
-              style={{ width: '100%', maxHeight: 320, objectFit: 'contain', borderRadius: 8, background: 'var(--bg)', border: '1px solid var(--border)' }} />
-            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Make sure the full receipt text is visible and sharp.
-            </p>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button className="btn-secondary" style={{ flex: 1 }} onClick={reset}>Try Another</button>
-              <button className="btn-primary" style={{ flex: 2 }} onClick={runOcr}>Scan This Receipt</button>
-            </div>
+        {/* ── crop ── */}
+        {step === 'crop' && imgSrc && (
+          <div style={{ padding: '1.25rem' }}>
+            <CropTool imgSrc={imgSrc} onConfirm={cropPct => runOcr(cropPct)} />
+            <button style={{ marginTop: '0.75rem', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem' }}
+              onClick={reset}>
+              ← Choose a different image
+            </button>
           </div>
         )}
 
@@ -246,8 +317,8 @@ export default function ReceiptScanner({ onResult, onClose }) {
           <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {processedSrc && (
               <div>
-                <p style={{ margin: '0 0 6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Auto-cropped receipt area:</p>
-                <img src={processedSrc} alt="Cropped receipt"
+                <p style={{ margin: '0 0 6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Scanning this area:</p>
+                <img src={processedSrc} alt="Scan area"
                   style={{ width: '100%', maxHeight: 200, objectFit: 'contain', borderRadius: 6, border: '1px solid var(--border)', background: '#fff' }} />
               </div>
             )}
@@ -307,9 +378,7 @@ export default function ReceiptScanner({ onResult, onClose }) {
                 {errorDetail}
               </pre>
             ) : (
-              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-                Unknown error — try a clearer photo.
-              </p>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>Unknown error — try again.</p>
             )}
             <button className="btn-primary" style={{ alignSelf: 'center' }} onClick={reset}>Try Again</button>
           </div>
