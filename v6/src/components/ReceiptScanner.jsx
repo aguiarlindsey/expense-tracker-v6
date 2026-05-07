@@ -344,7 +344,7 @@ export default function ReceiptScanner({ onResult, onClose }) {
               Review below — edit anything in the form after applying.
             </p>
             <ResultRow label="Amount"   value={parsed.amount ? `₹${parsed.amount}` : '—'} found={parsed._confidence.amount} />
-            <ResultRow label="Date"     value={parsed.date || '—'}                          found={parsed._confidence.date} />
+            <ResultRow label="Date"     value={parsed.date ? (() => { const [y,m,d] = parsed.date.split('-'); return `${d}-${m}-${y}`; })() : '—'} found={parsed._confidence.date} />
             <ResultRow label="Merchant" value={parsed.description || '—'}                  found={parsed._confidence.description} />
             <ResultRow label="Category" value={parsed.category ? `${parsed.category}${parsed.subcategory ? ' › ' + parsed.subcategory : ''}` : '—'} found={parsed._confidence.category} />
             <ResultRow label="Payment"  value={parsed.paymentMethod ? `${parsed.paymentMethod}${parsed.paymentDescription ? ' · ' + parsed.paymentDescription : ''}` : '—'} found={parsed._confidence.paymentMethod} />

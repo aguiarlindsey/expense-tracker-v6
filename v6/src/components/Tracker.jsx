@@ -18,6 +18,12 @@ function _fmtINR(n) {
 }
 // Module-level alias — sub-components use this; Tracker shadows it with incognito-aware version
 const fmtINR = _fmtINR
+// Display dates as DD-MM-YYYY everywhere; stored/input format stays YYYY-MM-DD
+function fmtDate(iso) {
+  if (!iso) return ''
+  const [y, m, d] = iso.split('-')
+  return d && m && y ? `${d}-${m}-${y}` : iso
+}
 function toINR(e) {
   if (!e) return 0
   if (!e.currency || e.currency === 'INR') return parseFloat(e.amount || 0)
@@ -68,7 +74,7 @@ function AnomalyPanel(expenses, anomalyHistory, fmtINR) {
           <div className="anomaly-list" style={{ marginTop: 10 }}>
             {anomalyHistory.slice(0, 5).map((a, i) => (
               <div key={i} className="anomaly-row">
-                <span className="anomaly-date">{a.date}</span>
+                <span className="anomaly-date">{fmtDate(a.date)}</span>
                 <span className="anomaly-desc">{a.description}</span>
                 <span className="anomaly-cat">{a.category}</span>
                 <span className="anomaly-deviation">+{a.deviationPct}%</span>
@@ -620,7 +626,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
                 <label>
                   Rate: 1 {form.currency} = ? INR
                   {rateFetching && <span style={{ marginLeft: 6, fontSize: '0.78em', color: 'var(--accent)' }}>⏳ Fetching historical rate…</span>}
-                  {!rateFetching && form.date < today && <span style={{ marginLeft: 6, fontSize: '0.78em', color: 'var(--text-muted)' }}>📅 {form.date}</span>}
+                  {!rateFetching && form.date < today && <span style={{ marginLeft: 6, fontSize: '0.78em', color: 'var(--text-muted)' }}>📅 {fmtDate(form.date)}</span>}
                 </label>
                 <input type="number" step="0.000001" min="0" value={form.conversionRate}
                   onChange={e => s('conversionRate', parseFloat(e.target.value) || 0)}
@@ -974,7 +980,7 @@ function IncomeForm({ onSubmit, onClose, initialData, rateData }) {
                 <label>
                   Rate: 1 {form.currency} = ? INR
                   {rateFetching && <span style={{ marginLeft: 6, fontSize: '0.78em', color: 'var(--accent)' }}>⏳ Fetching historical rate…</span>}
-                  {!rateFetching && form.date < today && <span style={{ marginLeft: 6, fontSize: '0.78em', color: 'var(--text-muted)' }}>📅 {form.date}</span>}
+                  {!rateFetching && form.date < today && <span style={{ marginLeft: 6, fontSize: '0.78em', color: 'var(--text-muted)' }}>📅 {fmtDate(form.date)}</span>}
                 </label>
                 <input type="number" step="0.000001" min="0" value={form.conversionRate}
                   onChange={e => s('conversionRate', parseFloat(e.target.value) || 0)}
@@ -1154,7 +1160,7 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
         {item.notes && <div className="item-notes">{item.notes}</div>}
         {item.subcategory === 'Fuel' && item.fuelRate && (
           <div className="item-notes">
-            ⛽ ₹{Number(item.fuelRate).toFixed(2)}/L{item.fuelQuantity ? ` · ${Number(item.fuelQuantity).toFixed(3)} L` : ''}{item.fuelType ? ` · ${item.fuelType}` : ''}
+            ⛽ ₹{Number(item.fuelRate).toFixed(2)}/L{item.fuelQuantity ? ` · ${Number(item.fuelQuantity).toFixed(2)} L` : ''}{item.fuelType ? ` · ${item.fuelType}` : ''}
           </div>
         )}
       </div>
@@ -1947,7 +1953,7 @@ export default function Tracker({ session }) {
     if (expenses.length >= 3) {
       const sorted = [...expenses].sort((a, b) => toINR(b) - toINR(a)), big = sorted[0]
       const avg = allExpINR / expenses.length, mult = (toINR(big) / avg).toFixed(1)
-      if (mult > 2) res.push({ title: '🚨 Largest Transaction', text: `"${big.description}" on ${big.date} — ${fmtINR(toINR(big))}, which is ${mult}× your average expense.` })
+      if (mult > 2) res.push({ title: '🚨 Largest Transaction', text: `"${big.description}" on ${fmtDate(big.date)} — ${fmtINR(toINR(big))}, which is ${mult}× your average expense.` })
     }
 
     // 6. Average daily spend
@@ -2420,7 +2426,7 @@ export default function Tracker({ session }) {
           ) : grouped.map(([date, items]) => (
             <div key={date} className="date-group">
               <div className="date-group-header">
-                <span>{new Date(date + 'T12:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                <span>{fmtDate(date)}</span>
                 <span>{fmtINR(items.reduce((s, e) => s + toINR(e), 0))}</span>
               </div>
               {items.map(e => <ExpItem key={e.id} item={e}
@@ -2480,7 +2486,7 @@ export default function Tracker({ session }) {
           ) : groupedInc.map(([date, items]) => (
             <div key={date} className="date-group">
               <div className="date-group-header">
-                <span>{new Date(date + 'T12:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                <span>{fmtDate(date)}</span>
                 <span style={{ color: 'var(--color-inc)' }}>+{fmtINR(items.reduce((s, i) => s + toINR(i), 0))}</span>
               </div>
               {items.map(i => <IncItem key={i.id} item={i}
@@ -2691,7 +2697,7 @@ export default function Tracker({ session }) {
                         <div className="goal-contribs-title">Contributions ({goal.contributions.length})</div>
                         {[...goal.contributions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5).map(c => (
                           <div key={c.id} className="contrib-row">
-                            <span className="contrib-date">{c.date}</span>
+                            <span className="contrib-date">{fmtDate(c.date)}</span>
                             <span className="contrib-amount">+{fmtINR(c.amount)}</span>
                             {c.note && <span className="contrib-note">{c.note}</span>}
                             <button className="contrib-del" onClick={() => deleteContribution(c.id)}>✕</button>
@@ -2970,7 +2976,7 @@ export default function Tracker({ session }) {
                             </div>
                             {sortedExps.map(e => (
                               <div key={e.id} className="trip-exp-row">
-                                <span className="trip-exp-date">{e.date}</span>
+                                <span className="trip-exp-date">{fmtDate(e.date)}</span>
                                 <span className="trip-exp-cat">{CATS[e.category]?.icon || '📦'} {e.category || 'Other'}</span>
                                 <span className="trip-exp-desc" title={e.description}>{e.description}</span>
                                 <span className="trip-exp-amt trip-exp-right">{fmtAmt(e.amount)}</span>
