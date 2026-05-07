@@ -100,6 +100,9 @@ export function makeExpense(partial = {}, source = 'manual') {
     receiptRef:         partial.receiptRef || '',
     taxAmount:          parseFloat(partial.taxAmount || 0),
     taxBreakdown:       partial.taxBreakdown && Object.keys(partial.taxBreakdown).length ? partial.taxBreakdown : {},
+    fuelRate:           partial.fuelRate ? parseFloat(partial.fuelRate) : null,
+    fuelQuantity:       partial.fuelQuantity ? parseFloat(partial.fuelQuantity) : null,
+    fuelType:           partial.fuelType || null,
     migratedFrom:       source,
     version:            6,
   }

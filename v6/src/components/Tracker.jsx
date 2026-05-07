@@ -467,6 +467,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
     recurringPeriod: 'monthly', nextDueDate: '',
     splitWith: '', splitParts: 1, receiptRef: '',
     taxAmount: 0, taxBreakdown: {},
+    fuelRate: '', fuelQuantity: '', fuelType: '',
     useCatAlloc: false, categoryAllocations: {},
   })
   const [showPalette, setShowPalette] = useState(false)
@@ -493,6 +494,9 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
       s('taxBreakdown', parsed.taxBreakdown)
       setShowTax(true)
     }
+    if (parsed.fuelRate)     s('fuelRate', String(parsed.fuelRate))
+    if (parsed.fuelQuantity) s('fuelQuantity', String(parsed.fuelQuantity))
+    if (parsed.fuelType)     s('fuelType', parsed.fuelType)
   }
 
   // ── Historical rate sync ───────────────────────────────
@@ -649,6 +653,30 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
               </select>
             </div>
           </div>
+          {/* Fuel details — only for Transport / Fuel */}
+          {form.category === 'Transport' && form.subcategory === 'Fuel' && (
+            <div className="form-row">
+              <div className="form-group">
+                <label>Rate per Litre (₹/L)</label>
+                <input type="number" min="0" step="0.01" placeholder="e.g. 103.50"
+                  value={form.fuelRate || ''}
+                  onChange={e => s('fuelRate', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label>Quantity (Litres)</label>
+                <input type="number" min="0" step="0.001" placeholder="e.g. 19.401"
+                  value={form.fuelQuantity || ''}
+                  onChange={e => s('fuelQuantity', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label>Fuel Type</label>
+                <select value={form.fuelType || ''} onChange={e => s('fuelType', e.target.value)}>
+                  <option value="">—</option>
+                  {['Petrol','Diesel','CNG','LPG','Premium','Speed','Power'].map(t => <option key={t}>{t}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
           <div className="form-row">
             <div className="form-group">
               <label>Payment</label>
@@ -1124,6 +1152,11 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
           {(item.tags || []).map(t => <span key={t} className="item-tag">{t}</span>)}
         </div>
         {item.notes && <div className="item-notes">{item.notes}</div>}
+        {item.subcategory === 'Fuel' && item.fuelRate && (
+          <div className="item-notes">
+            ⛽ ₹{Number(item.fuelRate).toFixed(2)}/L{item.fuelQuantity ? ` · ${Number(item.fuelQuantity).toFixed(3)} L` : ''}{item.fuelType ? ` · ${item.fuelType}` : ''}
+          </div>
+        )}
       </div>
       <div className="item-right">
         <div className="item-amount">

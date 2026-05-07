@@ -348,6 +348,26 @@ export default function ReceiptScanner({ onResult, onClose }) {
             <ResultRow label="Merchant" value={parsed.description || '—'}                  found={parsed._confidence.description} />
             <ResultRow label="Category" value={parsed.category ? `${parsed.category}${parsed.subcategory ? ' › ' + parsed.subcategory : ''}` : '—'} found={parsed._confidence.category} />
             <ResultRow label="Payment"  value={parsed.paymentMethod ? `${parsed.paymentMethod}${parsed.paymentDescription ? ' · ' + parsed.paymentDescription : ''}` : '—'} found={parsed._confidence.paymentMethod} />
+            {parsed.fuelRate && (
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '0.6rem', marginTop: '0.1rem' }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Fuel details ✓</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  <span style={{ fontSize: '0.75rem', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 7px' }}>
+                    ⛽ ₹{parsed.fuelRate}/L
+                  </span>
+                  {parsed.fuelQuantity && (
+                    <span style={{ fontSize: '0.75rem', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 7px' }}>
+                      {parsed.fuelQuantity} L
+                    </span>
+                  )}
+                  {parsed.fuelType && (
+                    <span style={{ fontSize: '0.75rem', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 7px' }}>
+                      {parsed.fuelType}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
             {parsed.taxAmount > 0 && (
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: '0.6rem', marginTop: '0.1rem' }}>
                 <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>

@@ -348,6 +348,31 @@ function extractTaxes(text) {
     : { taxBreakdown: {}, taxAmount: 0 };
 }
 
+// ── Fuel data extraction ──────────────────────────────────────────────────────
+function extractFuelData(text) {
+  // Rate per litre: "Rate Per Litre 103.50" / "Rate/Ltr 103.50" / "Price Per Litre 103.50"
+  const rateRe = /(?:rate\s*(?:per\s*)?(?:lit(?:re|er)?|ltr|l)|price\s*per\s*lit(?:re|er)?)[^\d]*(\d+(?:[.,]\d+)?)/i;
+  const rateM  = text.match(rateRe);
+  const fuelRate = rateM ? parseFloat(rateM[1].replace(',', '.')) : null;
+
+  // Quantity: "Sale Quantity 19.401" — OCR often gives "19 401" (space instead of decimal)
+  const qtyRe = /(?:sale\s*quant(?:ity)?|qty|quantity|volume|litres?\s*filled?|liter(?:s)?)[^\d]*(\d+[\s.,]\d+)/i;
+  const qtyM  = text.match(qtyRe);
+  let fuelQuantity = null;
+  if (qtyM) {
+    // normalise "19 401" → "19.401" (3-digit fractional part after a space is a decimal)
+    const raw = qtyM[1].replace(/(\d+)\s+(\d{1,3})$/, '$1.$2').replace(',', '.');
+    fuelQuantity = parseFloat(raw);
+    if (isNaN(fuelQuantity) || fuelQuantity > 1000) fuelQuantity = null; // sanity cap
+  }
+
+  // Fuel type: "Product Name Petrol" / "Product Diesel"
+  const typeM = text.match(/(?:product\s*(?:name|type)?|fuel\s*type)[^\w]*(petrol|diesel|cng|lpg|premium|speed|power)/i);
+  const fuelType = typeM ? typeM[1].charAt(0).toUpperCase() + typeM[1].slice(1).toLowerCase() : null;
+
+  return { fuelRate, fuelQuantity, fuelType };
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 export function parseReceipt(rawText) {
   if (!rawText || !rawText.trim()) return null;
@@ -359,6 +384,7 @@ export function parseReceipt(rawText) {
   const date                        = extractDate(rawText);
   const diningApp                   = category === 'Food' ? extractDiningApp(rawText) : '';
   const { taxBreakdown, taxAmount } = extractTaxes(rawText);
+  const { fuelRate, fuelQuantity, fuelType } = extractFuelData(rawText);
 
   const confidence = {
     amount:        amount !== null,
@@ -367,6 +393,7 @@ export function parseReceipt(rawText) {
     category:      !!category,
     paymentMethod: !!paymentMethod,
     taxes:         taxAmount > 0,
+    fuel:          !!fuelRate,
   };
 
   return {
@@ -380,6 +407,9 @@ export function parseReceipt(rawText) {
     diningApp,
     taxAmount,
     taxBreakdown,
+    fuelRate,
+    fuelQuantity,
+    fuelType,
     _rawText:           rawText,
     _confidence:        confidence,
   };
