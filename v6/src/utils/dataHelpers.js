@@ -98,6 +98,8 @@ export function makeExpense(partial = {}, source = 'manual') {
     splitWith:          partial.splitWith || '',
     splitParts:         parseInt(partial.splitParts || 1) || 1,
     receiptRef:         partial.receiptRef || '',
+    taxAmount:          parseFloat(partial.taxAmount || 0),
+    taxBreakdown:       partial.taxBreakdown && Object.keys(partial.taxBreakdown).length ? partial.taxBreakdown : {},
     migratedFrom:       source,
     version:            6,
   }

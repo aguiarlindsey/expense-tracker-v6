@@ -466,11 +466,13 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
     tags: [], customColor: null, isRecurring: false,
     recurringPeriod: 'monthly', nextDueDate: '',
     splitWith: '', splitParts: 1, receiptRef: '',
+    taxAmount: 0, taxBreakdown: {},
     useCatAlloc: false, categoryAllocations: {},
   })
   const [showPalette, setShowPalette] = useState(false)
   const [rateFetching, setRateFetching] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
+  const [showTax, setShowTax] = useState(!!(initialData?.taxAmount > 0))
   const s = (k, v) => setForm(p => ({ ...p, [k]: v }))
 
   const applyOcr = (parsed) => {
@@ -486,6 +488,11 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
       if (parsed.paymentDescription) s('paymentDescription', parsed.paymentDescription)
     }
     if (parsed.diningApp) s('diningApp', parsed.diningApp)
+    if (parsed.taxAmount > 0) {
+      s('taxAmount', parsed.taxAmount)
+      s('taxBreakdown', parsed.taxBreakdown)
+      setShowTax(true)
+    }
   }
 
   // ── Historical rate sync ───────────────────────────────
@@ -708,6 +715,34 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
               <label>Notes</label>
               <input value={form.notes} onChange={e => s('notes', e.target.value)} placeholder="Optional note" />
             </div>
+          </div>
+          {/* Tax Breakdown */}
+          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+            <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Tax / GST Breakdown{form.taxAmount > 0 ? <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6 }}>— Total ₹{Number(form.taxAmount).toFixed(2)}</span> : ''}</span>
+              <button type="button" onClick={() => setShowTax(v => !v)}
+                style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.78rem', padding: 0 }}>
+                {showTax ? '▲ Hide' : '▼ Add'}
+              </button>
+            </label>
+            {showTax && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginTop: '0.4rem' }}>
+                {[['sgst','SGST'],['cgst','CGST'],['igst','IGST'],['vat','VAT'],['serviceCharge','Service Charge'],['cess','Cess']].map(([key, label]) => (
+                  <div className="form-group" key={key}>
+                    <label style={{ fontSize: '0.72rem' }}>{label}</label>
+                    <input type="number" min="0" step="0.01" placeholder="0.00"
+                      value={form.taxBreakdown?.[key] || ''}
+                      onChange={e => {
+                        const v = parseFloat(e.target.value) || 0
+                        const nb = { ...(form.taxBreakdown || {}), [key]: v }
+                        s('taxBreakdown', nb)
+                        s('taxAmount', parseFloat(Object.values(nb).reduce((a, b) => a + b, 0).toFixed(2)))
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <div className="form-row">
             <div className="form-group">

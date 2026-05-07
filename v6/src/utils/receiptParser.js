@@ -303,6 +303,31 @@ function extractDiningApp(text) {
   return '';
 }
 
+// ── Tax extraction ────────────────────────────────────────────────────────────
+const TAX_PATTERNS = [
+  { key: 'sgst',          re: /\bSGST\b[^:\d₹Rs]*(?:\d+\.?\d*\s*%\s*)?(?:₹|Rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)/i },
+  { key: 'cgst',          re: /\bCGST\b[^:\d₹Rs]*(?:\d+\.?\d*\s*%\s*)?(?:₹|Rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)/i },
+  { key: 'igst',          re: /\bIGST\b[^:\d₹Rs]*(?:\d+\.?\d*\s*%\s*)?(?:₹|Rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)/i },
+  { key: 'vat',           re: /\bVAT\b[^:\d₹Rs]*(?:\d+\.?\d*\s*%\s*)?(?:₹|Rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)/i },
+  { key: 'serviceCharge', re: /\bService\s*Charge\b[^:\d₹Rs]*(?:\d+\.?\d*\s*%\s*)?(?:₹|Rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)/i },
+  { key: 'cess',          re: /\b(?:Cess|Surcharge)\b[^:\d₹Rs]*(?:\d+\.?\d*\s*%\s*)?(?:₹|Rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)/i },
+];
+
+function extractTaxes(text) {
+  const breakdown = {};
+  let total = 0;
+  for (const { key, re } of TAX_PATTERNS) {
+    const m = text.match(re);
+    if (m) {
+      const v = parseFloat(m[1].replace(/,/g, ''));
+      if (!isNaN(v) && v > 0) { breakdown[key] = v; total += v; }
+    }
+  }
+  return total > 0
+    ? { taxBreakdown: breakdown, taxAmount: parseFloat(total.toFixed(2)) }
+    : { taxBreakdown: {}, taxAmount: 0 };
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 export function parseReceipt(rawText) {
   if (!rawText || !rawText.trim()) return null;
@@ -310,9 +335,10 @@ export function parseReceipt(rawText) {
   const merchantName                = extractMerchantName(rawText);
   const { category, subcategory }   = extractCategory(merchantName, rawText);
   const { paymentMethod, paymentDescription } = extractPaymentMethod(rawText);
-  const amount = extractAmount(rawText);
-  const date   = extractDate(rawText);
-  const diningApp = category === 'Food' ? extractDiningApp(rawText) : '';
+  const amount                      = extractAmount(rawText);
+  const date                        = extractDate(rawText);
+  const diningApp                   = category === 'Food' ? extractDiningApp(rawText) : '';
+  const { taxBreakdown, taxAmount } = extractTaxes(rawText);
 
   const confidence = {
     amount:        amount !== null,
@@ -320,6 +346,7 @@ export function parseReceipt(rawText) {
     description:   !!merchantName,
     category:      !!category,
     paymentMethod: !!paymentMethod,
+    taxes:         taxAmount > 0,
   };
 
   return {
@@ -331,6 +358,8 @@ export function parseReceipt(rawText) {
     paymentMethod,
     paymentDescription,
     diningApp,
+    taxAmount,
+    taxBreakdown,
     _rawText:           rawText,
     _confidence:        confidence,
   };

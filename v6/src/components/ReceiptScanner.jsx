@@ -348,6 +348,20 @@ export default function ReceiptScanner({ onResult, onClose }) {
             <ResultRow label="Merchant" value={parsed.description || '—'}                  found={parsed._confidence.description} />
             <ResultRow label="Category" value={parsed.category ? `${parsed.category}${parsed.subcategory ? ' › ' + parsed.subcategory : ''}` : '—'} found={parsed._confidence.category} />
             <ResultRow label="Payment"  value={parsed.paymentMethod ? `${parsed.paymentMethod}${parsed.paymentDescription ? ' · ' + parsed.paymentDescription : ''}` : '—'} found={parsed._confidence.paymentMethod} />
+            {parsed.taxAmount > 0 && (
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '0.6rem', marginTop: '0.1rem' }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
+                  Taxes detected — Total ₹{parsed.taxAmount.toFixed(2)} ✓
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  {Object.entries(parsed.taxBreakdown).map(([k, v]) => (
+                    <span key={k} style={{ fontSize: '0.75rem', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 7px' }}>
+                      {k === 'serviceCharge' ? 'Svc Charge' : k.toUpperCase()} ₹{v.toFixed(2)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <button style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', textAlign: 'left', padding: 0 }}
               onClick={() => setShowRaw(v => !v)}>
