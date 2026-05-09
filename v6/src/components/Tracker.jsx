@@ -510,13 +510,16 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
     }
     if (parsed.vehicleModel || parsed.vehicleReg || parsed.currentKm || parsed.serviceType) {
       const parts = []
-      if (parsed.vehicleModel)  parts.push(parsed.vehicleModel)
-      if (parsed.vehicleReg)    parts.push(`Reg: ${parsed.vehicleReg}`)
-      if (parsed.currentKm)     parts.push(`${parsed.currentKm.toLocaleString()} km`)
-      if (parsed.serviceType)   parts.push(parsed.serviceType)
+      if (parsed.vehicleModel)    parts.push(parsed.vehicleModel)
+      if (parsed.vehicleReg)      parts.push(`Reg: ${parsed.vehicleReg}`)
+      if (parsed.currentKm)       parts.push(`${Number(parsed.currentKm).toLocaleString()} km at service`)
+      if (parsed.serviceType)     parts.push(parsed.serviceType)
+      if (parsed.nextServiceKm)   parts.push(`Next svc at ${Number(parsed.nextServiceKm).toLocaleString()} km`)
       if (parsed.nextServiceType && parsed.nextServiceDate) {
         const [y,m,d] = parsed.nextServiceDate.split('-')
         parts.push(`Next: ${parsed.nextServiceType} by ${d}-${m}-${y}`)
+      } else if (parsed.nextServiceType) {
+        parts.push(`Next: ${parsed.nextServiceType}`)
       }
       s('notes', parts.join(' | '))
     }

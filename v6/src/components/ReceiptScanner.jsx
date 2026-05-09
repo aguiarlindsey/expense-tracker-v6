@@ -211,6 +211,7 @@ export default function ReceiptScanner({ onResult, onClose }) {
   const [showRaw, setShowRaw]           = useState(false);
   const [errorDetail, setErrorDetail]   = useState('');
   const [reminderSet, setReminderSet]   = useState(false);
+  const [vehicleSvc, setVehicleSvc]     = useState(null); // editable vehicle fields
 
   const fileRef   = useRef(null);
   const cameraRef = useRef(null);
@@ -218,6 +219,26 @@ export default function ReceiptScanner({ onResult, onClose }) {
 
   const revokeAll = () => { urlsRef.current.forEach(u => URL.revokeObjectURL(u)); urlsRef.current = []; };
   useEffect(() => () => revokeAll(), []);
+
+  // Called once OCR text is ready — sets parsed + initialises the editable vehicle fields
+  const finishScan = useCallback(combined => {
+    setRawText(combined);
+    const result = parseReceipt(combined);
+    setParsed(result);
+    if (result && result.subcategory === 'Vehicle Maintenance') {
+      setVehicleSvc({
+        vehicleModel:    result.vehicleModel    || '',
+        vehicleReg:      result.vehicleReg      || '',
+        serviceType:     result.serviceType     || '',
+        currentKm:       result.currentKm != null ? String(result.currentKm) : '',
+        nextServiceKm:   '',
+        nextServiceDate: result.nextServiceDate || '',
+        nextServiceType: result.nextServiceType || '',
+      });
+    } else {
+      setVehicleSvc(null);
+    }
+  }, []);
 
   const loadFile = useCallback(async file => {
     if (!file) return;
@@ -301,8 +322,7 @@ export default function ReceiptScanner({ onResult, onClose }) {
       }
 
       const combined = texts.join('\n');
-      setRawText(combined);
-      setParsed(parseReceipt(combined));
+      finishScan(combined);
       setStep('results');
     } catch (err) {
       console.error('OCR error:', err);
@@ -311,13 +331,30 @@ export default function ReceiptScanner({ onResult, onClose }) {
     }
   }, [pages, currentImgSrc]);
 
-  const handleUse = useCallback(() => { if (parsed) onResult(parsed); onClose(); }, [parsed, onResult, onClose]);
+  const handleUse = useCallback(() => {
+    if (!parsed) return;
+    const result = vehicleSvc
+      ? {
+          ...parsed,
+          vehicleModel:    vehicleSvc.vehicleModel,
+          vehicleReg:      vehicleSvc.vehicleReg,
+          serviceType:     vehicleSvc.serviceType,
+          currentKm:       vehicleSvc.currentKm ? parseInt(vehicleSvc.currentKm, 10) || null : null,
+          nextServiceKm:   vehicleSvc.nextServiceKm ? parseInt(vehicleSvc.nextServiceKm, 10) || null : null,
+          nextServiceDate: vehicleSvc.nextServiceDate,
+          nextServiceType: vehicleSvc.nextServiceType,
+        }
+      : parsed;
+    onResult(result);
+    onClose();
+  }, [parsed, vehicleSvc, onResult, onClose]);
 
   const reset = () => {
     revokeAll();
     setStep('pick'); setMode('single'); setPages([]); setCurrentImgSrc(null);
     setProcessedSrc(null); setParsed(null); setRawText('');
     setShowRaw(false); setProgress(0); setErrorDetail(''); setStatusMsg('');
+    setVehicleSvc(null); setReminderSet(false);
   };
 
   const removePage = idx => {
@@ -355,8 +392,7 @@ export default function ReceiptScanner({ onResult, onClose }) {
           setProgress(Math.round(((i+1)/n)*100));
         }
         const combined = texts.join('\n');
-        setRawText(combined);
-        setParsed(parseReceipt(combined));
+        finishScan(combined);
         setStep('results');
       } catch (err) {
         setErrorDetail(err?.message || String(err));
@@ -532,58 +568,93 @@ export default function ReceiptScanner({ onResult, onClose }) {
             <ResultRow label="Category" value={parsed.category?`${parsed.category}${parsed.subcategory?' › '+parsed.subcategory:''}`:'—'} found={parsed._confidence.category} />
             <ResultRow label="Payment"  value={parsed.paymentMethod?`${parsed.paymentMethod}${parsed.paymentDescription?' · '+parsed.paymentDescription:''}`:'—'} found={parsed._confidence.paymentMethod} />
 
-            {/* ── Vehicle service details ── */}
-            {parsed.subcategory === 'Vehicle Maintenance' && (parsed.vehicleModel || parsed.currentKm || parsed.nextServiceDate) && (
-              <div style={{ borderTop:'1px solid var(--border)', paddingTop:'0.75rem', display:'flex', flexDirection:'column', gap:'0.5rem' }}>
-                <div style={{ fontSize:'0.78rem', fontWeight:600, color:'var(--text-muted)' }}>Vehicle Service ✓</div>
-                {parsed.vehicleModel && (
-                  <div style={{ display:'flex', gap:'0.5rem', alignItems:'baseline' }}>
-                    <span style={{ fontSize:'0.78rem', color:'var(--text-muted)', minWidth:72, fontWeight:600 }}>Vehicle</span>
-                    <span style={{ fontSize:'0.9rem' }}>{parsed.vehicleModel}{parsed.vehicleReg ? ` · ${parsed.vehicleReg}` : ''}</span>
+            {/* ── Vehicle service — editable details ── */}
+            {vehicleSvc && (
+              <div style={{ borderTop:'1px solid var(--border)', paddingTop:'0.75rem', display:'flex', flexDirection:'column', gap:'0.6rem' }}>
+                <div style={{ fontSize:'0.78rem', fontWeight:600, color:'var(--text-muted)' }}>
+                  Vehicle Service — edit any field before applying
+                </div>
+
+                {/* Row helper */}
+                {[
+                  { label:'Model',       key:'vehicleModel',    placeholder:'e.g. TVS Ntorq 150' },
+                  { label:'Reg No.',     key:'vehicleReg',      placeholder:'e.g. MH02GU 1566' },
+                  { label:'Service',     key:'serviceType',     placeholder:'e.g. 1st Free Service' },
+                ].map(({ label, key, placeholder }) => (
+                  <div key={key} style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
+                    <span style={{ fontSize:'0.75rem', color:'var(--text-muted)', minWidth:68, fontWeight:600, flexShrink:0 }}>{label}</span>
+                    <input
+                      value={vehicleSvc[key]}
+                      onChange={e => setVehicleSvc(p => ({ ...p, [key]: e.target.value }))}
+                      placeholder={placeholder}
+                      style={{ flex:1, fontSize:'0.82rem', padding:'0.3rem 0.5rem', borderRadius:5, border:'1px solid var(--border)', background:'var(--bg)', color:'var(--text)' }}
+                    />
                   </div>
-                )}
-                {parsed.currentKm && (
-                  <div style={{ display:'flex', gap:'0.5rem', alignItems:'baseline' }}>
-                    <span style={{ fontSize:'0.78rem', color:'var(--text-muted)', minWidth:72, fontWeight:600 }}>KMs</span>
-                    <span style={{ fontSize:'0.9rem' }}>{parsed.currentKm.toLocaleString()} km at service</span>
+                ))}
+
+                {/* KM row — two fields side by side */}
+                <div style={{ display:'flex', gap:'0.5rem', alignItems:'center' }}>
+                  <span style={{ fontSize:'0.75rem', color:'var(--text-muted)', minWidth:68, fontWeight:600, flexShrink:0 }}>KMs now</span>
+                  <input
+                    type="number" min="0"
+                    value={vehicleSvc.currentKm}
+                    onChange={e => setVehicleSvc(p => ({ ...p, currentKm: e.target.value }))}
+                    placeholder="e.g. 145"
+                    style={{ flex:1, fontSize:'0.82rem', padding:'0.3rem 0.5rem', borderRadius:5, border:'1px solid var(--border)', background:'var(--bg)', color:'var(--text)' }}
+                  />
+                  <span style={{ fontSize:'0.75rem', color:'var(--text-muted)', minWidth:68, fontWeight:600, flexShrink:0 }}>Next svc km</span>
+                  <input
+                    type="number" min="0"
+                    value={vehicleSvc.nextServiceKm}
+                    onChange={e => setVehicleSvc(p => ({ ...p, nextServiceKm: e.target.value }))}
+                    placeholder="e.g. 3000"
+                    style={{ flex:1, fontSize:'0.82rem', padding:'0.3rem 0.5rem', borderRadius:5, border:'1px solid var(--border)', background:'var(--bg)', color:'var(--text)' }}
+                  />
+                </div>
+
+                {/* Next service box */}
+                <div style={{ background:'var(--bg)', border:'1px solid var(--border)', borderRadius:8, padding:'0.6rem 0.75rem', display:'flex', flexDirection:'column', gap:'0.45rem' }}>
+                  <div style={{ fontSize:'0.75rem', fontWeight:600, color:'var(--text-muted)' }}>Next Service Due</div>
+                  <div style={{ display:'flex', gap:'0.5rem', alignItems:'center' }}>
+                    <span style={{ fontSize:'0.75rem', color:'var(--text-muted)', minWidth:40, fontWeight:600, flexShrink:0 }}>Date</span>
+                    <input
+                      type="date"
+                      value={vehicleSvc.nextServiceDate}
+                      onChange={e => { setVehicleSvc(p => ({ ...p, nextServiceDate: e.target.value })); setReminderSet(false); }}
+                      style={{ flex:1, fontSize:'0.82rem', padding:'0.3rem 0.5rem', borderRadius:5, border:'1px solid var(--border)', background:'var(--bg)', color:'var(--text)' }}
+                    />
                   </div>
-                )}
-                {parsed.serviceType && (
-                  <div style={{ display:'flex', gap:'0.5rem', alignItems:'baseline' }}>
-                    <span style={{ fontSize:'0.78rem', color:'var(--text-muted)', minWidth:72, fontWeight:600 }}>Service</span>
-                    <span style={{ fontSize:'0.9rem' }}>{parsed.serviceType}</span>
+                  <div style={{ display:'flex', gap:'0.5rem', alignItems:'center' }}>
+                    <span style={{ fontSize:'0.75rem', color:'var(--text-muted)', minWidth:40, fontWeight:600, flexShrink:0 }}>Type</span>
+                    <input
+                      value={vehicleSvc.nextServiceType}
+                      onChange={e => setVehicleSvc(p => ({ ...p, nextServiceType: e.target.value }))}
+                      placeholder="e.g. 2nd Free Service"
+                      style={{ flex:1, fontSize:'0.82rem', padding:'0.3rem 0.5rem', borderRadius:5, border:'1px solid var(--border)', background:'var(--bg)', color:'var(--text)' }}
+                    />
                   </div>
-                )}
-                {(parsed.nextServiceDate || parsed.nextServiceType) && (
-                  <div style={{ background:'var(--bg)', border:'1px solid var(--border)', borderRadius:8, padding:'0.6rem 0.75rem', marginTop:'0.25rem' }}>
-                    <div style={{ fontSize:'0.75rem', fontWeight:600, color:'var(--text-muted)', marginBottom:'0.3rem' }}>Next Service Due</div>
-                    <div style={{ display:'flex', flexWrap:'wrap', gap:'0.4rem', alignItems:'center' }}>
-                      {parsed.nextServiceDate && (() => { const [y,m,d]=parsed.nextServiceDate.split('-'); return <Chip>📅 {d}-{m}-{y}</Chip>; })()}
-                      {parsed.nextServiceType && <Chip>{parsed.nextServiceType}</Chip>}
-                    </div>
-                    {parsed.nextServiceDate && (
-                      <button
-                        onClick={() => {
-                          try {
-                            const existing = JSON.parse(localStorage.getItem('et_svc_reminders') || '[]');
-                            const key = parsed.vehicleReg || parsed.nextServiceDate;
-                            const filtered = existing.filter(r => r.key !== key);
-                            filtered.push({
-                              key,
-                              date: parsed.nextServiceDate,
-                              label: `${parsed.vehicleModel || 'Vehicle'} service${parsed.nextServiceType ? ' — ' + parsed.nextServiceType : ''}`,
-                              reg: parsed.vehicleReg || '',
-                            });
-                            localStorage.setItem('et_svc_reminders', JSON.stringify(filtered));
-                            setReminderSet(true);
-                          } catch (_) {}
-                        }}
-                        style={{ marginTop:'0.5rem', background: reminderSet ? 'var(--success,#22c55e)' : 'var(--primary)', color:'#fff', border:'none', borderRadius:6, padding:'0.4rem 0.9rem', cursor:'pointer', fontSize:'0.8rem', fontWeight:600 }}>
-                        {reminderSet ? '✓ Reminder set' : '🔔 Set Reminder'}
-                      </button>
-                    )}
-                  </div>
-                )}
+                  {vehicleSvc.nextServiceDate && (
+                    <button
+                      onClick={() => {
+                        try {
+                          const existing = JSON.parse(localStorage.getItem('et_svc_reminders') || '[]');
+                          const key = vehicleSvc.vehicleReg || vehicleSvc.nextServiceDate;
+                          const filtered = existing.filter(r => r.key !== key);
+                          filtered.push({
+                            key,
+                            date: vehicleSvc.nextServiceDate,
+                            label: `${vehicleSvc.vehicleModel || 'Vehicle'} service${vehicleSvc.nextServiceType ? ' — ' + vehicleSvc.nextServiceType : ''}`,
+                            reg: vehicleSvc.vehicleReg || '',
+                          });
+                          localStorage.setItem('et_svc_reminders', JSON.stringify(filtered));
+                          setReminderSet(true);
+                        } catch (_) {}
+                      }}
+                      style={{ alignSelf:'flex-start', background: reminderSet ? 'var(--success,#22c55e)' : 'var(--primary)', color:'#fff', border:'none', borderRadius:6, padding:'0.35rem 0.85rem', cursor:'pointer', fontSize:'0.8rem', fontWeight:600 }}>
+                      {reminderSet ? '✓ Reminder saved' : '🔔 Set Reminder'}
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
