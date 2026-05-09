@@ -93,8 +93,13 @@ const MERCHANT_MAP = {
 // Lines to skip when scanning for the business name
 const SKIP_LINE_RE = /^(receipt|bill|invoice|tax\s*invoice|kot|order|cash\s*memo|cash\s*receipt|gst|gstin|fssai|table|cover|pax|phone|ph:|tel:|mob:|address|city|pincode|welcome|thank\s*you|wifi|password|subtotal|sub\s*total|total|amount|qty|item|s\.?no|sr\.?\s*no|date|time|operator|cashier|void|duplicate|copy|printed)/i;
 
-// Company registration suffixes — legal entity name, not the brand/restaurant name
-const COMPANY_SUFFIX_RE = /\b(pvt\.?\s*ltd\.?|private\s+limited|limited|llp|llc|inc\.?|corp\.?|co\.?\s*ltd\.?|catering\s+services|hospitality|enterprises|solutions)\b/i;
+// When a line contains a company suffix, try to extract the name before it.
+// For hospitality names (TRIFECTA CATERING SERVICES PVT LTD) the actual brand
+// follows on the next line — skip those entirely. For non-hospitality companies
+// (RAJ WHEELERS LLP) the company name IS the merchant — extract the part before
+// the suffix.
+const COMPANY_SUFFIX_RE     = /^(.+?)\s*\b(pvt\.?\s*ltd\.?|private\s+limited|limited|llp|llc|inc\.?|corp\.?|co\.?\s*ltd\.?)\b/i;
+const HOSPITALITY_SUFFIX_RE = /\b(catering|hospitality|restaurants?|hotels?|food\s*services?|enterprises|solutions)\b/i;
 
 // Food keywords for fallback category detection when merchant is unknown
 const FOOD_KW = [
@@ -218,25 +223,38 @@ function extractMerchantName(text) {
     }
   }
 
-  // 2. Priority pass: first all-caps line in top 5 that isn't metadata or a
-  //    legal company registration line (e.g. "TRIFECTA CATERING SERVICES PVT LTD").
-  //    The actual brand/restaurant name (e.g. "TORII") follows on the next line.
+  // 2. Priority pass: first all-caps line in top 5.
+  //    If the line has a company suffix, extract the part before it.
+  //    Exception: hospitality names (TRIFECTA CATERING SERVICES PVT LTD) —
+  //    skip those entirely; the real brand (e.g. "TORII") follows on the next line.
   for (const line of lines.slice(0, 5)) {
     if (!isNameCandidate(line)) continue;
-    if (COMPANY_SUFFIX_RE.test(line)) continue;       // skip legal entity names
-    const letters = (line.match(/[a-zA-Z]/g) || []).length;
-    const isAllCaps = line.replace(/[^a-zA-Z]/g, '') === line.replace(/[^a-zA-Z]/g, '').toUpperCase();
-    if (isAllCaps && letters >= 3) return cleanName(line);
+    let candidate = line;
+    const suffixM = line.match(COMPANY_SUFFIX_RE);
+    if (suffixM) {
+      if (HOSPITALITY_SUFFIX_RE.test(suffixM[1])) continue; // brand is on next line
+      candidate = suffixM[1].trim();                          // e.g. "RAJ WHEELERS"
+    }
+    if (!isNameCandidate(candidate)) continue;
+    const letters = (candidate.match(/[a-zA-Z]/g) || []).length;
+    const isAllCaps = candidate.replace(/[^a-zA-Z]/g, '') === candidate.replace(/[^a-zA-Z]/g, '').toUpperCase();
+    if (isAllCaps && letters >= 3) return cleanName(candidate);
   }
 
   // 3. Scoring fallback for mixed-case names (e.g. "The Bombay Canteen")
   let best = null, bestScore = -1;
   for (const line of lines.slice(0, 8)) {
     if (!isNameCandidate(line)) continue;
-    if (COMPANY_SUFFIX_RE.test(line)) continue;
-    const letters = (line.match(/[a-zA-Z]/g) || []).length;
+    let candidate = line;
+    const suffixM = line.match(COMPANY_SUFFIX_RE);
+    if (suffixM) {
+      if (HOSPITALITY_SUFFIX_RE.test(suffixM[1])) continue;
+      candidate = suffixM[1].trim();
+    }
+    if (!isNameCandidate(candidate)) continue;
+    const letters = (candidate.match(/[a-zA-Z]/g) || []).length;
     let score = letters + Math.max(0, 6 - lines.indexOf(line)) * 2;
-    if (score > bestScore) { bestScore = score; best = line; }
+    if (score > bestScore) { bestScore = score; best = candidate; }
   }
 
   return best ? cleanName(best) : null;
@@ -272,6 +290,44 @@ function hasFuelContent(text) {
   return FUEL_KW.filter(kw => lower.includes(kw)).length >= 2;
 }
 
+// Vehicle service / maintenance receipt keywords
+const VEHICLE_SERVICE_KW = [
+  // Service bill structure
+  'job card','job order','jobcard','jc no',
+  'service centre','service center','service station','workshop','garage',
+  'parts total','labour total','labor total','labour charges','labor charges',
+  'spare parts','spares',
+  // Components
+  'engine oil','engine flush','oil filter','air filter','oil change',
+  'brake pad','brake oil','brake fluid','brake shoe',
+  'chain','clutch plate','spark plug','battery terminal',
+  'tyre','tire',
+  // Vehicle brands / models (common on service bills)
+  'tvs','ntorq','apache','jupiter','raider',
+  'hero motocorp','splendor','passion','glamour','xpulse',
+  'bajaj','pulsar','avenger','dominar','chetak',
+  'royal enfield','bullet','himalayan','meteor',
+  'yamaha','fz','r15','mt15','fascino','ray zr',
+  'honda activa','activa','dio','shine','unicorn','hornet',
+  'suzuki access','access 125','burgman',
+  'ola electric','ola s1','ather','revolt',
+  'kawasaki','ktm',
+  // Context
+  'mechanic','two wheeler','two-wheeler','scooter','motorcycle','bike service',
+  'free service','periodic service','general service','first service',
+  'frame no','regn no','regnno','reg no','chassis no',
+  'next due','nxtdue',
+];
+
+function hasVehicleServiceContent(text) {
+  const lower = text.toLowerCase();
+  let hits = 0;
+  for (const kw of VEHICLE_SERVICE_KW) {
+    if (lower.includes(kw)) { hits++; if (hits >= 2) return true; }
+  }
+  return false;
+}
+
 function extractCategory(merchantName, rawText) {
   // Try known merchant map
   if (merchantName) {
@@ -279,6 +335,11 @@ function extractCategory(merchantName, rawText) {
     for (const key of Object.keys(MERCHANT_MAP)) {
       if (lower.includes(key)) return MERCHANT_MAP[key];
     }
+  }
+
+  // Fallback: detect vehicle service/maintenance
+  if (rawText && hasVehicleServiceContent(rawText)) {
+    return { category: 'Transport', subcategory: 'Vehicle Maintenance' };
   }
 
   // Fallback: detect fuel from receipt body (petrol pump bills)
