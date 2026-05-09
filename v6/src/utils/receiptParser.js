@@ -448,6 +448,52 @@ function extractFuelData(text) {
   return { fuelRate, fuelQuantity, fuelType };
 }
 
+// ── Vehicle service data ──────────────────────────────────────────────────────
+function extractVehicleServiceData(text) {
+  // Current odometer KMs — "KMs 1145", "KM: 1145", "Odometer 12345"
+  const kmM = text.match(/\b(?:kms?|odometer|odo)\s*[:\-]?\s*(\d{3,7})\b/i);
+  const currentKm = kmM ? parseInt(kmM[1], 10) : null;
+
+  // Next service due date — "NxtDueDt:10/09/2026", "Next Due Date: 10-09-2026"
+  let nextServiceDate = null;
+  const nxtDtM = text.match(/nxt\s*due\s*dt\s*[:\-]?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-](?:20)?\d{2})/i)
+    || text.match(/next\s*(?:service\s*)?due\s*date\s*[:\-]?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-](?:20)?\d{2})/i);
+  if (nxtDtM) {
+    const parts = nxtDtM[1].split(/[\/\-]/);
+    if (parts.length === 3) {
+      let [d, mo, y] = parts;
+      if (y.length === 2) y = '20' + y;
+      const iso = `${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`;
+      const dateObj = new Date(iso + 'T12:00:00');
+      if (!isNaN(dateObj.getTime()) && dateObj.getFullYear() >= 2024) nextServiceDate = iso;
+    }
+  }
+
+  // Next service type — "NxtDue :2nd Free Service", "Next Due: 10000 KM"
+  const nxtTypeM = text.match(/nxt\s*due\s*[:\-\s]+([a-zA-Z0-9 ]{3,50}?)(?=\s+nxt|\s*\n|$)/i)
+    || text.match(/next\s*service\s*[:\-]?\s*([^\n\r]{3,50})/i);
+  const nextServiceType = nxtTypeM ? nxtTypeM[1].trim() : null;
+
+  // Vehicle model — "Model TVS Ntorq 150 TFT ABS OBDIIB"
+  const modelM = text.match(/\bmodel\s+([A-Za-z0-9 ]{4,50})/i);
+  let vehicleModel = null;
+  if (modelM) {
+    vehicleModel = modelM[1]
+      .replace(/\b(tft|abs|obdi+|efi|bs[iv6]+|ubs|gps|iot|bt|cbs|arai|orn|esp)\b.*/i, '')
+      .replace(/\s+/g, ' ').trim();
+  }
+
+  // Vehicle registration — Indian format MH02GU1566
+  const regM = text.match(/reg(?:n)?\.?\s*no\.?\s*[:\-]?\s*([A-Z]{2}\s*\d{2}\s*[A-Z]{1,3}\s*\d{1,4})/i);
+  const vehicleReg = regM ? regM[1].replace(/\s+/g, ' ').trim().toUpperCase() : null;
+
+  // Job / service type — "JobType 1st Free Service"
+  const jobM = text.match(/job\s*type\s*[:\-]?\s*(.{3,60}?)(?=\s+nxt\b|\s*\n|$)/i);
+  const serviceType = jobM ? jobM[1].trim() : null;
+
+  return { currentKm, nextServiceDate, nextServiceType, vehicleModel, vehicleReg, serviceType };
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 export function parseReceipt(rawText) {
   if (!rawText || !rawText.trim()) return null;
@@ -460,6 +506,8 @@ export function parseReceipt(rawText) {
   const diningApp                   = category === 'Food' ? extractDiningApp(rawText) : '';
   const { taxBreakdown, taxAmount } = extractTaxes(rawText);
   const { fuelRate, fuelQuantity, fuelType } = extractFuelData(rawText);
+  const isVehicleService            = category === 'Transport' && subcategory === 'Vehicle Maintenance';
+  const vehicleData                 = isVehicleService ? extractVehicleServiceData(rawText) : {};
 
   const confidence = {
     amount:        amount !== null,
@@ -485,6 +533,7 @@ export function parseReceipt(rawText) {
     fuelRate,
     fuelQuantity,
     fuelType,
+    ...vehicleData,
     _rawText:           rawText,
     _confidence:        confidence,
   };

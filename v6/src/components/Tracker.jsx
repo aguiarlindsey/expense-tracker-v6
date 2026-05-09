@@ -503,6 +503,23 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
     if (parsed.fuelRate)     s('fuelRate', String(parsed.fuelRate))
     if (parsed.fuelQuantity) s('fuelQuantity', String(parsed.fuelQuantity))
     if (parsed.fuelType)     s('fuelType', parsed.fuelType)
+    // Vehicle service fields
+    if (parsed.nextServiceDate) {
+      s('nextDueDate', parsed.nextServiceDate)
+      s('isRecurring', true)
+    }
+    if (parsed.vehicleModel || parsed.vehicleReg || parsed.currentKm || parsed.serviceType) {
+      const parts = []
+      if (parsed.vehicleModel)  parts.push(parsed.vehicleModel)
+      if (parsed.vehicleReg)    parts.push(`Reg: ${parsed.vehicleReg}`)
+      if (parsed.currentKm)     parts.push(`${parsed.currentKm.toLocaleString()} km`)
+      if (parsed.serviceType)   parts.push(parsed.serviceType)
+      if (parsed.nextServiceType && parsed.nextServiceDate) {
+        const [y,m,d] = parsed.nextServiceDate.split('-')
+        parts.push(`Next: ${parsed.nextServiceType} by ${d}-${m}-${y}`)
+      }
+      s('notes', parts.join(' | '))
+    }
   }
 
   // ── Historical rate sync ───────────────────────────────
@@ -1805,6 +1822,29 @@ export default function Tracker({ session }) {
     upcoming.sort((a, b) => a.daysUntil - b.daysUntil)
     setUpcomingRecurring(upcoming.slice(0, 5))
   }, [expenses, loading, todayStr])
+
+  // ── Service reminders (from receipt scanner) ─────────
+  useEffect(() => {
+    if (loading) return
+    try {
+      const reminders = JSON.parse(localStorage.getItem('et_svc_reminders') || '[]')
+      const today = new Date(todayStr + 'T12:00:00')
+      reminders.forEach(r => {
+        if (!r.date) return
+        const due = new Date(r.date + 'T12:00:00')
+        const daysUntil = Math.ceil((due - today) / 864e5)
+        if (daysUntil < 0 || daysUntil > 30) return
+        const key = `svc-remind-${r.key}-${r.date}`
+        if (_firedToasts.current.has(key)) return
+        _firedToasts.current.add(key)
+        const urgency = daysUntil === 0 ? 'due today' : daysUntil === 1 ? 'due tomorrow' : `due in ${daysUntil} days`
+        addToast(daysUntil <= 3 ? 'warn' : 'info', '🔧',
+          `Service reminder: ${r.label}`,
+          `${urgency}${r.reg ? ` · ${r.reg}` : ''}`,
+          daysUntil <= 3 ? 10000 : 7000)
+      })
+    } catch (_) {}
+  }, [loading, todayStr])
 
   // ── Chart data ───────────────────────────────────────
   const catData = useMemo(() => {
