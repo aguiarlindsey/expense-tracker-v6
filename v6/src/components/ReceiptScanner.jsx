@@ -5,6 +5,37 @@ import { parseReceipt } from '../utils/receiptParser.js';
 const isMobile = () => typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 const MAX_DIM = 1500;
 
+// ── PDF → image ───────────────────────────────────────────────────────────────
+// Lazily import pdfjs so it never crashes the app on load
+let _pdfjsLib = null;
+async function getPdfjs() {
+  if (_pdfjsLib) return _pdfjsLib;
+  _pdfjsLib = await import('pdfjs-dist');
+  if (!_pdfjsLib.GlobalWorkerOptions.workerSrc) {
+    _pdfjsLib.GlobalWorkerOptions.workerSrc =
+      `https://unpkg.com/pdfjs-dist@${_pdfjsLib.version}/build/pdf.worker.min.mjs`;
+  }
+  return _pdfjsLib;
+}
+
+async function renderPdfToImages(file) {
+  const pdfjs = await getPdfjs();
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+  const urls = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 2 });
+    const canvas = document.createElement('canvas');
+    canvas.width  = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    urls.push(URL.createObjectURL(blob));
+  }
+  return urls;
+}
+
 // ── Image preprocessing ───────────────────────────────────────────────────────
 function resizeToCanvas(img) {
   const scale = Math.min(1, MAX_DIM / Math.max(img.naturalWidth, img.naturalHeight));
@@ -73,7 +104,6 @@ async function runOcrOnCanvas(canvas, onProgress) {
 }
 
 // ── Crop Tool ─────────────────────────────────────────────────────────────────
-// actions: array of { label, variant, onClick(cropPct) }
 function CropTool({ imgSrc, actions }) {
   const imgRef  = useRef(null);
   const [crop, setCrop] = useState({ x1:3, y1:3, x2:97, y2:97 });
@@ -172,7 +202,6 @@ function CropTool({ imgSrc, actions }) {
 export default function ReceiptScanner({ onResult, onClose }) {
   const [step, setStep]                 = useState('pick');
   const [mode, setMode]                 = useState('single');
-  // pages = array of { url, crop } — completed, ready to scan
   const [pages, setPages]               = useState([]);
   const [currentImgSrc, setCurrentImgSrc] = useState(null);
   const [processedSrc, setProcessedSrc] = useState(null);
@@ -185,30 +214,64 @@ export default function ReceiptScanner({ onResult, onClose }) {
 
   const fileRef   = useRef(null);
   const cameraRef = useRef(null);
-  const urlsRef   = useRef([]); // all blob URLs for cleanup
+  const urlsRef   = useRef([]);
 
   const revokeAll = () => { urlsRef.current.forEach(u => URL.revokeObjectURL(u)); urlsRef.current = []; };
   useEffect(() => () => revokeAll(), []);
 
-  const loadFile = useCallback(file => {
-    if (!file || !file.type.startsWith('image/')) return;
-    const url = URL.createObjectURL(file);
-    urlsRef.current.push(url);
-    setCurrentImgSrc(url);
-    setStep('crop');
-    // reset file input so same file can be picked again
+  const loadFile = useCallback(async file => {
+    if (!file) return;
     if (fileRef.current)   fileRef.current.value   = '';
     if (cameraRef.current) cameraRef.current.value = '';
+
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isImage = file.type.startsWith('image/');
+
+    if (isPdf) {
+      setStatusMsg('Reading PDF…');
+      setStep('preparing');
+      try {
+        const imageUrls = await renderPdfToImages(file);
+        if (imageUrls.length === 0) {
+          setErrorDetail('PDF appears to be empty or could not be rendered.');
+          setStep('error');
+          return;
+        }
+        imageUrls.forEach(u => urlsRef.current.push(u));
+        if (imageUrls.length === 1) {
+          setCurrentImgSrc(imageUrls[0]);
+          setStatusMsg('');
+          setStep('crop');
+        } else {
+          // Multi-page PDF: add all pages as parts (full-page crop) ready to scan
+          const allPages = imageUrls.map(url => ({ url, crop: { x1:0, y1:0, x2:100, y2:100 } }));
+          setPages(prev => [...prev, ...allPages]);
+          setMode('multi');
+          setStatusMsg('');
+          setStep('pick');
+        }
+      } catch (err) {
+        setErrorDetail('Could not read PDF: ' + (err?.message || String(err)));
+        setStep('error');
+      }
+    } else if (isImage) {
+      const url = URL.createObjectURL(file);
+      urlsRef.current.push(url);
+      setCurrentImgSrc(url);
+      setStep('crop');
+    } else {
+      const ext = file.name.includes('.') ? file.name.split('.').pop().toUpperCase() : 'unknown';
+      setErrorDetail(`".${ext}" files are not supported. Please upload a PDF or image (JPEG, PNG, WEBP, etc.).`);
+      setStep('error');
+    }
   }, []);
 
-  // Save current page to list and go pick the next one
   const saveAndContinue = useCallback(crop => {
     setPages(prev => [...prev, { url: currentImgSrc, crop }]);
     setCurrentImgSrc(null);
     setStep('pick');
   }, [currentImgSrc]);
 
-  // Save current page and kick off OCR on all pages
   const saveAndScan = useCallback(async crop => {
     const allPages = [...pages, { url: currentImgSrc, crop }];
     setPages(allPages);
@@ -254,10 +317,9 @@ export default function ReceiptScanner({ onResult, onClose }) {
     revokeAll();
     setStep('pick'); setMode('single'); setPages([]); setCurrentImgSrc(null);
     setProcessedSrc(null); setParsed(null); setRawText('');
-    setShowRaw(false); setProgress(0); setErrorDetail('');
+    setShowRaw(false); setProgress(0); setErrorDetail(''); setStatusMsg('');
   };
 
-  // Remove a collected page (and revoke its URL)
   const removePage = idx => {
     setPages(prev => {
       URL.revokeObjectURL(prev[idx].url);
@@ -265,6 +327,43 @@ export default function ReceiptScanner({ onResult, onClose }) {
       return prev.filter((_, i) => i !== idx);
     });
   };
+
+  // Scan already-collected pages without adding another
+  const scanCollected = useCallback(() => {
+    const pg = [...pages];
+    setPages([]);
+    setStep('scanning');
+    setProgress(0);
+    const n = pg.length;
+    (async () => {
+      try {
+        const texts = [];
+        for (let i = 0; i < n; i++) {
+          const { url, crop } = pg[i];
+          setStatusMsg(`Preparing part ${i+1} of ${n}…`);
+          const { canvas, dataUrl } = await preprocessImage(url, crop);
+          if (i === 0) setProcessedSrc(dataUrl);
+          const base = i / n;
+          const text = await runOcrOnCanvas(canvas, (msg, prog) => {
+            if (msg) setStatusMsg(msg);
+            if (prog != null) {
+              setStatusMsg(`Scanning part ${i+1} of ${n}…`);
+              setProgress(Math.round((base + prog/n) * 100));
+            }
+          });
+          texts.push(text);
+          setProgress(Math.round(((i+1)/n)*100));
+        }
+        const combined = texts.join('\n');
+        setRawText(combined);
+        setParsed(parseReceipt(combined));
+        setStep('results');
+      } catch (err) {
+        setErrorDetail(err?.message || String(err));
+        setStep('error');
+      }
+    })();
+  }, [pages]);
 
   const partLabel = n => `part${n !== 1 ? 's' : ''}`;
 
@@ -276,11 +375,18 @@ export default function ReceiptScanner({ onResult, onClose }) {
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
+        {/* ── PREPARING (PDF render) ── */}
+        {step === 'preparing' && (
+          <div style={{ padding:'1.5rem', display:'flex', flexDirection:'column', alignItems:'center', gap:'1rem' }}>
+            <div style={{ fontSize:'2rem' }}>📄</div>
+            <p style={{ margin:0, fontSize:'0.85rem', color:'var(--text-muted)', textAlign:'center' }}>{statusMsg || 'Reading file…'}</p>
+          </div>
+        )}
+
         {/* ── PICK ── */}
         {step === 'pick' && (
           <div style={{ padding:'1.5rem', display:'flex', flexDirection:'column', gap:'1rem' }}>
 
-            {/* Mode toggle — only shown before first page is committed */}
             {pages.length === 0 && (
               <div style={{ display:'flex', gap:'0.5rem' }}>
                 <button className={mode==='single'?'btn-primary':'btn-secondary'} style={{ flex:1 }}
@@ -292,7 +398,6 @@ export default function ReceiptScanner({ onResult, onClose }) {
               </div>
             )}
 
-            {/* Collected pages chips */}
             {pages.length > 0 && (
               <div>
                 <p style={{ margin:'0 0 6px', fontSize:'0.8rem', color:'var(--text-muted)', fontWeight:600 }}>
@@ -316,10 +421,9 @@ export default function ReceiptScanner({ onResult, onClose }) {
               </div>
             )}
 
-            {/* Instructions */}
             <p style={{ margin:0, fontSize:'0.82rem', color:'var(--text-muted)' }}>
               {pages.length === 0 && mode === 'single'
-                ? 'Take a photo or upload an image. You can crop to the receipt before scanning.'
+                ? 'Upload a receipt — PDF, JPEG, PNG or any image. You can crop before scanning.'
                 : pages.length === 0
                   ? 'Photograph the top section of the receipt first.'
                   : `Start slightly above where part ${pages.length} ended to avoid missing any lines.`}
@@ -335,54 +439,18 @@ export default function ReceiptScanner({ onResult, onClose }) {
                   style={{ display:'none' }} onChange={e => loadFile(e.target.files[0])} />
               </>
             )}
+
             <button className="btn-secondary" style={{ width:'100%', padding:'0.75rem' }}
               onClick={() => fileRef.current.click()}>
               {isMobile()
                 ? (pages.length > 0 ? `🖼️ Choose Part ${pages.length+1} from Gallery` : '🖼️ Choose from Gallery')
-                : (pages.length > 0 ? `📁 Upload Part ${pages.length+1}` : '📁 Upload Receipt Image')}
+                : (pages.length > 0 ? `📁 Upload Part ${pages.length+1}` : '📁 Upload Receipt (PDF / Image)')}
             </button>
-            <input ref={fileRef} type="file" accept="image/*" style={{ display:'none' }}
-              onChange={e => loadFile(e.target.files[0])} />
+            <input ref={fileRef} type="file" accept="image/*,application/pdf,.pdf"
+              style={{ display:'none' }} onChange={e => loadFile(e.target.files[0])} />
 
-            {/* Skip adding more — scan collected pages now */}
             {pages.length > 0 && (
-              <button className="btn-primary" style={{ width:'100%' }}
-                onClick={() => {
-                  // scan existing pages without adding another
-                  const pg = [...pages];
-                  setPages([]);
-                  setStep('scanning');
-                  setProgress(0);
-                  const n = pg.length;
-                  (async () => {
-                    try {
-                      const texts = [];
-                      for (let i = 0; i < n; i++) {
-                        const { url, crop } = pg[i];
-                        setStatusMsg(`Preparing part ${i+1} of ${n}…`);
-                        const { canvas, dataUrl } = await preprocessImage(url, crop);
-                        if (i === 0) setProcessedSrc(dataUrl);
-                        const base = i / n;
-                        const text = await runOcrOnCanvas(canvas, (msg, prog) => {
-                          if (msg) setStatusMsg(msg);
-                          if (prog != null) {
-                            setStatusMsg(`Scanning part ${i+1} of ${n}…`);
-                            setProgress(Math.round((base + prog/n) * 100));
-                          }
-                        });
-                        texts.push(text);
-                        setProgress(Math.round(((i+1)/n)*100));
-                      }
-                      const combined = texts.join('\n');
-                      setRawText(combined);
-                      setParsed(parseReceipt(combined));
-                      setStep('results');
-                    } catch (err) {
-                      setErrorDetail(err?.message || String(err));
-                      setStep('error');
-                    }
-                  })();
-                }}>
+              <button className="btn-primary" style={{ width:'100%' }} onClick={scanCollected}>
                 Scan {pages.length} Collected {pages.length === 1 ? 'Part' : 'Parts'} Now
               </button>
             )}
