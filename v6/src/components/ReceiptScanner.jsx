@@ -12,8 +12,7 @@ async function getPdfjs() {
   if (_pdfjsLib) return _pdfjsLib;
   _pdfjsLib = await import('pdfjs-dist');
   if (!_pdfjsLib.GlobalWorkerOptions.workerSrc) {
-    _pdfjsLib.GlobalWorkerOptions.workerSrc =
-      `https://unpkg.com/pdfjs-dist@${_pdfjsLib.version}/build/pdf.worker.min.mjs`;
+    _pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
   }
   return _pdfjsLib;
 }
