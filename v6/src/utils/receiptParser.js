@@ -399,6 +399,8 @@ const TAX_PATTERNS = [
 function extractTaxes(text) {
   const breakdown = {};
   let total = 0;
+
+  // Standard inline patterns — e.g. "SGST 9%: 36.23" or "SGST : 36.23"
   for (const { key, re } of TAX_PATTERNS) {
     const m = text.match(re);
     if (m) {
@@ -406,6 +408,23 @@ function extractTaxes(text) {
       if (!isNaN(v) && v > 0) { breakdown[key] = v; total += v; }
     }
   }
+
+  // Column-table format — SGST/CGST are column headers; values are in rows.
+  // The Sub Total summary row contains the accumulated totals.
+  // e.g. "Sub Total 5.00 0.00 1102.54 99.23 99.23"
+  if (total === 0 && /\bsgst\b/i.test(text) && /\bcgst\b/i.test(text)) {
+    // Match Sub Total row: any number of leading numerics then two final captures (SGST, CGST)
+    const subM = text.match(
+      /(?:sub\s*total|subtotal)\s+(?:[\d,]+\.?\d*\s+){1,}([\d,]+\.?\d*)\s+([\d,]+\.?\d*)\s*(?:\r?\n|$)/im
+    );
+    if (subM) {
+      const sgst = parseFloat(subM[1].replace(/,/g, ''));
+      const cgst = parseFloat(subM[2].replace(/,/g, ''));
+      if (!isNaN(sgst) && sgst > 0) { breakdown.sgst = sgst; total += sgst; }
+      if (!isNaN(cgst) && cgst > 0) { breakdown.cgst = cgst; total += cgst; }
+    }
+  }
+
   return total > 0
     ? { taxBreakdown: breakdown, taxAmount: parseFloat(total.toFixed(2)) }
     : { taxBreakdown: {}, taxAmount: 0 };
