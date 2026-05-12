@@ -9,7 +9,25 @@
       "PowerShell($PSVersionTable.PSVersion)",
       "PowerShell(& \"C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe\" -NoProfile -Command '$PSVersionTable.PSVersion' 2>$null; if \\(-not $?\\) { Write-Output \"PowerShell 7 not found at default path\" })",
       "PowerShell(winget install *)",
-      "PowerShell(Get-Command *)"
+      "PowerShell(Get-Command *)",
+      "Bash(npm install *)",
+      "Bash(npm audit *)",
+      "Bash(grep -v \"//\")",
+      "Bash(grep -n \"text: \\\\`\" D:/CLAUDE/EXPENSE_TRACKER/v6/src/components/Tracker.jsx)",
+      "Bash(git revert *)",
+      "Bash(Get-ChildItem -Path \"D:\\\\CLAUDE\\\\EXPENSE_TRACKER\\\\v6\" -Recurse -Force)",
+      "Bash(Select-Object -Property FullName, PSIsContainer)",
+      "Bash(Format-List)",
+      "Bash(cat)",
+      "Read(//tmp/**)",
+      "Bash(npm config *)",
+      "Bash(ls CHANGELOG*)",
+      "Bash(ls ../CHANGELOG*)",
+      "Bash(grep -v \"new Date\\\\|startsWith\\\\|filter\\\\|sort\\\\|\\\\\\\\.date <\\\\|\\\\\\\\.date >\\\\|e\\\\.date}\\\\s*[,\\\\]]\\\\|CACHE\\\\|hist_\\\\|today\\\\|form\\\\.\")",
+      "Bash(ls *.jsx *.md *.txt)",
+      "Bash(ls v6/*.md)",
+      "Bash(findstr -i pdf)",
+      "Bash(npx vite *)"
     ]
   }
 }

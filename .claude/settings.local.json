@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
+      "Bash(grep -n \"const insights\" dist/assets/index-*.js)",
+      "Bash(awk 'NR < 34429 && /allMonthlyExp/' dist/assets/index-*.js)",
+      "Bash(npx supabase:*)",
+      "Bash(curl:*)",
+      "Bash(git -C D:/CLAUDE/EXPENSE_TRACKER log --oneline -8)"
+    ]
+  }
+}

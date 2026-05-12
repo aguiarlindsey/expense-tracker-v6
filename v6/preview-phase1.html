@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expense Tracker V7 — Full UI Preview</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { overflow-x: hidden; }
+
+/* ── Tokens ── */
+:root {
+  --bg:         #0d0d0d;
+  --surface:    #181818;
+  --surface2:   #212121;
+  --text:       #efefef;
+  --text-muted: #777;
+  --border:     #282828;
+  --primary:    #2563eb;
+  --radius:     13px;
+  --glass-bg:   rgba(20,20,20,0.70);
+  --glass-bdr:  rgba(255,255,255,0.07);
+  --glass-blur: blur(22px) saturate(160%);
+  --shadow:     0 4px 28px rgba(0,0,0,0.45);
+  --green: #10b981; --red: #ef4444; --amber: #f59e0b; --blue: #3b82f6; --purple: #8b5cf6;
+}
+.light {
+  --bg:#f4f4f5; --surface:#ffffff; --surface2:#f0f0f0; --text:#111; --text-muted:#666;
+  --border:#e4e4e7; --glass-bg:rgba(255,255,255,0.75); --glass-bdr:rgba(0,0,0,0.07);
+  --shadow:0 4px 24px rgba(0,0,0,0.09);
+}
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+/* ── Header ── */
+.app-header {
+  background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur);
+  border-bottom:1px solid var(--glass-bdr); padding:0 1.5rem; height:56px;
+  display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:200;
+}
+.logo { font-size:1rem; font-weight:700; letter-spacing:-.02em; display:flex; align-items:center; gap:.4rem; }
+.logo small { opacity:.4; font-weight:400; font-size:.8rem; }
+.cmd-pill {
+  flex:1; max-width:280px; margin:0 1.5rem;
+  background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+  padding:.35rem .75rem; display:flex; align-items:center; gap:.5rem;
+  color:var(--text-muted); font-size:.8rem; cursor:pointer;
+  transition:border-color .15s;
+}
+.cmd-pill:hover { border-color:var(--primary); }
+.cmd-pill kbd { margin-left:auto; background:var(--bg); border:1px solid var(--border); border-radius:4px; padding:1px 5px; font-size:.7rem; font-family:monospace; }
+.hdr-right { display:flex; align-items:center; gap:.6rem; }
+.icon-btn { background:none; border:1px solid var(--border); color:var(--text-muted); width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:.85rem; display:flex; align-items:center; justify-content:center; transition:border-color .15s,color .15s; }
+.icon-btn:hover { border-color:var(--primary); color:var(--primary); }
+.avatar { width:30px; height:30px; border-radius:50%; background:linear-gradient(135deg,#2563eb,#7c3aed); display:flex; align-items:center; justify-content:center; font-size:.7rem; font-weight:700; color:#fff; cursor:pointer; }
+
+/* ── Tabs ── */
+.tabs-bar {
+  background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur);
+  border-bottom:1px solid var(--glass-bdr); padding:0 1.25rem;
+  display:flex; gap:2px; overflow-x:auto; scrollbar-width:none;
+  position:sticky; top:56px; z-index:199;
+}
+.tabs-bar::-webkit-scrollbar { display:none; }
+.tab { background:none; border:none; padding:.55rem .85rem; font-size:.82rem; color:var(--text-muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; white-space:nowrap; font-weight:500; transition:color .15s; }
+.tab:hover { color:var(--text); }
+.tab.active { color:var(--primary); border-bottom-color:var(--primary); font-weight:600; }
+
+/* ── Layout ── */
+.page { display:none; max-width:960px; margin:0 auto; padding:1.4rem; }
+.page.active { display:block; }
+
+/* ── Glass tile ── */
+.tile {
+  background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur);
+  border:1px solid var(--glass-bdr); border-radius:var(--radius);
+  transition:border-color .2s, transform .15s;
+}
+.tile:hover { border-color:rgba(255,255,255,0.13); }
+
+/* ── Bento grid ── */
+.bento { display:grid; grid-template-columns:2fr 1fr 1fr; gap:.875rem; margin-bottom:1.25rem; }
+.bp { padding:1.1rem 1.25rem; }
+.bp.hero { grid-column:1; grid-row:1/3; padding:1.5rem; position:relative; overflow:hidden; }
+.bp.hero::before { content:''; position:absolute; top:-50px; right:-50px; width:160px; height:160px; background:radial-gradient(circle,rgba(37,99,235,.15) 0%,transparent 70%); border-radius:50%; pointer-events:none; }
+.bp.spark { grid-column:1/3; }
+.t-label { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); margin-bottom:.45rem; }
+.t-val { font-size:1.55rem; font-weight:800; letter-spacing:-.04em; line-height:1; }
+.t-val.xl { font-size:2.4rem; }
+.t-sub { font-size:.72rem; color:var(--text-muted); margin-top:.3rem; }
+.badge { display:inline-flex; align-items:center; gap:2px; font-size:.68rem; font-weight:600; padding:2px 7px; border-radius:99px; margin-top:.4rem; }
+.bg-green { background:rgba(16,185,129,.13); color:#10b981; }
+.bg-red   { background:rgba(239,68,68,.13);  color:#ef4444; }
+.bg-blue  { background:rgba(37,99,235,.13);  color:#60a5fa; }
+.bg-amber { background:rgba(245,158,11,.13); color:#f59e0b; }
+.bg-purple{ background:rgba(139,92,246,.13); color:#a78bfa; }
+
+/* progress bar */
+.pbar { height:5px; background:var(--border); border-radius:99px; overflow:hidden; margin:.75rem 0 .35rem; }
+.pbar-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,#2563eb,#7c3aed); }
+.pbar-meta { display:flex; justify-content:space-between; font-size:.68rem; color:var(--text-muted); }
+
+/* strip */
+.strip { padding:.85rem 1.25rem; margin-bottom:1.25rem; display:flex; align-items:center; gap:1rem; }
+.strip-prog { flex:1; height:5px; background:var(--border); border-radius:99px; overflow:hidden; }
+.strip-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,#2563eb,#7c3aed); }
+.strip-meta { font-size:.76rem; color:var(--text-muted); white-space:nowrap; display:flex; gap:.65rem; }
+.strip-meta strong { color:var(--text); }
+
+/* section title */
+.sec { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); margin-bottom:.65rem; }
+
+/* category tiles */
+.cat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:.7rem; margin-bottom:1.25rem; }
+.cat-tile { padding:.85rem 1rem; }
+.cat-top { display:flex; align-items:center; gap:.5rem; margin-bottom:.55rem; }
+.cat-ico { width:28px; height:28px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:.95rem; flex-shrink:0; }
+.cat-name { font-size:.78rem; font-weight:600; }
+.cat-amt { font-size:1rem; font-weight:700; margin-bottom:.35rem; }
+.cat-bar { height:3px; background:var(--border); border-radius:99px; overflow:hidden; margin-bottom:.28rem; }
+.cat-fill { height:100%; border-radius:99px; }
+.cat-meta { display:flex; justify-content:space-between; font-size:.67rem; color:var(--text-muted); }
+
+/* recent list */
+.list-card { overflow:hidden; margin-bottom:1.25rem; }
+.list-hdr { display:flex; align-items:center; justify-content:space-between; padding:.8rem 1.1rem; border-bottom:1px solid var(--glass-bdr); }
+.list-hdr-title { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); }
+.list-hdr-action { font-size:.78rem; color:var(--primary); background:none; border:none; cursor:pointer; }
+.exp-row { display:flex; align-items:center; gap:.8rem; padding:.7rem 1.1rem; border-bottom:1px solid var(--glass-bdr); transition:background .1s; cursor:default; }
+.exp-row:last-child { border-bottom:none; }
+.exp-row:hover { background:rgba(255,255,255,.025); }
+.exp-ico { width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+.exp-body { flex:1; min-width:0; }
+.exp-desc { font-size:.85rem; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.exp-meta { font-size:.7rem; color:var(--text-muted); margin-top:2px; }
+.exp-extra { font-size:.68rem; color:var(--text-muted); font-style:italic; margin-top:1px; }
+.exp-right { text-align:right; flex-shrink:0; }
+.exp-amt { font-size:.88rem; font-weight:700; }
+.exp-date { font-size:.68rem; color:var(--text-muted); margin-top:2px; }
+
+/* income row */
+.inc-row { display:flex; align-items:center; gap:.8rem; padding:.7rem 1.1rem; border-bottom:1px solid var(--glass-bdr); }
+.inc-row:last-child { border-bottom:none; }
+.inc-amt { font-size:.88rem; font-weight:700; color:#10b981; }
+
+/* bar chart */
+.bar-chart-wrap { padding:1.1rem 1.25rem 0; }
+svg text { fill:var(--text-muted); }
+
+/* insights grid */
+.insight-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:.75rem; margin-bottom:1.25rem; }
+.insight-card { padding:1rem 1.1rem; }
+.ins-icon { font-size:1.4rem; margin-bottom:.5rem; }
+.ins-title { font-size:.78rem; font-weight:600; margin-bottom:.25rem; }
+.ins-val { font-size:1.1rem; font-weight:800; letter-spacing:-.02em; color:var(--primary); }
+.ins-sub { font-size:.7rem; color:var(--text-muted); margin-top:.2rem; }
+
+/* health score */
+.health-hero { display:flex; align-items:center; gap:1.5rem; padding:1.4rem 1.5rem; margin-bottom:1.25rem; }
+.health-ring { position:relative; width:90px; height:90px; flex-shrink:0; }
+.health-ring svg { transform:rotate(-90deg); }
+.health-ring-label { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.health-ring-num { font-size:1.4rem; font-weight:800; }
+.health-ring-text { font-size:.6rem; color:var(--text-muted); }
+.health-details { flex:1; }
+.health-title { font-size:1.1rem; font-weight:700; margin-bottom:.3rem; }
+.health-desc { font-size:.78rem; color:var(--text-muted); line-height:1.5; }
+.health-bars { margin-top:.75rem; display:flex; flex-direction:column; gap:.4rem; }
+.h-bar-row { display:flex; align-items:center; gap:.75rem; font-size:.72rem; }
+.h-bar-label { width:100px; color:var(--text-muted); }
+.h-bar-track { flex:1; height:4px; background:var(--border); border-radius:99px; overflow:hidden; }
+.h-bar-fill { height:100%; border-radius:99px; }
+.h-bar-val { width:36px; text-align:right; font-weight:600; }
+
+/* goals */
+.goal-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:.875rem; margin-bottom:1.25rem; }
+.goal-card { padding:1.2rem; display:flex; flex-direction:column; gap:.75rem; }
+.goal-top { display:flex; align-items:center; gap:.875rem; }
+.goal-ring { position:relative; width:64px; height:64px; flex-shrink:0; }
+.goal-ring svg { transform:rotate(-90deg); }
+.goal-ring-pct { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:800; }
+.goal-info { flex:1; }
+.goal-name { font-size:.88rem; font-weight:700; margin-bottom:.2rem; }
+.goal-saved { font-size:.72rem; color:var(--text-muted); }
+.goal-pbar { height:4px; background:var(--border); border-radius:99px; overflow:hidden; }
+.goal-fill { height:100%; border-radius:99px; }
+.goal-meta { display:flex; justify-content:space-between; font-size:.68rem; color:var(--text-muted); margin-top:.25rem; }
+
+/* recurring */
+.rec-row { display:flex; align-items:center; gap:.8rem; padding:.7rem 1.1rem; border-bottom:1px solid var(--glass-bdr); }
+.rec-row:last-child { border-bottom:none; }
+.rec-body { flex:1; min-width:0; }
+.rec-name { font-size:.85rem; font-weight:500; }
+.rec-meta { font-size:.7rem; color:var(--text-muted); margin-top:2px; }
+.rec-right { text-align:right; }
+.rec-amt { font-size:.88rem; font-weight:700; }
+.rec-due { font-size:.68rem; margin-top:2px; }
+.due-soon { color:#f59e0b; }
+.due-ok   { color:var(--text-muted); }
+
+/* trips */
+.trip-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:.875rem; margin-bottom:1.25rem; }
+.trip-card { padding:1.2rem; }
+.trip-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:.75rem; }
+.trip-dest { font-size:1rem; font-weight:700; }
+.trip-dates { font-size:.72rem; color:var(--text-muted); margin-top:2px; }
+.trip-status { font-size:.68rem; font-weight:600; padding:2px 8px; border-radius:99px; }
+.st-past     { background:rgba(120,120,120,.15); color:var(--text-muted); }
+.st-active   { background:rgba(16,185,129,.13); color:#10b981; }
+.st-upcoming { background:rgba(37,99,235,.13);  color:#60a5fa; }
+.trip-stats { display:flex; gap:1.25rem; }
+.trip-stat { font-size:.72rem; color:var(--text-muted); }
+.trip-stat strong { display:block; font-size:1rem; font-weight:700; color:var(--text); }
+.trip-bar { height:3px; background:var(--border); border-radius:99px; margin:.75rem 0 .3rem; overflow:hidden; }
+.trip-bar-fill { height:100%; background:linear-gradient(90deg,#2563eb,#7c3aed); border-radius:99px; }
+.trip-cats { font-size:.68rem; color:var(--text-muted); }
+
+/* exchange */
+.converter-row { display:flex; align-items:center; gap:.75rem; padding:1.1rem 1.25rem; margin-bottom:1.25rem; flex-wrap:wrap; }
+.fx-input { flex:1; min-width:120px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:.5rem .875rem; font-size:.95rem; font-weight:600; color:var(--text); outline:none; }
+.fx-input:focus { border-color:var(--primary); }
+.fx-arrow { font-size:1.2rem; color:var(--text-muted); }
+.fx-result { font-size:1.2rem; font-weight:800; color:#10b981; }
+.rate-row { display:flex; align-items:center; padding:.6rem 1.1rem; border-bottom:1px solid var(--glass-bdr); font-size:.85rem; }
+.rate-row:last-child { border-bottom:none; }
+.rate-flag { font-size:1.1rem; margin-right:.6rem; }
+.rate-code { font-weight:600; width:48px; }
+.rate-name { color:var(--text-muted); font-size:.76rem; flex:1; }
+.rate-val  { font-weight:700; }
+.rate-chg  { font-size:.7rem; margin-left:.5rem; }
+
+/* settings */
+.settings-section { margin-bottom:1.25rem; }
+.settings-hdr { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); padding:.5rem 1.1rem; border-bottom:1px solid var(--glass-bdr); }
+.setting-row { display:flex; align-items:center; justify-content:space-between; padding:.8rem 1.1rem; border-bottom:1px solid var(--glass-bdr); }
+.setting-row:last-child { border-bottom:none; }
+.setting-label { font-size:.85rem; font-weight:500; }
+.setting-desc { font-size:.72rem; color:var(--text-muted); margin-top:2px; }
+.setting-val { font-size:.82rem; color:var(--text-muted); display:flex; align-items:center; gap:.4rem; }
+.toggle { width:38px; height:22px; background:var(--primary); border-radius:99px; position:relative; cursor:pointer; flex-shrink:0; }
+.toggle::after { content:''; position:absolute; width:16px; height:16px; background:#fff; border-radius:50%; top:3px; right:3px; transition:right .2s; }
+.toggle.off { background:var(--border); }
+.toggle.off::after { right:calc(100% - 19px); }
+.danger-btn { background:rgba(239,68,68,.1); color:#ef4444; border:1px solid rgba(239,68,68,.25); border-radius:8px; padding:.45rem 1rem; font-size:.82rem; cursor:pointer; }
+
+/* budget bars */
+.budget-grid { display:grid; grid-template-columns:1fr; gap:.5rem; padding:.75rem 1.1rem; }
+.budget-row { display:flex; align-items:center; gap:.75rem; }
+.budget-icon { font-size:1rem; width:24px; flex-shrink:0; }
+.budget-name { font-size:.78rem; font-weight:500; width:90px; }
+.budget-track { flex:1; height:6px; background:var(--border); border-radius:99px; overflow:hidden; }
+.budget-fill { height:100%; border-radius:99px; }
+.budget-pct  { font-size:.7rem; color:var(--text-muted); width:36px; text-align:right; }
+.budget-amt  { font-size:.7rem; color:var(--text-muted); width:80px; text-align:right; }
+
+/* anomaly banner */
+.alert-banner { display:flex; align-items:center; gap:.75rem; padding:.8rem 1.1rem; margin-bottom:1.25rem; border-radius:var(--radius); border:1px solid rgba(239,68,68,.25); background:rgba(239,68,68,.07); }
+.alert-banner .alert-text { flex:1; font-size:.8rem; }
+.alert-banner .alert-dismiss { background:none; border:1px solid rgba(239,68,68,.3); color:#ef4444; border-radius:6px; padding:3px 10px; font-size:.7rem; cursor:pointer; }
+
+/* about card */
+.about-card { padding:1.5rem; text-align:center; }
+.about-title { font-size:1.4rem; font-weight:800; margin-bottom:.75rem; }
+.about-badges { display:flex; flex-wrap:wrap; justify-content:center; gap:.4rem; margin-bottom:1rem; }
+.about-badge { background:var(--surface2); border:1px solid var(--border); border-radius:99px; padding:3px 10px; font-size:.72rem; color:var(--text-muted); }
+.about-rows { text-align:left; display:flex; flex-direction:column; gap:.4rem; font-size:.78rem; }
+.about-row { display:flex; justify-content:space-between; gap:1rem; }
+.about-row span:first-child { color:var(--text-muted); }
+
+/* FAB */
+.fab { position:fixed; bottom:1.4rem; right:1.4rem; background:linear-gradient(135deg,#2563eb,#7c3aed); color:#fff; border:none; border-radius:99px; padding:.65rem 1.4rem; font-size:.88rem; font-weight:600; cursor:pointer; box-shadow:0 4px 20px rgba(37,99,235,.4); display:flex; align-items:center; gap:.35rem; z-index:300; transition:transform .15s,box-shadow .15s; }
+.fab:hover { transform:translateY(-2px); box-shadow:0 6px 24px rgba(37,99,235,.5); }
+
+/* preview controls */
+.ctrl-bar { position:fixed; bottom:1.4rem; left:1.4rem; z-index:400; }
+.ctrl-btn { background:var(--surface); border:1px solid var(--border); color:var(--text-muted); border-radius:8px; padding:.45rem .9rem; font-size:.78rem; cursor:pointer; }
+
+/* responsive */
+@media(max-width:680px) {
+  .cmd-pill { display:none; }
+  .bento { grid-template-columns:1fr 1fr; }
+  .bp.hero { grid-column:1/3; }
+  .bp.spark { grid-column:1/3; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="app-header">
+  <div class="logo">💸 Expense Tracker <small>V7</small></div>
+  <div class="cmd-pill">🔍 Search or jump to anything…<kbd>⌘K</kbd></div>
+  <div class="hdr-right">
+    <button class="icon-btn" onclick="toggleMode()">🌙</button>
+    <button class="icon-btn">🔔</button>
+    <div class="avatar">AL</div>
+  </div>
+</header>
+
+<!-- TABS -->
+<nav class="tabs-bar" id="tabs">
+  <button class="tab active" onclick="showTab(0)">Overview</button>
+  <button class="tab" onclick="showTab(1)">Income</button>
+  <button class="tab" onclick="showTab(2)">Trends</button>
+  <button class="tab" onclick="showTab(3)">Budgets</button>
+  <button class="tab" onclick="showTab(4)">Goals</button>
+  <button class="tab" onclick="showTab(5)">Insights</button>
+  <button class="tab" onclick="showTab(6)">Recurring</button>
+  <button class="tab" onclick="showTab(7)">✈️ Trips</button>
+  <button class="tab" onclick="showTab(8)">Exchange</button>
+  <button class="tab" onclick="showTab(9)">Settings</button>
+</nav>
+
+<!-- ══════════════════════════════════════════════
+     TAB 0 — OVERVIEW
+══════════════════════════════════════════════ -->
+<div class="page active" id="page-0">
+  <!-- month strip -->
+  <div class="tile strip">
+    <div style="font-size:.78rem;color:var(--text-muted);white-space:nowrap">May 2026 ▾</div>
+    <div class="strip-prog"><div class="strip-fill" style="width:59%"></div></div>
+    <div class="strip-meta">
+      <span>₹42,800 <span style="opacity:.4">of ₹72,000</span></span>
+      <span style="opacity:.3">·</span>
+      <span><strong>19 days</strong> left</span>
+      <span style="opacity:.3">·</span>
+      <span><strong>₹1,512/day</strong> remaining</span>
+    </div>
+  </div>
+
+  <!-- bento -->
+  <div class="bento">
+    <div class="tile bp hero">
+      <div class="t-label">Total Spent — May 2026</div>
+      <div class="t-val xl">₹42,800</div>
+      <div class="t-sub">59% of ₹72,000 monthly budget</div>
+      <div class="pbar"><div class="pbar-fill" style="width:59%"></div></div>
+      <div class="pbar-meta"><span>₹0</span><span style="color:var(--primary);font-weight:600">₹42,800</span><span>₹72,000</span></div>
+      <div style="margin-top:.9rem;display:flex;gap:.4rem;flex-wrap:wrap">
+        <span class="badge bg-amber">⚡ 59% used</span>
+        <span class="badge bg-blue">47 transactions</span>
+      </div>
+    </div>
+    <div class="tile bp">
+      <div class="t-label">Income</div>
+      <div class="t-val">₹85,000</div>
+      <div class="t-sub">May 2026</div>
+      <span class="badge bg-green">↑ ₹5k vs Apr</span>
+    </div>
+    <div class="tile bp">
+      <div class="t-label">Net Savings</div>
+      <div class="t-val" style="color:#10b981">+₹42,200</div>
+      <div class="t-sub">Income − Expenses</div>
+      <span class="badge bg-green">21% rate</span>
+    </div>
+    <div class="tile bp">
+      <div class="t-label">Safe to Spend</div>
+      <div class="t-val" style="color:#60a5fa">₹18,200</div>
+      <div class="t-sub">Remaining budget today</div>
+    </div>
+    <div class="tile bp">
+      <div class="t-label">Burn Rate</div>
+      <div class="t-val">₹1,420</div>
+      <div class="t-sub">per day this month</div>
+      <span class="badge bg-amber">↑ 8% vs avg</span>
+    </div>
+    <!-- sparkline -->
+    <div class="tile bp spark bar-chart-wrap" style="padding-bottom:1rem">
+      <div class="t-label" style="margin-bottom:.6rem">30-Day Spend Trend</div>
+      <svg viewBox="0 0 560 70" style="width:100%;height:60px">
+        <defs>
+          <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#2563eb" stop-opacity=".28"/>
+            <stop offset="100%" stop-color="#2563eb" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path d="M0,60 L19,57 L38,55 L57,58 L76,52 L95,49 L114,46 L133,48 L152,42 L171,38 L190,11 L209,40 L228,44 L247,42 L266,40 L285,38 L304,34 L323,32 L342,36 L361,38 L380,33 L399,30 L418,28 L437,31 L456,27 L475,23 L494,25 L513,21 L532,18 L551,15 L560,14 L560,70 L0,70 Z" fill="url(#sg)"/>
+        <polyline points="0,60 19,57 38,55 57,58 76,52 95,49 114,46 133,48 152,42 171,38 190,11 209,40 228,44 247,42 266,40 285,38 304,34 323,32 342,36 361,38 380,33 399,30 418,28 437,31 456,27 475,23 494,25 513,21 532,18 551,15 560,14" fill="none" stroke="#2563eb" stroke-width="2" stroke-linejoin="round"/>
+        <circle cx="190" cy="11" r="4" fill="#7c3aed"/>
+        <text x="190" y="7" text-anchor="middle" font-size="8" fill="#7c3aed" font-family="sans-serif">EMI</text>
+        <circle cx="560" cy="14" r="4" fill="#2563eb"/>
+      </svg>
+      <div style="display:flex;justify-content:space-between;font-size:.64rem;color:var(--text-muted);margin-top:.2rem"><span>1 May</span><span>10 May</span><span>20 May</span><span>Today</span></div>
+    </div>
+    <div class="tile bp" style="background:rgba(239,68,68,.06);border-color:rgba(239,68,68,.2)">
+      <div class="t-label" style="color:#ef4444">⚠️ Anomaly</div>
+      <div style="font-size:.85rem;font-weight:600;margin-bottom:.3rem">Food unusually high</div>
+      <div style="font-size:.72rem;color:var(--text-muted);line-height:1.5">34% above 3-month avg<br>₹12,400 vs ₹9,250 avg</div>
+      <button style="margin-top:.5rem;background:none;border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:6px;padding:2px 9px;font-size:.68rem;cursor:pointer">Dismiss</button>
+    </div>
+  </div>
+
+  <!-- category tiles -->
+  <div class="sec">Spending by Category</div>
+  <div class="cat-grid">
+    <div class="tile cat-tile"><div class="cat-top"><div class="cat-ico" style="background:rgba(249,115,22,.14)">🍽️</div><div class="cat-name">Food</div></div><div class="cat-amt">₹12,400</div><div class="cat-bar"><div class="cat-fill" style="background:#f97316;width:83%"></div></div><div class="cat-meta"><span>83%</span><span style="color:#f97316">₹2,600 left</span></div></div>
+    <div class="tile cat-tile"><div class="cat-top"><div class="cat-ico" style="background:rgba(16,185,129,.14)">🏠</div><div class="cat-name">Housing</div></div><div class="cat-amt">₹18,000</div><div class="cat-bar"><div class="cat-fill" style="background:#10b981;width:100%"></div></div><div class="cat-meta"><span>100%</span><span style="color:#ef4444">At limit</span></div></div>
+    <div class="tile cat-tile"><div class="cat-top"><div class="cat-ico" style="background:rgba(59,130,246,.14)">🚗</div><div class="cat-name">Transport</div></div><div class="cat-amt">₹8,200</div><div class="cat-bar"><div class="cat-fill" style="background:#3b82f6;width:82%"></div></div><div class="cat-meta"><span>82%</span><span style="color:#3b82f6">₹1,800 left</span></div></div>
+    <div class="tile cat-tile"><div class="cat-top"><div class="cat-ico" style="background:rgba(139,92,246,.14)">🛍️</div><div class="cat-name">Shopping</div></div><div class="cat-amt">₹6,100</div><div class="cat-bar"><div class="cat-fill" style="background:#8b5cf6;width:76%"></div></div><div class="cat-meta"><span>76%</span><span style="color:#8b5cf6">₹1,900 left</span></div></div>
+    <div class="tile cat-tile"><div class="cat-top"><div class="cat-ico" style="background:rgba(239,68,68,.14)">💊</div><div class="cat-name">Health</div></div><div class="cat-amt">₹4,200</div><div class="cat-bar"><div class="cat-fill" style="background:#ef4444;width:84%"></div></div><div class="cat-meta"><span>84%</span><span style="color:#ef4444">₹800 left</span></div></div>
+  </div>
+
+  <!-- recent -->
+  <div class="tile list-card">
+    <div class="list-hdr"><div class="list-hdr-title">Recent Expenses</div><button class="list-hdr-action">See all →</button></div>
+    <div class="exp-row"><div class="exp-ico" style="background:rgba(249,115,22,.12)">🍽️</div><div class="exp-body"><div class="exp-desc">Swiggy</div><div class="exp-meta">Food · Takeaway · UPI/QR · GPay</div></div><div class="exp-right"><div class="exp-amt" style="color:#ef4444">−₹340</div><div class="exp-date">Today</div></div></div>
+    <div class="exp-row"><div class="exp-ico" style="background:rgba(59,130,246,.12)">🔧</div><div class="exp-body"><div class="exp-desc">Honda Service Centre</div><div class="exp-meta">Transport · Vehicle Maintenance · Cash</div><div class="exp-extra">🔧 12,500 km · Next at 15,000 km · Due 10-11-2026</div></div><div class="exp-right"><div class="exp-amt" style="color:#ef4444">−₹2,800</div><div class="exp-date">Yesterday</div></div></div>
+    <div class="exp-row"><div class="exp-ico" style="background:rgba(139,92,246,.12)">🛍️</div><div class="exp-body"><div class="exp-desc">Big Bazaar</div><div class="exp-meta">Shopping · Groceries · Credit Card</div></div><div class="exp-right"><div class="exp-amt" style="color:#ef4444">−₹1,240</div><div class="exp-date">11 May</div></div></div>
+    <div class="exp-row"><div class="exp-ico" style="background:rgba(16,185,129,.12)">🏠</div><div class="exp-body"><div class="exp-desc">HDFC Home Loan EMI</div><div class="exp-meta">Housing · EMI · Net Banking · 🔄 monthly</div></div><div class="exp-right"><div class="exp-amt" style="color:#ef4444">−₹18,000</div><div class="exp-date">10 May</div></div></div>
+    <div class="exp-row"><div class="exp-ico" style="background:rgba(236,72,153,.12)">🎬</div><div class="exp-body"><div class="exp-desc">Netflix</div><div class="exp-meta">Entertainment · OTT/Streaming · Credit Card · 🔄 monthly</div></div><div class="exp-right"><div class="exp-amt" style="color:#ef4444">−₹649</div><div class="exp-date">09 May</div></div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1 — INCOME
+══════════════════════════════════════════════ -->
+<div class="page" id="page-1">
+  <div class="bento" style="grid-template-columns:1fr 1fr 1fr">
+    <div class="tile bp"><div class="t-label">Total Income — May 2026</div><div class="t-val" style="color:#10b981">₹85,000</div><div class="t-sub">2 sources</div><span class="badge bg-green">↑ ₹5k vs Apr</span></div>
+    <div class="tile bp"><div class="t-label">Salary</div><div class="t-val">₹75,000</div><div class="t-sub">Primary income</div><span class="badge bg-blue">88% of total</span></div>
+    <div class="tile bp"><div class="t-label">Freelance</div><div class="t-val">₹10,000</div><div class="t-sub">Secondary income</div><span class="badge bg-purple">12% of total</span></div>
+  </div>
+
+  <!-- source bars -->
+  <div class="tile" style="margin-bottom:1.25rem;padding:1.1rem 1.25rem">
+    <div class="sec" style="margin-bottom:.85rem">Income Sources</div>
+    <div style="display:flex;flex-direction:column;gap:.75rem">
+      <div><div style="display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:.3rem"><span>💼 Salary</span><span style="font-weight:700;color:#10b981">₹75,000</span></div><div style="height:7px;background:var(--border);border-radius:99px;overflow:hidden"><div style="height:100%;width:88%;background:#10b981;border-radius:99px"></div></div></div>
+      <div><div style="display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:.3rem"><span>💻 Freelance</span><span style="font-weight:700;color:#3b82f6">₹10,000</span></div><div style="height:7px;background:var(--border);border-radius:99px;overflow:hidden"><div style="height:100%;width:12%;background:#3b82f6;border-radius:99px"></div></div></div>
+    </div>
+  </div>
+
+  <div class="tile list-card">
+    <div class="list-hdr"><div class="list-hdr-title">Income This Month</div><button class="list-hdr-action">+ Add Income</button></div>
+    <div class="inc-row"><div class="exp-ico" style="background:rgba(16,185,129,.12)">💼</div><div class="exp-body"><div class="exp-desc">May Salary — TechCorp Pvt Ltd</div><div class="exp-meta">Salary · Net Banking · 01 May 2026</div></div><div class="exp-right"><div class="inc-amt">+₹75,000</div></div></div>
+    <div class="inc-row"><div class="exp-ico" style="background:rgba(59,130,246,.12)">💻</div><div class="exp-body"><div class="exp-desc">Freelance — UI Design Project</div><div class="exp-meta">Freelance · UPI/QR · 08 May 2026</div></div><div class="exp-right"><div class="inc-amt">+₹10,000</div></div></div>
+  </div>
+
+  <!-- previous months -->
+  <div class="sec" style="margin-top:1.25rem">Previous Months</div>
+  <div class="tile list-card">
+    <div class="inc-row"><div class="exp-ico" style="background:rgba(16,185,129,.12)">📅</div><div class="exp-body"><div class="exp-desc">April 2026</div><div class="exp-meta">2 sources</div></div><div class="exp-right"><div class="inc-amt">+₹80,000</div></div></div>
+    <div class="inc-row"><div class="exp-ico" style="background:rgba(16,185,129,.12)">📅</div><div class="exp-body"><div class="exp-desc">March 2026</div><div class="exp-meta">2 sources</div></div><div class="exp-right"><div class="inc-amt">+₹75,000</div></div></div>
+    <div class="inc-row"><div class="exp-ico" style="background:rgba(16,185,129,.12)">📅</div><div class="exp-body"><div class="exp-desc">February 2026</div><div class="exp-meta">1 source</div></div><div class="exp-right"><div class="inc-amt">+₹75,000</div></div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 2 — TRENDS
+══════════════════════════════════════════════ -->
+<div class="page" id="page-2">
+  <!-- 6-month bar chart -->
+  <div class="tile" style="padding:1.25rem;margin-bottom:1.25rem">
+    <div class="sec" style="margin-bottom:1rem">6-Month Spend Overview</div>
+    <svg viewBox="0 0 540 110" style="width:100%;height:110px">
+      <!-- bars -->
+      <rect x="10"  y="31" width="68" height="69" rx="5" fill="rgba(37,99,235,.25)"/>
+      <rect x="100" y="21" width="68" height="79" rx="5" fill="rgba(37,99,235,.25)"/>
+      <rect x="190" y="37" width="68" height="63" rx="5" fill="rgba(37,99,235,.25)"/>
+      <rect x="280" y="15" width="68" height="85" rx="5" fill="rgba(37,99,235,.25)"/>
+      <rect x="370" y="28" width="68" height="72" rx="5" fill="rgba(37,99,235,.35)"/>
+      <rect x="460" y="18" width="68" height="82" rx="5" rx="5" fill="#2563eb" opacity=".85"/>
+      <!-- labels -->
+      <text x="44"  y="106" text-anchor="middle" font-size="9" font-family="sans-serif">Dec</text>
+      <text x="134" y="106" text-anchor="middle" font-size="9" font-family="sans-serif">Jan</text>
+      <text x="224" y="106" text-anchor="middle" font-size="9" font-family="sans-serif">Feb</text>
+      <text x="314" y="106" text-anchor="middle" font-size="9" font-family="sans-serif">Mar</text>
+      <text x="404" y="106" text-anchor="middle" font-size="9" font-family="sans-serif">Apr</text>
+      <text x="494" y="106" text-anchor="middle" font-size="9" font-family="sans-serif" fill="#60a5fa" font-weight="bold">May</text>
+      <!-- amounts -->
+      <text x="44"  y="27" text-anchor="middle" font-size="8" font-family="sans-serif">38.4k</text>
+      <text x="134" y="17" text-anchor="middle" font-size="8" font-family="sans-serif">41.2k</text>
+      <text x="224" y="33" text-anchor="middle" font-size="8" font-family="sans-serif">36.8k</text>
+      <text x="314" y="11" text-anchor="middle" font-size="8" font-family="sans-serif">44.1k</text>
+      <text x="404" y="24" text-anchor="middle" font-size="8" font-family="sans-serif">39.5k</text>
+      <text x="494" y="14" text-anchor="middle" font-size="8" fill="#60a5fa" font-family="sans-serif">42.8k</text>
+    </svg>
+  </div>
+
+  <!-- MoM comparison table -->
+  <div class="sec">Month-over-Month by Category</div>
+  <div class="tile list-card" style="margin-bottom:1.25rem">
+    <div class="list-hdr"><div class="list-hdr-title">Apr → May Change</div></div>
+    <div class="exp-row" style="font-size:.72rem;color:var(--text-muted);padding:.4rem 1.1rem;border-bottom:1px solid var(--glass-bdr)">
+      <div style="width:28px"></div><div style="flex:1;font-weight:700">Category</div><div style="width:80px;text-align:right;font-weight:700">Apr</div><div style="width:80px;text-align:right;font-weight:700">May</div><div style="width:70px;text-align:right;font-weight:700">Change</div>
+    </div>
+    <div class="exp-row"><div style="width:28px">🍽️</div><div style="flex:1;font-size:.82rem">Food</div><div style="width:80px;text-align:right;font-size:.82rem">₹9,800</div><div style="width:80px;text-align:right;font-size:.82rem">₹12,400</div><div style="width:70px;text-align:right;font-size:.78rem;color:#ef4444;font-weight:600">↑ +27%</div></div>
+    <div class="exp-row"><div style="width:28px">🏠</div><div style="flex:1;font-size:.82rem">Housing</div><div style="width:80px;text-align:right;font-size:.82rem">₹18,000</div><div style="width:80px;text-align:right;font-size:.82rem">₹18,000</div><div style="width:70px;text-align:right;font-size:.78rem;color:var(--text-muted)">— 0%</div></div>
+    <div class="exp-row"><div style="width:28px">🚗</div><div style="flex:1;font-size:.82rem">Transport</div><div style="width:80px;text-align:right;font-size:.82rem">₹5,400</div><div style="width:80px;text-align:right;font-size:.82rem">₹8,200</div><div style="width:70px;text-align:right;font-size:.78rem;color:#ef4444;font-weight:600">↑ +52%</div></div>
+    <div class="exp-row"><div style="width:28px">🛍️</div><div style="flex:1;font-size:.82rem">Shopping</div><div style="width:80px;text-align:right;font-size:.82rem">₹7,800</div><div style="width:80px;text-align:right;font-size:.82rem">₹6,100</div><div style="width:70px;text-align:right;font-size:.78rem;color:#10b981;font-weight:600">↓ -22%</div></div>
+    <div class="exp-row"><div style="width:28px">💊</div><div style="flex:1;font-size:.82rem">Health</div><div style="width:80px;text-align:right;font-size:.82rem">₹2,100</div><div style="width:80px;text-align:right;font-size:.82rem">₹4,200</div><div style="width:70px;text-align:right;font-size:.78rem;color:#ef4444;font-weight:600">↑ +100%</div></div>
+  </div>
+
+  <!-- fixed vs variable -->
+  <div class="bento" style="grid-template-columns:1fr 1fr">
+    <div class="tile bp"><div class="t-label">Fixed Expenses</div><div class="t-val">₹20,500</div><div class="t-sub">Housing + Subscriptions</div><span class="badge bg-blue">48% of spend</span></div>
+    <div class="tile bp"><div class="t-label">Variable Expenses</div><div class="t-val">₹22,300</div><div class="t-sub">Food, Shopping, etc.</div><span class="badge bg-amber">52% of spend</span></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 3 — BUDGETS
+══════════════════════════════════════════════ -->
+<div class="page" id="page-3">
+  <!-- overall -->
+  <div class="tile bp hero" style="grid-column:auto;margin-bottom:1.25rem">
+    <div class="t-label">Monthly Budget — May 2026</div>
+    <div class="t-val xl">₹42,800 <span style="font-size:1.2rem;color:var(--text-muted);font-weight:400">/ ₹72,000</span></div>
+    <div class="pbar" style="margin-top:1rem"><div class="pbar-fill" style="width:59%"></div></div>
+    <div class="pbar-meta"><span>0%</span><span style="color:var(--primary);font-weight:600">59% used</span><span>100%</span></div>
+    <div style="margin-top:.75rem;display:flex;gap:.5rem">
+      <span class="badge bg-blue">19 days left</span>
+      <span class="badge bg-amber">₹1,512/day remaining</span>
+    </div>
+  </div>
+
+  <!-- daily/weekly -->
+  <div class="bento" style="grid-template-columns:1fr 1fr;margin-bottom:1.25rem">
+    <div class="tile bp"><div class="t-label">Daily Budget</div><div class="t-val">₹1,420 <span style="font-size:.9rem;color:var(--text-muted);font-weight:400">/ ₹2,400</span></div><div class="pbar" style="height:4px"><div class="pbar-fill" style="width:59%;background:#f59e0b"></div></div><span class="badge bg-amber">59%</span></div>
+    <div class="tile bp"><div class="t-label">Weekly Budget</div><div class="t-val">₹9,940 <span style="font-size:.9rem;color:var(--text-muted);font-weight:400">/ ₹16,800</span></div><div class="pbar" style="height:4px"><div class="pbar-fill" style="width:59%"></div></div><span class="badge bg-blue">59%</span></div>
+  </div>
+
+  <!-- per category -->
+  <div class="sec">Per-Category Budgets</div>
+  <div class="tile" style="margin-bottom:1.25rem">
+    <div class="budget-grid">
+      <div class="budget-row"><div class="budget-icon">🍽️</div><div class="budget-name">Food</div><div class="budget-track"><div class="budget-fill" style="width:83%;background:#f97316"></div></div><div class="budget-pct">83%</div><div class="budget-amt" style="color:#f97316">₹2,600 left</div></div>
+      <div class="budget-row"><div class="budget-icon">🏠</div><div class="budget-name">Housing</div><div class="budget-track"><div class="budget-fill" style="width:100%;background:#ef4444"></div></div><div class="budget-pct" style="color:#ef4444">100%</div><div class="budget-amt" style="color:#ef4444">At limit</div></div>
+      <div class="budget-row"><div class="budget-icon">🚗</div><div class="budget-name">Transport</div><div class="budget-track"><div class="budget-fill" style="width:82%;background:#f59e0b"></div></div><div class="budget-pct">82%</div><div class="budget-amt" style="color:#f59e0b">₹1,800 left</div></div>
+      <div class="budget-row"><div class="budget-icon">🛍️</div><div class="budget-name">Shopping</div><div class="budget-track"><div class="budget-fill" style="width:76%;background:#8b5cf6"></div></div><div class="budget-pct">76%</div><div class="budget-amt">₹1,900 left</div></div>
+      <div class="budget-row"><div class="budget-icon">💊</div><div class="budget-name">Health</div><div class="budget-track"><div class="budget-fill" style="width:84%;background:#ef4444"></div></div><div class="budget-pct">84%</div><div class="budget-amt" style="color:#ef4444">₹800 left</div></div>
+      <div class="budget-row"><div class="budget-icon">🎬</div><div class="budget-name">Entertainment</div><div class="budget-track"><div class="budget-fill" style="width:50%;background:#10b981"></div></div><div class="budget-pct">50%</div><div class="budget-amt" style="color:#10b981">₹2,500 left</div></div>
+      <div class="budget-row"><div class="budget-icon">🪞</div><div class="budget-name">Personal</div><div class="budget-track"><div class="budget-fill" style="width:47%;background:#10b981"></div></div><div class="budget-pct">47%</div><div class="budget-amt" style="color:#10b981">₹1,600 left</div></div>
+      <div class="budget-row"><div class="budget-icon">⚡</div><div class="budget-name">Utilities</div><div class="budget-track"><div class="budget-fill" style="width:38%;background:#10b981"></div></div><div class="budget-pct">38%</div><div class="budget-amt" style="color:#10b981">₹3,100 left</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 4 — GOALS
+══════════════════════════════════════════════ -->
+<div class="page" id="page-4">
+  <div class="bento" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:1.25rem">
+    <div class="tile bp"><div class="t-label">Total Saved</div><div class="t-val">₹95,000</div><div class="t-sub">Across 3 goals</div></div>
+    <div class="tile bp"><div class="t-label">Closest to Goal</div><div class="t-val" style="font-size:1.1rem">Goa Trip Fund</div><div class="t-sub">60% complete</div><span class="badge bg-green">₹10k to go</span></div>
+    <div class="tile bp"><div class="t-label">Next Milestone</div><div class="t-val" style="font-size:1.1rem">Emergency Fund</div><div class="t-sub">50% at ₹1,00,000</div><span class="badge bg-amber">₹50k away</span></div>
+  </div>
+
+  <div class="sec">Your Goals</div>
+  <div class="goal-grid">
+    <!-- Emergency Fund -->
+    <div class="tile goal-card">
+      <div class="goal-top">
+        <div class="goal-ring">
+          <svg viewBox="0 0 64 64" width="64" height="64">
+            <circle cx="32" cy="32" r="26" fill="none" stroke="var(--border)" stroke-width="5"/>
+            <circle cx="32" cy="32" r="26" fill="none" stroke="#10b981" stroke-width="5" stroke-dasharray="40.8 122.5" stroke-linecap="round"/>
+          </svg>
+          <div class="goal-ring-pct" style="color:#10b981">25%</div>
+        </div>
+        <div class="goal-info">
+          <div class="goal-name">🛡️ Emergency Fund</div>
+          <div class="goal-saved">₹50,000 saved of ₹2,00,000</div>
+        </div>
+      </div>
+      <div class="goal-pbar"><div class="goal-fill" style="width:25%;background:#10b981"></div></div>
+      <div class="goal-meta"><span>₹1,50,000 remaining</span><span>Target: Dec 2026</span></div>
+    </div>
+    <!-- Goa Trip -->
+    <div class="tile goal-card">
+      <div class="goal-top">
+        <div class="goal-ring">
+          <svg viewBox="0 0 64 64" width="64" height="64">
+            <circle cx="32" cy="32" r="26" fill="none" stroke="var(--border)" stroke-width="5"/>
+            <circle cx="32" cy="32" r="26" fill="none" stroke="#3b82f6" stroke-width="5" stroke-dasharray="97.9 65.3" stroke-linecap="round"/>
+          </svg>
+          <div class="goal-ring-pct" style="color:#3b82f6">60%</div>
+        </div>
+        <div class="goal-info">
+          <div class="goal-name">🏖️ Goa Trip Fund</div>
+          <div class="goal-saved">₹15,000 saved of ₹25,000</div>
+        </div>
+      </div>
+      <div class="goal-pbar"><div class="goal-fill" style="width:60%;background:#3b82f6"></div></div>
+      <div class="goal-meta"><span>₹10,000 remaining</span><span>Target: Aug 2026</span></div>
+    </div>
+    <!-- New Laptop -->
+    <div class="tile goal-card">
+      <div class="goal-top">
+        <div class="goal-ring">
+          <svg viewBox="0 0 64 64" width="64" height="64">
+            <circle cx="32" cy="32" r="26" fill="none" stroke="var(--border)" stroke-width="5"/>
+            <circle cx="32" cy="32" r="26" fill="none" stroke="#8b5cf6" stroke-width="5" stroke-dasharray="81.7 81.6" stroke-linecap="round"/>
+          </svg>
+          <div class="goal-ring-pct" style="color:#8b5cf6">50%</div>
+        </div>
+        <div class="goal-info">
+          <div class="goal-name">💻 New Laptop</div>
+          <div class="goal-saved">₹30,000 saved of ₹60,000</div>
+        </div>
+      </div>
+      <div class="goal-pbar"><div class="goal-fill" style="width:50%;background:#8b5cf6"></div></div>
+      <div class="goal-meta"><span>₹30,000 remaining</span><span>Target: Oct 2026</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 5 — INSIGHTS
+══════════════════════════════════════════════ -->
+<div class="page" id="page-5">
+  <!-- health score hero -->
+  <div class="tile health-hero" style="margin-bottom:1.25rem">
+    <div class="health-ring">
+      <svg viewBox="0 0 90 90" width="90" height="90">
+        <circle cx="45" cy="45" r="38" fill="none" stroke="var(--border)" stroke-width="7"/>
+        <circle cx="45" cy="45" r="38" fill="none" stroke="#10b981" stroke-width="7" stroke-dasharray="170.4 68.5" stroke-linecap="round"/>
+      </svg>
+      <div class="health-ring-label"><div class="health-ring-num" style="color:#10b981">72</div><div class="health-ring-text">/ 100</div></div>
+    </div>
+    <div class="health-details">
+      <div class="health-title">Financial Health: Good 🟢</div>
+      <div class="health-desc">Your savings rate is healthy and most categories are within budget. Food and Transport overspend slightly this month.</div>
+      <div class="health-bars">
+        <div class="h-bar-row"><div class="h-bar-label">Savings Rate</div><div class="h-bar-track"><div class="h-bar-fill" style="width:84%;background:#10b981"></div></div><div class="h-bar-val" style="color:#10b981">21%</div></div>
+        <div class="h-bar-row"><div class="h-bar-label">Budget Use</div><div class="h-bar-track"><div class="h-bar-fill" style="width:59%;background:#f59e0b"></div></div><div class="h-bar-val" style="color:#f59e0b">59%</div></div>
+        <div class="h-bar-row"><div class="h-bar-label">Consistency</div><div class="h-bar-track"><div class="h-bar-fill" style="width:70%;background:#3b82f6"></div></div><div class="h-bar-val" style="color:#3b82f6">70%</div></div>
+        <div class="h-bar-row"><div class="h-bar-label">Goals Progress</div><div class="h-bar-track"><div class="h-bar-fill" style="width:45%;background:#8b5cf6"></div></div><div class="h-bar-val" style="color:#8b5cf6">45%</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">Key Insights — May 2026</div>
+  <div class="insight-grid">
+    <div class="tile insight-card"><div class="ins-icon">🍽️</div><div class="ins-title">Top Category</div><div class="ins-val">Food</div><div class="ins-sub">₹12,400 · 29% of spend</div></div>
+    <div class="tile insight-card"><div class="ins-icon">🏪</div><div class="ins-title">Top Merchant</div><div class="ins-val">Swiggy</div><div class="ins-sub">₹3,200 across 11 orders</div></div>
+    <div class="tile insight-card"><div class="ins-icon">📱</div><div class="ins-title">Top Payment</div><div class="ins-val">UPI/QR</div><div class="ins-sub">67% of transactions</div></div>
+    <div class="tile insight-card"><div class="ins-icon">📅</div><div class="ins-title">Peak Spend Day</div><div class="ins-val">Tuesday</div><div class="ins-sub">Avg ₹2,140 on Tuesdays</div></div>
+    <div class="tile insight-card"><div class="ins-icon">📈</div><div class="ins-title">Biggest Jump</div><div class="ins-val">Transport</div><div class="ins-sub">↑ 52% vs last month</div></div>
+    <div class="tile insight-card"><div class="ins-icon">💸</div><div class="ins-title">Largest Expense</div><div class="ins-val">₹18,000</div><div class="ins-sub">HDFC Home Loan EMI</div></div>
+    <div class="tile insight-card"><div class="ins-icon">🔄</div><div class="ins-title">Recurring Total</div><div class="ins-val">₹20,648</div><div class="ins-sub">Fixed monthly commitments</div></div>
+    <div class="tile insight-card"><div class="ins-icon">🎯</div><div class="ins-title">No-Spend Days</div><div class="ins-val">3 days</div><div class="ins-sub">3 clean days this month 🔥</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 6 — RECURRING
+══════════════════════════════════════════════ -->
+<div class="page" id="page-6">
+  <div class="bento" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:1.25rem">
+    <div class="tile bp"><div class="t-label">Monthly Committed</div><div class="t-val">₹20,648</div><div class="t-sub">7 recurring expenses</div></div>
+    <div class="tile bp" style="border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.06)"><div class="t-label" style="color:#f59e0b">⏰ Due Soon</div><div class="t-val">2 expenses</div><div class="t-sub">Due within 7 days</div></div>
+    <div class="tile bp"><div class="t-label">Annual Committed</div><div class="t-val">₹2,47,776</div><div class="t-sub">All recurring × 12</div></div>
+  </div>
+
+  <div class="sec">Upcoming</div>
+  <div class="tile list-card" style="margin-bottom:1.25rem">
+    <div class="rec-row" style="background:rgba(245,158,11,.05)"><div class="exp-ico" style="background:rgba(16,185,129,.12)">🏠</div><div class="rec-body"><div class="rec-name">HDFC Home Loan EMI</div><div class="rec-meta">Housing · EMI · monthly · Net Banking</div></div><div class="rec-right"><div class="rec-amt" style="color:#ef4444">₹18,000</div><div class="rec-due due-soon">⏰ Due in 4 days — 10 Jun</div></div></div>
+    <div class="rec-row" style="background:rgba(245,158,11,.05)"><div class="exp-ico" style="background:rgba(16,185,129,.12)">🧘</div><div class="rec-body"><div class="rec-name">Cult.fit Gym</div><div class="rec-meta">Personal · Gym · monthly · Credit Card</div></div><div class="rec-right"><div class="rec-amt" style="color:#ef4444">₹1,500</div><div class="rec-due due-soon">⏰ Due in 2 days — 14 Jun</div></div></div>
+  </div>
+
+  <div class="sec">All Recurring</div>
+  <div class="tile list-card">
+    <div class="rec-row"><div class="exp-ico" style="background:rgba(16,185,129,.12)">🏠</div><div class="rec-body"><div class="rec-name">HDFC Home Loan EMI</div><div class="rec-meta">Housing · monthly</div></div><div class="rec-right"><div class="rec-amt" style="color:#ef4444">₹18,000</div><div class="rec-due due-ok">10 Jun</div></div></div>
+    <div class="rec-row"><div class="exp-ico" style="background:rgba(236,72,153,.12)">🎬</div><div class="rec-body"><div class="rec-name">Netflix</div><div class="rec-meta">Entertainment · monthly</div></div><div class="rec-right"><div class="rec-amt" style="color:#ef4444">₹649</div><div class="rec-due due-ok">09 Jun</div></div></div>
+    <div class="rec-row"><div class="exp-ico" style="background:rgba(16,185,129,.12)">🧘</div><div class="rec-body"><div class="rec-name">Cult.fit Gym</div><div class="rec-meta">Personal · monthly</div></div><div class="rec-right"><div class="rec-amt" style="color:#ef4444">₹1,500</div><div class="rec-due due-soon">14 Jun</div></div></div>
+    <div class="rec-row"><div class="exp-ico" style="background:rgba(37,99,235,.12)">🎵</div><div class="rec-body"><div class="rec-name">Spotify</div><div class="rec-meta">Entertainment · monthly</div></div><div class="rec-right"><div class="rec-amt" style="color:#ef4444">₹119</div><div class="rec-due due-ok">20 Jun</div></div></div>
+    <div class="rec-row"><div class="exp-ico" style="background:rgba(245,158,11,.12)">📱</div><div class="rec-body"><div class="rec-name">Jio Postpaid</div><div class="rec-meta">Utilities · monthly</div></div><div class="rec-right"><div class="rec-amt" style="color:#ef4444">₹599</div><div class="rec-due due-ok">22 Jun</div></div></div>
+    <div class="rec-row"><div class="exp-ico" style="background:rgba(139,92,246,.12)">☁️</div><div class="rec-body"><div class="rec-name">Google One 100GB</div><div class="rec-meta">Utilities · monthly</div></div><div class="rec-right"><div class="rec-amt" style="color:#ef4444">₹130</div><div class="rec-due due-ok">25 Jun</div></div></div>
+    <div class="rec-row"><div class="exp-ico" style="background:rgba(239,68,68,.12)">🛡️</div><div class="rec-body"><div class="rec-name">Car Insurance</div><div class="rec-meta">Finance · quarterly</div></div><div class="rec-right"><div class="rec-amt" style="color:#ef4444">₹2,400</div><div class="rec-due due-ok">15 Aug</div></div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 7 — TRIPS
+══════════════════════════════════════════════ -->
+<div class="page" id="page-7">
+  <div class="bento" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:1.25rem">
+    <div class="tile bp"><div class="t-label">Total Trips</div><div class="t-val">3</div><div class="t-sub">2 past · 1 upcoming</div></div>
+    <div class="tile bp"><div class="t-label">Total Spent on Trips</div><div class="t-val">₹58,000</div><div class="t-sub">Past trips only</div></div>
+    <div class="tile bp"><div class="t-label">Avg per Trip</div><div class="t-val">₹29,000</div><div class="t-sub">Per past trip</div></div>
+  </div>
+
+  <div class="sec">Your Trips</div>
+  <div class="trip-grid">
+    <div class="tile trip-card">
+      <div class="trip-top"><div><div class="trip-dest">🇹🇭 Bangkok Trip</div><div class="trip-dates">08 Apr – 15 Apr 2026 · 8 days</div></div><span class="trip-status st-past">Past</span></div>
+      <div class="trip-stats"><div class="trip-stat"><strong>₹45,200</strong>Total Spent</div><div class="trip-stat"><strong>8</strong>Expenses</div><div class="trip-stat"><strong>₹5,650</strong>Per day</div></div>
+      <div class="trip-bar"><div class="trip-bar-fill" style="width:100%"></div></div>
+      <div class="trip-cats">🍽️ Food ₹12k · ✈️ Flight ₹18k · 🏨 Hotel ₹10k · 🛍️ Shopping ₹5k</div>
+    </div>
+    <div class="tile trip-card">
+      <div class="trip-top"><div><div class="trip-dest">🏖️ Goa Weekend</div><div class="trip-dates">03 May – 05 May 2026 · 3 days</div></div><span class="trip-status st-past">Past</span></div>
+      <div class="trip-stats"><div class="trip-stat"><strong>₹12,800</strong>Total Spent</div><div class="trip-stat"><strong>5</strong>Expenses</div><div class="trip-stat"><strong>₹4,267</strong>Per day</div></div>
+      <div class="trip-bar"><div class="trip-bar-fill" style="width:100%"></div></div>
+      <div class="trip-cats">🍽️ Food ₹3.2k · 🏨 Hotel ₹6k · 🚗 Transport ₹3.6k</div>
+    </div>
+    <div class="tile trip-card" style="opacity:.7;border-style:dashed">
+      <div class="trip-top"><div><div class="trip-dest">💼 Mumbai Business</div><div class="trip-dates">20 Jun – 22 Jun 2026 · 3 days</div></div><span class="trip-status st-upcoming">Upcoming</span></div>
+      <div class="trip-stats"><div class="trip-stat"><strong>—</strong>Budget</div><div class="trip-stat"><strong>0</strong>Expenses</div><div class="trip-stat"><strong>39 days</strong>Away</div></div>
+      <div class="trip-bar"><div class="trip-bar-fill" style="width:0%"></div></div>
+      <div class="trip-cats" style="color:var(--text-muted)">No expenses linked yet</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 8 — EXCHANGE
+══════════════════════════════════════════════ -->
+<div class="page" id="page-8">
+  <div class="tile" style="margin-bottom:1.25rem;padding:1.1rem 1.25rem">
+    <div class="sec" style="margin-bottom:.85rem">Quick Converter</div>
+    <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+      <input class="fx-input" type="number" value="100" style="max-width:120px">
+      <select class="fx-input" style="max-width:110px"><option>USD 🇺🇸</option><option>EUR 🇪🇺</option><option>GBP 🇬🇧</option></select>
+      <div style="font-size:1.4rem;color:var(--text-muted)">→</div>
+      <div class="fx-result">₹ 8,342.00</div>
+      <div style="font-size:.72rem;color:var(--text-muted)">1 USD = ₹83.42</div>
+    </div>
+  </div>
+
+  <div class="tile bp" style="margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between">
+    <div><div class="t-label">Base Currency</div><div style="font-size:.92rem;font-weight:600">🇮🇳 INR — Indian Rupee</div></div>
+    <div style="font-size:.72rem;color:var(--text-muted)">Last updated: Today 14:32 · Live rates</div>
+  </div>
+
+  <div class="sec">Live Rates (per 1 unit → INR)</div>
+  <div class="tile list-card">
+    <div class="rate-row"><div class="rate-flag">🇺🇸</div><div class="rate-code">USD</div><div class="rate-name">US Dollar</div><div class="rate-val">₹83.42</div><div class="rate-chg" style="color:#10b981">▲ 0.12%</div></div>
+    <div class="rate-row"><div class="rate-flag">🇪🇺</div><div class="rate-code">EUR</div><div class="rate-name">Euro</div><div class="rate-val">₹90.18</div><div class="rate-chg" style="color:#ef4444">▼ 0.08%</div></div>
+    <div class="rate-row"><div class="rate-flag">🇬🇧</div><div class="rate-code">GBP</div><div class="rate-name">British Pound</div><div class="rate-val">₹105.64</div><div class="rate-chg" style="color:#10b981">▲ 0.21%</div></div>
+    <div class="rate-row"><div class="rate-flag">🇦🇪</div><div class="rate-code">AED</div><div class="rate-name">UAE Dirham</div><div class="rate-val">₹22.71</div><div class="rate-chg" style="color:var(--text-muted)">— 0.00%</div></div>
+    <div class="rate-row"><div class="rate-flag">🇸🇬</div><div class="rate-code">SGD</div><div class="rate-name">Singapore Dollar</div><div class="rate-val">₹61.83</div><div class="rate-chg" style="color:#10b981">▲ 0.05%</div></div>
+    <div class="rate-row"><div class="rate-flag">🇯🇵</div><div class="rate-code">JPY</div><div class="rate-name">Japanese Yen</div><div class="rate-val">₹0.55</div><div class="rate-chg" style="color:#ef4444">▼ 0.31%</div></div>
+    <div class="rate-row"><div class="rate-flag">🇦🇺</div><div class="rate-code">AUD</div><div class="rate-name">Australian Dollar</div><div class="rate-val">₹53.92</div><div class="rate-chg" style="color:#10b981">▲ 0.14%</div></div>
+    <div class="rate-row"><div class="rate-flag">🇨🇦</div><div class="rate-code">CAD</div><div class="rate-name">Canadian Dollar</div><div class="rate-val">₹61.20</div><div class="rate-chg" style="color:#ef4444">▼ 0.07%</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 9 — SETTINGS
+══════════════════════════════════════════════ -->
+<div class="page" id="page-9">
+  <!-- Profile -->
+  <div class="tile settings-section">
+    <div class="settings-hdr">Profile</div>
+    <div class="setting-row"><div><div class="setting-label">Email</div><div class="setting-desc">aguiar.lindsey@gmail.com</div></div><div class="setting-val">Verified ✅</div></div>
+    <div class="setting-row"><div><div class="setting-label">Display Name</div></div><div class="setting-val">Lindsey A. <span style="color:var(--primary);cursor:pointer">Edit</span></div></div>
+  </div>
+
+  <!-- Preferences -->
+  <div class="tile settings-section">
+    <div class="settings-hdr">Preferences</div>
+    <div class="setting-row"><div><div class="setting-label">Base Currency</div><div class="setting-desc">All amounts displayed in this currency</div></div><div class="setting-val">🇮🇳 INR ▾</div></div>
+    <div class="setting-row"><div><div class="setting-label">Dark Mode</div></div><div class="setting-val"><div class="toggle"></div></div></div>
+    <div class="setting-row"><div><div class="setting-label">Colorblind Mode</div><div class="setting-desc">Replaces red/green with blue/orange</div></div><div class="setting-val"><div class="toggle off"></div></div></div>
+  </div>
+
+  <!-- Security -->
+  <div class="tile settings-section">
+    <div class="settings-hdr">Security</div>
+    <div class="setting-row"><div><div class="setting-label">Biometric Lock</div><div class="setting-desc">Fingerprint / Face ID — enrolled on this device</div></div><div class="setting-val" style="color:#10b981">Active ✅</div></div>
+    <div class="setting-row"><div><div class="setting-label">Backup Email OTP</div><div class="setting-desc">Fallback when biometrics fail</div></div><div class="setting-val">Configured ✅</div></div>
+    <div class="setting-row"><div><div class="setting-label">Session</div></div><div class="setting-val"><button style="background:none;border:1px solid var(--border);color:var(--text-muted);border-radius:6px;padding:3px 10px;font-size:.78rem;cursor:pointer">Sign Out</button></div></div>
+  </div>
+
+  <!-- Notifications -->
+  <div class="tile settings-section">
+    <div class="settings-hdr">Notifications</div>
+    <div class="setting-row"><div><div class="setting-label">Push Notifications</div><div class="setting-desc">Daily spend reminders at 7:00 AM IST</div></div><div class="setting-val"><div class="toggle"></div></div></div>
+    <div class="setting-row"><div><div class="setting-label">Recurring Reminders</div><div class="setting-desc">Alert 3 days before due date</div></div><div class="setting-val"><div class="toggle"></div></div></div>
+    <div class="setting-row"><div><div class="setting-label">Budget Alerts</div><div class="setting-desc">At 50%, 80%, 100% of budget</div></div><div class="setting-val"><div class="toggle"></div></div></div>
+  </div>
+
+  <!-- Data -->
+  <div class="tile settings-section">
+    <div class="settings-hdr">Data</div>
+    <div class="setting-row"><div><div class="setting-label">Export Data</div><div class="setting-desc">Download all expenses as CSV</div></div><div class="setting-val"><button style="background:none;border:1px solid var(--border);color:var(--text-muted);border-radius:6px;padding:3px 10px;font-size:.78rem;cursor:pointer">Export CSV</button></div></div>
+    <div class="setting-row"><div><div class="setting-label">Import Data</div><div class="setting-desc">Import from CSV or V5 export</div></div><div class="setting-val"><button style="background:none;border:1px solid var(--border);color:var(--text-muted);border-radius:6px;padding:3px 10px;font-size:.78rem;cursor:pointer">Import</button></div></div>
+    <div class="setting-row"><div><div class="setting-label">Migrate from V5</div><div class="setting-desc">Import your old expense tracker data</div></div><div class="setting-val"><button style="background:none;border:1px solid var(--border);color:var(--text-muted);border-radius:6px;padding:3px 10px;font-size:.78rem;cursor:pointer">Migrate</button></div></div>
+  </div>
+
+  <!-- Danger -->
+  <div class="tile settings-section">
+    <div class="settings-hdr" style="color:#ef4444">Danger Zone</div>
+    <div class="setting-row"><div><div class="setting-label">Clear All Data</div><div class="setting-desc">Permanently delete all expenses and income</div></div><div class="setting-val"><button class="danger-btn">Clear Data</button></div></div>
+  </div>
+
+  <!-- About -->
+  <div class="tile">
+    <div class="about-card">
+      <div class="about-title">💸 Expense Tracker V7</div>
+      <div class="about-badges">
+        <span class="about-badge">v7.11.1</span>
+        <span class="about-badge">Incognito Mode</span>
+        <span class="about-badge">OCR Scanner</span>
+        <span class="about-badge">Biometric Lock</span>
+        <span class="about-badge">122 Currencies</span>
+        <span class="about-badge">Cloud + Supabase</span>
+        <span class="about-badge">PWA</span>
+        <span class="about-badge">Offline Mode</span>
+      </div>
+      <div class="about-rows">
+        <div class="about-row"><span>Architecture</span><span>Vite + React + Supabase</span></div>
+        <div class="about-row"><span>Deployment</span><span>Vercel CDN · auto-deploy</span></div>
+        <div class="about-row"><span>Security</span><span>WebAuthn · OTP · RLS · HttpOnly cookies</span></div>
+        <div class="about-row"><span>Last updated</span><span>12-05-2026 (v7.11.1)</span></div>
+        <div class="about-row"><span>Total build time</span><span>~118 hours across 36 sessions</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FAB -->
+<button class="fab">＋ Add Expense</button>
+
+<!-- Light/Dark toggle -->
+<div class="ctrl-bar">
+  <button class="ctrl-btn" onclick="toggleMode()">☀️ / 🌙 Toggle Theme</button>
+</div>
+
+<script>
+function showTab(i) {
+  document.querySelectorAll('.page').forEach((p,j) => p.classList.toggle('active', i===j));
+  document.querySelectorAll('.tab').forEach((t,j) => t.classList.toggle('active', i===j));
+}
+function toggleMode() {
+  document.documentElement.classList.toggle('dark');
+  document.documentElement.classList.toggle('light');
+}
+</script>
+</body>
+</html>

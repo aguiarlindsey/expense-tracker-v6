@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mobile Preview — Expense Tracker V7</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #080808;
+  color: #fff;
+  min-height: 100vh;
+  overflow-x: auto;
+}
+
+/* ── Page header ── */
+.page-title {
+  text-align: center;
+  padding: 2rem 1rem 1rem;
+}
+.page-title h1 { font-size: 1.4rem; font-weight: 800; letter-spacing: -.03em; }
+.page-title p  { font-size: .82rem; color: #666; margin-top: .3rem; }
+
+/* ── Screen selector ── */
+.sel-bar {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: .4rem; padding: .75rem 1rem 1rem;
+}
+.sel-btn {
+  background: #1a1a1a; border: 1px solid #2a2a2a; color: #666;
+  border-radius: 99px; padding: .3rem .85rem; font-size: .72rem;
+  font-weight: 600; cursor: pointer; transition: all .15s;
+}
+.sel-btn:hover { color: #ccc; border-color: #444; }
+.sel-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+
+/* ── Showcase row ── */
+.showcase {
+  display: flex; justify-content: center; align-items: flex-start;
+  gap: 2.5rem; padding: 1rem 2rem 3rem;
+  overflow-x: auto;
+}
+.device-col { display: flex; flex-direction: column; align-items: center; gap: .75rem; flex-shrink: 0; }
+.device-label {
+  font-size: .75rem; font-weight: 700; color: #555;
+  text-transform: uppercase; letter-spacing: .1em;
+}
+.device-model { font-size: .68rem; color: #3a3a3a; margin-top: 2px; text-align: center; }
+
+/* ── Phone frame base ── */
+.phone {
+  position: relative;
+  width: 336px;
+  height: 726px;
+  border-radius: 50px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* iPhone 15 Pro */
+.iphone {
+  background: linear-gradient(160deg, #9a9a9a 0%, #6b6b6b 40%, #7e7e7e 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.25),
+    inset 0 0 0 3px #444,
+    0 30px 80px rgba(0,0,0,.8),
+    0 0 0 1px #1a1a1a;
+}
+.iphone .phone-inner {
+  position: absolute;
+  top: 3px; left: 3px; right: 3px; bottom: 3px;
+  border-radius: 47px;
+  background: #0d0d0d;
+  overflow: hidden;
+}
+/* Dynamic Island */
+.iphone .dynamic-island {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  width: 118px; height: 34px; background: #000; border-radius: 20px; z-index: 50;
+}
+/* iPhone side buttons */
+.iphone::before {
+  content: '';
+  position: absolute; left: -4px; top: 120px;
+  width: 4px; height: 34px;
+  background: #5a5a5a; border-radius: 3px 0 0 3px;
+  box-shadow: 0 46px 0 #5a5a5a, 0 88px 0 #5a5a5a;
+}
+.iphone::after {
+  content: '';
+  position: absolute; right: -4px; top: 152px;
+  width: 4px; height: 70px;
+  background: #5a5a5a; border-radius: 0 3px 3px 0;
+}
+
+/* Samsung Galaxy S24 */
+.samsung {
+  background: linear-gradient(160deg, #2a2a2e, #111115, #1e1e22);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.08),
+    inset 0 0 0 3px #090909,
+    0 30px 80px rgba(0,0,0,.85),
+    0 0 0 1px #0a0a0a;
+  border-radius: 44px;
+}
+.samsung .phone-inner {
+  position: absolute;
+  top: 3px; left: 3px; right: 3px; bottom: 3px;
+  border-radius: 41px;
+  background: #0d0d0d;
+  overflow: hidden;
+}
+.samsung .punch-hole {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+  width: 13px; height: 13px; background: #000; border-radius: 50%; z-index: 50;
+}
+.samsung::before {
+  content: '';
+  position: absolute; left: -3px; top: 150px;
+  width: 3px; height: 32px; background: #1a1a1a; border-radius: 2px 0 0 2px;
+  box-shadow: 0 42px 0 #1a1a1a;
+}
+.samsung::after {
+  content: '';
+  position: absolute; right: -3px; top: 168px;
+  width: 3px; height: 58px; background: #1a1a1a; border-radius: 0 2px 2px 0;
+}
+
+/* Google Pixel 8 */
+.pixel {
+  background: linear-gradient(160deg, #232328, #141418, #1d1d22);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.07),
+    inset 0 0 0 3px #080808,
+    0 30px 80px rgba(0,0,0,.85),
+    0 0 0 1px #080808;
+  border-radius: 42px;
+}
+.pixel .phone-inner {
+  position: absolute;
+  top: 3px; left: 3px; right: 3px; bottom: 3px;
+  border-radius: 39px;
+  background: #0d0d0d;
+  overflow: hidden;
+}
+.pixel .punch-hole {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+  width: 12px; height: 12px; background: #000; border-radius: 50%; z-index: 50;
+}
+/* Pixel camera bar (decorative top strip) */
+.pixel .cam-bar {
+  position: absolute; top: 0; left: 0; right: 0; height: 6px;
+  background: linear-gradient(90deg, #1a1f2e, #0f1118, #1a1f2e);
+  z-index: 49;
+}
+.pixel::after {
+  content: '';
+  position: absolute; right: -3px; top: 160px;
+  width: 3px; height: 65px; background: #181818; border-radius: 0 2px 2px 0;
+}
+
+/* ── Phone content area ── */
+.phone-screen {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex; flex-direction: column;
+  font-size: 12px;
+}
+
+/* ── Status bars ── */
+.status-ios {
+  height: 54px; display: flex; align-items: flex-end;
+  justify-content: space-between; padding: 0 20px 8px;
+  font-size: 12px; font-weight: 600; color: #f0f0f0;
+  flex-shrink: 0;
+}
+.status-android {
+  height: 28px; display: flex; align-items: center;
+  justify-content: space-between; padding: 0 14px;
+  font-size: 11px; font-weight: 500; color: #f0f0f0;
+  flex-shrink: 0;
+}
+.status-icons { display: flex; align-items: center; gap: 4px; }
+
+/* ── App header (compact mobile) ── */
+.m-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 14px 8px;
+  background: rgba(13,13,13,.9);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  flex-shrink: 0;
+}
+.m-logo { font-size: .82rem; font-weight: 700; letter-spacing: -.02em; }
+.m-hdr-right { display: flex; align-items: center; gap: 6px; }
+.m-icon { width: 26px; height: 26px; border-radius: 7px; background: rgba(255,255,255,.07); display: flex; align-items: center; justify-content: center; font-size: .75rem; cursor: pointer; }
+.m-avatar { width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg,#2563eb,#7c3aed); display: flex; align-items: center; justify-content: center; font-size: .6rem; font-weight: 700; color: #fff; }
+.m-month { font-size: .68rem; color: #666; }
+
+/* ── Scrollable content ── */
+.m-content {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  padding: 10px 10px 0;
+  scrollbar-width: none;
+}
+.m-content::-webkit-scrollbar { display: none; }
+
+/* ── Bottom nav ── */
+.bottom-nav {
+  height: 68px; background: rgba(15,15,15,.95);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255,255,255,.07);
+  display: flex; align-items: center;
+  padding: 0 6px 10px;
+  flex-shrink: 0;
+}
+.nav-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  gap: 3px; padding: 6px 0; cursor: pointer;
+  background: none; border: none; color: #555;
+  transition: color .15s;
+}
+.nav-btn.active { color: #2563eb; }
+.nav-btn span { font-size: 18px; line-height: 1; }
+.nav-btn small { font-size: 9px; font-weight: 600; }
+.nav-fab {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: linear-gradient(135deg,#2563eb,#7c3aed);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; color: #fff; border: none; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(37,99,235,.5);
+  flex-shrink: 0; margin: 0 4px;
+}
+
+/* Home indicator */
+.home-indicator {
+  position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+  width: 100px; height: 4px; background: rgba(255,255,255,.25); border-radius: 99px;
+}
+
+/* ── Screens ── */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* ── Glass tile ── */
+.m-tile {
+  background: rgba(24,24,24,.85);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 14px;
+  margin-bottom: 8px;
+}
+
+/* ── Progress bar ── */
+.m-pbar { height: 4px; background: rgba(255,255,255,.1); border-radius: 99px; overflow: hidden; }
+.m-pbar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg,#2563eb,#7c3aed); }
+
+/* ── Badge ── */
+.m-badge { display: inline-flex; align-items: center; font-size: .62rem; font-weight: 700; padding: 2px 6px; border-radius: 99px; }
+.b-green  { background: rgba(16,185,129,.15); color: #10b981; }
+.b-red    { background: rgba(239,68,68,.15);  color: #ef4444; }
+.b-blue   { background: rgba(37,99,235,.15);  color: #60a5fa; }
+.b-amber  { background: rgba(245,158,11,.15); color: #f59e0b; }
+.b-purple { background: rgba(139,92,246,.15); color: #a78bfa; }
+
+/* ── Hero tile ── */
+.hero-tile { padding: 14px; margin-bottom: 8px; position: relative; overflow: hidden; }
+.hero-tile::before { content:''; position:absolute; top:-40px; right:-40px; width:100px; height:100px; background:radial-gradient(circle,rgba(37,99,235,.2) 0%,transparent 70%); border-radius:50%; pointer-events:none; }
+.h-label { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #666; margin-bottom: 4px; }
+.h-val   { font-size: 1.8rem; font-weight: 800; letter-spacing: -.04em; line-height: 1; color: #efefef; }
+.h-sub   { font-size: .65rem; color: #666; margin-top: 3px; }
+
+/* ── 2-col grid ── */
+.m-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.stat-tile { padding: 10px 12px; }
+.st-label { font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #555; margin-bottom: 3px; }
+.st-val   { font-size: 1rem; font-weight: 800; color: #efefef; letter-spacing: -.02em; }
+.st-sub   { font-size: .6rem; color: #555; margin-top: 2px; }
+
+/* ── Section title ── */
+.m-sec { font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #555; margin: 10px 0 6px; }
+
+/* ── Expense rows ── */
+.exp-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.exp-row:last-child { border-bottom: none; }
+.exp-ico { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: .9rem; flex-shrink: 0; }
+.exp-name { font-size: .78rem; font-weight: 500; }
+.exp-meta { font-size: .62rem; color: #555; margin-top: 1px; }
+.exp-amt  { font-size: .8rem; font-weight: 700; color: #ef4444; }
+.exp-date { font-size: .6rem; color: #555; text-align: right; margin-top: 2px; }
+
+/* ── Category rows ── */
+.cat-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px; border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.cat-row:last-child { border-bottom: none; }
+.cat-ico { width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: .8rem; flex-shrink: 0; }
+.cat-info { flex: 1; min-width: 0; }
+.cat-name { font-size: .72rem; font-weight: 500; }
+.cat-bar  { height: 2px; background: rgba(255,255,255,.08); border-radius: 99px; overflow: hidden; margin-top: 3px; }
+.cat-fill { height: 100%; border-radius: 99px; }
+.cat-amt  { font-size: .72rem; font-weight: 700; text-align: right; flex-shrink: 0; }
+.cat-pct  { font-size: .58rem; color: #555; text-align: right; }
+
+/* ── Sparkline ── */
+.spark-tile { padding: 10px 12px 8px; margin-bottom: 8px; }
+
+/* ── Anomaly banner ── */
+.anomaly-banner {
+  border: 1px solid rgba(239,68,68,.25);
+  background: rgba(239,68,68,.07);
+  border-radius: 10px; padding: 8px 10px; margin-bottom: 8px;
+  font-size: .65rem;
+}
+.anomaly-banner strong { color: #ef4444; }
+
+/* ── Budget bars ── */
+.bud-row { display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-bottom: 1px solid rgba(255,255,255,.05); }
+.bud-row:last-child { border-bottom: none; }
+.bud-ico  { font-size: .82rem; width: 18px; flex-shrink: 0; }
+.bud-name { font-size: .68rem; width: 72px; flex-shrink: 0; }
+.bud-track { flex: 1; height: 4px; background: rgba(255,255,255,.1); border-radius: 99px; overflow: hidden; }
+.bud-fill { height: 100%; border-radius: 99px; }
+.bud-pct  { font-size: .6rem; color: #555; width: 28px; text-align: right; }
+
+/* ── Goal ring ── */
+.goal-card { padding: 12px; margin-bottom: 8px; display: flex; gap: 10px; align-items: center; }
+.g-ring { position: relative; width: 56px; height: 56px; flex-shrink: 0; }
+.g-ring svg { transform: rotate(-90deg); }
+.g-pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: .7rem; font-weight: 800; }
+.g-info { flex: 1; min-width: 0; }
+.g-name { font-size: .78rem; font-weight: 700; }
+.g-saved { font-size: .62rem; color: #555; margin-top: 2px; }
+.g-pbar { height: 3px; background: rgba(255,255,255,.08); border-radius: 99px; overflow: hidden; margin-top: 6px; }
+.g-fill { height: 100%; border-radius: 99px; }
+
+/* ── Insight cards ── */
+.ins-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.ins-card { padding: 10px 12px; border-radius: 12px; }
+.ins-icon { font-size: 1.1rem; margin-bottom: 4px; }
+.ins-val  { font-size: .88rem; font-weight: 800; color: #efefef; }
+.ins-sub  { font-size: .6rem; color: #555; margin-top: 2px; }
+
+/* ── Health score ── */
+.health-card { padding: 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+.h-ring { position: relative; width: 68px; height: 68px; flex-shrink: 0; }
+.h-ring svg { transform: rotate(-90deg); }
+.h-ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.h-ring-num { font-size: 1rem; font-weight: 800; }
+
+/* ── Recurring rows ── */
+.rec-row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.05); }
+.rec-row:last-child { border-bottom: none; }
+.rec-name { font-size: .75rem; font-weight: 500; }
+.rec-meta { font-size: .6rem; color: #555; margin-top: 1px; }
+.rec-amt  { font-size: .78rem; font-weight: 700; color: #ef4444; }
+.rec-due  { font-size: .6rem; margin-top: 2px; }
+
+/* ── Trip cards ── */
+.trip-card { padding: 12px; margin-bottom: 8px; }
+.trip-dest  { font-size: .85rem; font-weight: 700; }
+.trip-dates { font-size: .62rem; color: #555; margin-top: 2px; }
+.trip-row   { display: flex; justify-content: space-between; margin-top: 8px; }
+.trip-stat  { font-size: .6rem; color: #555; }
+.trip-stat strong { display: block; font-size: .8rem; color: #efefef; font-weight: 700; }
+
+/* ── Rate rows ── */
+.rate-row { display: flex; align-items: center; padding: 7px 12px; border-bottom: 1px solid rgba(255,255,255,.05); }
+.rate-row:last-child { border-bottom: none; }
+.rate-flag { font-size: 1rem; margin-right: 6px; }
+.rate-code { font-size: .72rem; font-weight: 700; width: 40px; }
+.rate-name { font-size: .65rem; color: #555; flex: 1; }
+.rate-val  { font-size: .75rem; font-weight: 700; }
+.rate-chg  { font-size: .6rem; margin-left: 4px; }
+
+/* ── Settings ── */
+.settings-group { border-radius: 12px; overflow: hidden; margin-bottom: 8px; }
+.settings-hdr { font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #555; padding: 5px 12px; background: rgba(18,18,18,.8); border-bottom: 1px solid rgba(255,255,255,.05); }
+.setting-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-bottom: 1px solid rgba(255,255,255,.05); background: rgba(22,22,22,.8); }
+.setting-row:last-child { border-bottom: none; }
+.s-label { font-size: .75rem; font-weight: 500; }
+.s-val   { font-size: .68rem; color: #555; }
+.toggle  { width: 30px; height: 18px; background: #2563eb; border-radius: 99px; position: relative; flex-shrink: 0; }
+.toggle::after { content:''; position:absolute; width:12px; height:12px; background:#fff; border-radius:50%; top:3px; right:3px; }
+.toggle.off { background: #333; }
+.toggle.off::after { right: calc(100% - 15px); }
+
+/* ── Add expense sheet ── */
+.add-sheet { background: #161616; border-radius: 16px 16px 0 0; border-top: 1px solid rgba(255,255,255,.1); padding: 0 12px 8px; }
+.sheet-handle { width: 36px; height: 4px; background: rgba(255,255,255,.15); border-radius: 99px; margin: 10px auto 12px; }
+.sheet-title { font-size: .88rem; font-weight: 700; margin-bottom: 10px; }
+.form-group { margin-bottom: 8px; }
+.form-label { font-size: .62rem; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 3px; }
+.form-input {
+  width: 100%; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px; padding: 7px 10px; font-size: .82rem; color: #efefef; outline: none;
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+.form-select { width: 100%; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; padding: 7px 10px; font-size: .78rem; color: #efefef; }
+.btn-submit { width: 100%; background: linear-gradient(135deg,#2563eb,#7c3aed); color: #fff; border: none; border-radius: 10px; padding: 11px; font-size: .85rem; font-weight: 700; cursor: pointer; margin-top: 4px; }
+
+/* ── More menu ── */
+.more-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 4px 0; }
+.more-item { padding: 14px 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; cursor: pointer; }
+.more-item:hover { border-color: rgba(255,255,255,.15); }
+.more-icon { font-size: 1.3rem; }
+.more-name { font-size: .75rem; font-weight: 600; }
+.more-desc { font-size: .6rem; color: #555; }
+
+/* ── Income tab ── */
+.inc-row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.05); }
+.inc-row:last-child { border-bottom: none; }
+.inc-amt { font-size: .8rem; font-weight: 700; color: #10b981; }
+
+/* ── Global controls ── */
+.ctrl-bar {
+  position: fixed; bottom: 1.25rem; right: 1.25rem; z-index: 999;
+  display: flex; gap: .5rem;
+}
+.ctrl-btn { background: #1a1a1a; border: 1px solid #2a2a2a; color: #888; border-radius: 8px; padding: .4rem .9rem; font-size: .75rem; cursor: pointer; }
+.ctrl-btn:hover { color: #fff; }
+
+/* light mode */
+.light-app .phone-screen { background: #f5f5f5; color: #111; }
+.light-app .m-header { background: rgba(245,245,245,.9); border-bottom: 1px solid #e0e0e0; }
+.light-app .m-tile { background: rgba(255,255,255,.9); border-color: #e4e4e7; }
+.light-app .bottom-nav { background: rgba(250,250,250,.95); border-top: 1px solid #e0e0e0; }
+.light-app .nav-btn { color: #aaa; }
+.light-app .nav-btn.active { color: #2563eb; }
+.light-app .h-val, .light-app .st-val, .light-app .exp-name, .light-app .exp-amt,
+.light-app .cat-name, .light-app .cat-amt, .light-app .g-name, .light-app .ins-val,
+.light-app .rec-name, .light-app .trip-dest, .light-app .rate-val, .light-app .s-label,
+.light-app .m-logo, .light-app .sheet-title, .light-app .btn-submit { color: #111; }
+.light-app .exp-amt, .light-app .rec-amt { color: #ef4444; }
+.light-app .inc-amt { color: #10b981; }
+.light-app .status-ios, .light-app .status-android { color: #111; }
+.light-app .add-sheet { background: #f0f0f0; border-color: #ddd; }
+.light-app .form-input, .light-app .form-select { background: #fff; border-color: #ddd; color: #111; }
+.light-app .more-item { background: #fff; border-color: #eee; }
+.light-app .settings-hdr { background: #eee; }
+.light-app .setting-row { background: #fff; }
+.light-app .s-val, .light-app .exp-meta, .light-app .cat-pct, .light-app .h-sub,
+.light-app .st-sub, .light-app .trip-dates, .light-app .rec-meta, .light-app .rate-name,
+.light-app .m-month { color: #888; }
+.light-app .exp-date, .light-app .ins-sub, .light-app .g-saved, .light-app .rate-chg,
+.light-app .rec-due, .light-app .trip-stat, .light-app .bud-pct { color: #aaa; }
+.light-app .m-pbar, .light-app .cat-bar, .light-app .bud-track, .light-app .g-pbar { background: #e0e0e0; }
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>📱 Mobile Preview — Expense Tracker V7</h1>
+  <p>iPhone 15 Pro · Samsung Galaxy S24 · Google Pixel 8 · Toggle light/dark · Click any screen below</p>
+</div>
+
+<!-- Screen selector -->
+<div class="sel-bar">
+  <button class="sel-btn active" onclick="showScreen(0)">🏠 Overview</button>
+  <button class="sel-btn" onclick="showScreen(1)">💸 Expenses</button>
+  <button class="sel-btn" onclick="showScreen(2)">➕ Add Expense</button>
+  <button class="sel-btn" onclick="showScreen(3)">💰 Income</button>
+  <button class="sel-btn" onclick="showScreen(4)">📈 Trends</button>
+  <button class="sel-btn" onclick="showScreen(5)">🎯 Budgets</button>
+  <button class="sel-btn" onclick="showScreen(6)">🏆 Goals</button>
+  <button class="sel-btn" onclick="showScreen(7)">🧠 Insights</button>
+  <button class="sel-btn" onclick="showScreen(8)">🔄 Recurring</button>
+  <button class="sel-btn" onclick="showScreen(9)">✈️ Trips</button>
+  <button class="sel-btn" onclick="showScreen(10)">💱 Exchange</button>
+  <button class="sel-btn" onclick="showScreen(11)">⚙️ Settings</button>
+  <button class="sel-btn" onclick="showScreen(12)">☰ More Menu</button>
+</div>
+
+<div class="showcase">
+
+  <!-- ── iPhone 15 Pro ── -->
+  <div class="device-col">
+    <div class="device-label">iPhone 15 Pro</div>
+    <div class="device-model">Natural Titanium · iOS 18</div>
+    <div class="phone iphone" id="d-iphone">
+      <div class="dynamic-island"></div>
+      <div class="phone-inner">
+        <div class="phone-screen" id="screen-iphone">
+          <!-- status bar -->
+          <div class="status-ios">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>●●●</span><span>WiFi</span>
+              <span>⬛⬛⬛⬜ 82%</span>
+            </div>
+          </div>
+          <!-- app content injected here -->
+          <div id="app-iphone"></div>
+        </div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+  </div>
+
+  <!-- ── Samsung Galaxy S24 ── -->
+  <div class="device-col">
+    <div class="device-label">Samsung Galaxy S24</div>
+    <div class="device-model">Phantom Black · One UI 7</div>
+    <div class="phone samsung" id="d-samsung">
+      <div class="punch-hole"></div>
+      <div class="phone-inner">
+        <div class="phone-screen" id="screen-samsung">
+          <div class="status-android">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>▲▲▲</span><span>WiFi</span><span>🔋82%</span>
+            </div>
+          </div>
+          <div id="app-samsung"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Google Pixel 8 ── -->
+  <div class="device-col">
+    <div class="device-label">Google Pixel 8</div>
+    <div class="device-model">Obsidian · Android 15</div>
+    <div class="phone pixel" id="d-pixel">
+      <div class="cam-bar"></div>
+      <div class="punch-hole"></div>
+      <div class="phone-inner">
+        <div class="phone-screen" id="screen-pixel">
+          <div class="status-android">
+            <span>9:41</span>
+            <div class="status-icons">
+              <span>▲▲▲</span><span>WiFi</span><span>🔋82%</span>
+            </div>
+          </div>
+          <div id="app-pixel"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Controls -->
+<div class="ctrl-bar">
+  <button class="ctrl-btn" onclick="toggleLight()">☀️ Light Mode</button>
+</div>
+
+<script>
+// ── Screen content definitions ──────────────────────────
+
+const screens = {
+
+// 0: OVERVIEW
+0: `
+<div class="m-header">
+  <div class="m-logo">💸 Tracker V7</div>
+  <div class="m-hdr-right">
+    <div class="m-icon">🔔</div>
+    <div class="m-avatar">AL</div>
+  </div>
+</div>
+<div class="m-content">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <div style="font-size:.68rem;color:#555">May 2026</div>
+    <div style="font-size:.62rem;color:#555">19 days left</div>
+  </div>
+  <div class="m-tile hero-tile">
+    <div class="h-label">Total Spent</div>
+    <div class="h-val">₹42,800</div>
+    <div class="h-sub">59% of ₹72,000 budget</div>
+    <div class="m-pbar" style="margin-top:8px"><div class="m-pbar-fill" style="width:59%"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:.58rem;color:#555;margin-top:3px"><span>₹0</span><span>₹72,000</span></div>
+    <div style="margin-top:6px;display:flex;gap:4px">
+      <span class="m-badge b-amber">⚡ 59% used</span>
+      <span class="m-badge b-blue">47 txns</span>
+    </div>
+  </div>
+  <div class="m-row2">
+    <div class="m-tile stat-tile">
+      <div class="st-label">Income</div>
+      <div class="st-val" style="color:#10b981">₹85,000</div>
+      <span class="m-badge b-green">↑ ₹5k</span>
+    </div>
+    <div class="m-tile stat-tile">
+      <div class="st-label">Net Savings</div>
+      <div class="st-val" style="color:#10b981">₹42,200</div>
+      <span class="m-badge b-green">21%</span>
+    </div>
+  </div>
+  <div class="m-row2">
+    <div class="m-tile stat-tile">
+      <div class="st-label">Safe to Spend</div>
+      <div class="st-val" style="color:#60a5fa">₹18,200</div>
+      <div class="st-sub">Today's budget left</div>
+    </div>
+    <div class="m-tile stat-tile">
+      <div class="st-label">Burn Rate</div>
+      <div class="st-val">₹1,420</div>
+      <div class="st-sub">per day</div>
+    </div>
+  </div>
+  <div class="m-tile spark-tile">
+    <div class="h-label" style="margin-bottom:6px">30-Day Trend</div>
+    <svg viewBox="0 0 280 50" style="width:100%;height:44px">
+      <defs><linearGradient id="mg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2563eb" stop-opacity=".3"/><stop offset="100%" stop-color="#2563eb" stop-opacity="0"/></linearGradient></defs>
+      <path d="M0,42 L10,40 L19,38 L28,41 L37,36 L46,34 L56,31 L65,33 L74,28 L84,24 L93,8 L102,27 L112,30 L121,28 L130,26 L140,24 L149,21 L158,19 L168,22 L177,24 L186,20 L196,17 L205,15 L214,18 L224,13 L233,10 L242,12 L252,8 L261,6 L270,4 L280,3 L280,50 L0,50 Z" fill="url(#mg)"/>
+      <polyline points="0,42 10,40 19,38 28,41 37,36 46,34 56,31 65,33 74,28 84,24 93,8 102,27 112,30 121,28 130,26 140,24 149,21 158,19 168,22 177,24 186,20 196,17 205,15 214,18 224,13 233,10 242,12 252,8 261,6 270,4 280,3" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round"/>
+      <circle cx="93" cy="8" r="3" fill="#7c3aed"/>
+      <circle cx="280" cy="3" r="3" fill="#2563eb"/>
+    </svg>
+    <div style="display:flex;justify-content:space-between;font-size:.55rem;color:#555;margin-top:2px"><span>1 May</span><span>Today</span></div>
+  </div>
+  <div class="anomaly-banner">⚠️ <strong>Food unusually high</strong> — ₹12,400 · 34% above avg</div>
+  <div class="m-sec">Top Categories</div>
+  <div class="m-tile">
+    <div class="cat-row"><div class="cat-ico" style="background:rgba(249,115,22,.15)">🍽️</div><div class="cat-info"><div class="cat-name">Food</div><div class="cat-bar"><div class="cat-fill" style="background:#f97316;width:83%"></div></div></div><div><div class="cat-amt">₹12,400</div><div class="cat-pct" style="color:#f97316">83%</div></div></div>
+    <div class="cat-row"><div class="cat-ico" style="background:rgba(16,185,129,.15)">🏠</div><div class="cat-info"><div class="cat-name">Housing</div><div class="cat-bar"><div class="cat-fill" style="background:#ef4444;width:100%"></div></div></div><div><div class="cat-amt">₹18,000</div><div class="cat-pct" style="color:#ef4444">100%</div></div></div>
+    <div class="cat-row"><div class="cat-ico" style="background:rgba(59,130,246,.15)">🚗</div><div class="cat-info"><div class="cat-name">Transport</div><div class="cat-bar"><div class="cat-fill" style="background:#3b82f6;width:82%"></div></div></div><div><div class="cat-amt">₹8,200</div><div class="cat-pct">82%</div></div></div>
+    <div class="cat-row"><div class="cat-ico" style="background:rgba(139,92,246,.15)">🛍️</div><div class="cat-info"><div class="cat-name">Shopping</div><div class="cat-bar"><div class="cat-fill" style="background:#8b5cf6;width:76%"></div></div></div><div><div class="cat-amt">₹6,100</div><div class="cat-pct">76%</div></div></div>
+  </div>
+  <div class="m-sec">Recent</div>
+  <div class="m-tile">
+    <div class="exp-row"><div class="exp-ico" style="background:rgba(249,115,22,.12)">🍽️</div><div style="flex:1"><div class="exp-name">Swiggy</div><div class="exp-meta">Food · UPI/QR</div></div><div><div class="exp-amt">−₹340</div><div class="exp-date">Today</div></div></div>
+    <div class="exp-row"><div class="exp-ico" style="background:rgba(59,130,246,.12)">🔧</div><div style="flex:1"><div class="exp-name">Honda Service</div><div class="exp-meta">Transport · Cash · 12,500km</div></div><div><div class="exp-amt">−₹2,800</div><div class="exp-date">Yesterday</div></div></div>
+    <div class="exp-row"><div class="exp-ico" style="background:rgba(16,185,129,.12)">🏠</div><div style="flex:1"><div class="exp-name">HDFC EMI</div><div class="exp-meta">Housing · Net Banking · 🔄</div></div><div><div class="exp-amt">−₹18,000</div><div class="exp-date">10 May</div></div></div>
+  </div>
+  <div style="height:78px"></div>
+</div>
+<div class="bottom-nav">
+  <button class="nav-btn active"><span>🏠</span><small>Home</small></button>
+  <button class="nav-btn"><span>💸</span><small>Expenses</small></button>
+  <button class="nav-fab">＋</button>
+  <button class="nav-btn"><span>📊</span><small>Insights</small></button>
+  <button class="nav-btn"><span>☰</span><small>More</small></button>
+</div>`,
+
+// 1: EXPENSE LIST
+1: `
+<div class="m-header">
+  <div class="m-logo">Expenses</div>
+  <div class="m-hdr-right"><div class="m-icon">🔍</div><div class="m-icon">⚙️</div></div>
+</div>
+<div class="m-content">
+  <div style="margin-bottom:8px">
+    <input class="form-input" placeholder="🔍 Search expenses…" style="border-radius:10px">
+  </div>
+  <div style="display:flex;gap:6px;margin-bottom:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none">
+    <span class="m-badge b-blue" style="padding:4px 10px;border-radius:99px;white-space:nowrap;cursor:pointer">All</span>
+    <span class="m-badge" style="padding:4px 10px;border-radius:99px;white-space:nowrap;background:rgba(255,255,255,.07);color:#888;cursor:pointer">Food</span>
+    <span class="m-badge" style="padding:4px 10px;border-radius:99px;white-space:nowrap;background:rgba(255,255,255,.07);color:#888;cursor:pointer">Transport</span>
+    <span class="m-badge" style="padding:4px 10px;border-radius:99px;white-space:nowrap;background:rgba(255,255,255,.07);color:#888;cursor:pointer">Shopping</span>
+  </div>
+  <div class="m-sec">12 May 2026</div>
+  <div class="m-tile">
+    <div class="exp-row"><div class="exp-ico" style="background:rgba(249,115,22,.12)">🍽️</div><div style="flex:1"><div class="exp-name">Swiggy</div><div class="exp-meta">Food · Takeaway · GPay</div></div><div><div class="exp-amt">−₹340</div><div class="exp-date">Today</div></div></div>
+  </div>
+  <div class="m-sec">11 May 2026</div>
+  <div class="m-tile">
+    <div class="exp-row"><div class="exp-ico" style="background:rgba(59,130,246,.12)">🔧</div><div style="flex:1"><div class="exp-name">Honda Service Centre</div><div class="exp-meta">Vehicle Maintenance</div></div><div><div class="exp-amt">−₹2,800</div><div class="exp-date">Yesterday</div></div></div>
+    <div class="exp-row"><div class="exp-ico" style="background:rgba(139,92,246,.12)">🛍️</div><div style="flex:1"><div class="exp-name">Big Bazaar</div><div class="exp-meta">Shopping · Groceries</div></div><div><div class="exp-amt">−₹1,240</div></div></div>
+  </div>
+  <div class="m-sec">10 May 2026</div>
+  <div class="m-tile">
+    <div class="exp-row"><div class="exp-ico" style="background:rgba(16,185,129,.12)">🏠</div><div style="flex:1"><div class="exp-name">HDFC Home Loan EMI</div><div class="exp-meta">Housing · EMI · 🔄</div></div><div><div class="exp-amt">−₹18,000</div></div></div>
+    <div class="exp-row"><div class="exp-ico" style="background:rgba(236,72,153,.12)">🎬</div><div style="flex:1"><div class="exp-name">Netflix</div><div class="exp-meta">Entertainment · 🔄</div></div><div><div class="exp-amt">−₹649</div></div></div>
+  </div>
+  <div class="m-sec">09 May 2026</div>
+  <div class="m-tile">
+    <div class="exp-row"><div class="exp-ico" style="background:rgba(249,115,22,.12)">🍽️</div><div style="flex:1"><div class="exp-name">Zomato</div><div class="exp-meta">Food · Takeaway</div></div><div><div class="exp-amt">−₹520</div></div></div>
+    <div class="exp-row"><div class="exp-ico" style="background:rgba(245,158,11,.12)">⚡</div><div style="flex:1"><div class="exp-name">BESCOM Electricity</div><div class="exp-meta">Utilities</div></div><div><div class="exp-amt">−₹1,840</div></div></div>
+  </div>
+  <div style="height:78px"></div>
+</div>
+<div class="bottom-nav">
+  <button class="nav-btn"><span>🏠</span><small>Home</small></button>
+  <button class="nav-btn active"><span>💸</span><small>Expenses</small></button>
+  <button class="nav-fab">＋</button>
+  <button class="nav-btn"><span>📊</span><small>Insights</small></button>
+  <button class="nav-btn"><span>☰</span><small>More</small></button>
+</div>`,
+
+// 2: ADD EXPENSE SHEET
+2: `
+<div class="m-header">
+  <div class="m-logo">💸 Tracker V7</div>
+  <div class="m-hdr-right"><div class="m-icon">🔔</div><div class="m-avatar">AL</div></div>
+</div>
+<div class="m-content" style="padding:0;position:relative">
+  <!-- blurred background (overview) -->
+  <div style="padding:10px;filter:blur(2px);opacity:.4;pointer-events:none">
+    <div class="m-tile hero-tile"><div class="h-label">Total Spent</div><div class="h-val">₹42,800</div></div>
+    <div class="m-row2"><div class="m-tile stat-tile"><div class="st-val" style="color:#10b981">₹85,000</div></div><div class="m-tile stat-tile"><div class="st-val" style="color:#10b981">₹42,200</div></div></div>
+  </div>
+  <!-- slide-up sheet -->
+  <div style="position:absolute;bottom:0;left:0;right:0">
+    <div class="add-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">➕ Add Expense</div>
+      <div class="form-row">
+        <div class="form-group"><div class="form-label">Date</div><input class="form-input" type="date" value="2026-05-12"></div>
+        <div class="form-group"><div class="form-label">Amount *</div><input class="form-input" placeholder="0.00"></div>
+      </div>
+      <div class="form-group"><div class="form-label">Description *</div><input class="form-input" placeholder="What did you spend on?"></div>
+      <div class="form-row">
+        <div class="form-group"><div class="form-label">Category</div><select class="form-select"><option>🍽️ Food</option><option>🚗 Transport</option><option>🛍️ Shopping</option></select></div>
+        <div class="form-group"><div class="form-label">Payment</div><select class="form-select"><option>UPI/QR</option><option>Cash</option><option>Card</option></select></div>
+      </div>
+      <div class="form-group"><div class="form-label">Notes (optional)</div><input class="form-input" placeholder="Any notes…"></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+        <input type="checkbox" id="rec-cb">
+        <label for="rec-cb" style="font-size:.72rem;color:#888">Recurring expense</label>
+        <div style="margin-left:auto"><span style="font-size:.7rem;color:#555">📷 Scan receipt</span></div>
+      </div>
+      <button class="btn-submit">Add Expense</button>
+    </div>
+  </div>
+</div>
+<div class="bottom-nav">
+  <button class="nav-btn"><span>🏠</span><small>Home</small></button>
+  <button class="nav-btn"><span>💸</span><small>Expenses</small></button>
+  <button class="nav-fab" style="background:linear-gradient(135deg,#7c3aed,#2563eb)">✕</button>
+  <button class="nav-btn"><span>📊</span><small>Insights</small></button>
+  <button class="nav-btn"><span>☰</span><small>More</small></button>
+</div>`,
+
+// 3: INCOME
+3: `
+<div class="m-header">
+  <div class="m-logo">Income</div>
+  <div class="m-hdr-right"><div class="m-icon">＋</div></div>
+</div>
+<div class="m-content">
+  <div class="m-tile hero-tile">
+    <div class="h-label">Total Income — May 2026</div>
+    <div class="h-val" style="color:#10b981">₹85,000</div>
+    <div class="h-sub">2 sources · <span class="m-badge b-green">↑ ₹5k vs Apr</span></div>
+  </div>
+  <div class="m-row2">
+    <div class="m-tile stat-tile"><div class="st-label">Salary</div><div class="st-val">₹75,000</div><div class="st-sub">88% of income</div></div>
+    <div class="m-tile stat-tile"><div class="st-label">Freelance</div><div class="st-val">₹10,000</div><div class="st-sub">12% of income</div></div>
+  </div>
+  <div class="m-sec">May 2026</div>
+  <div class="m-tile">
+    <div class="inc-row"><div class="exp-ico" style="background:rgba(16,185,129,.12)">💼</div><div style="flex:1"><div class="exp-name">May Salary — TechCorp</div><div class="exp-meta">Net Banking · 01 May</div></div><div><div class="inc-amt">+₹75,000</div></div></div>
+    <div class="inc-row"><div class="exp-ico" style="background:rgba(59,130,246,.12)">💻</div><div style="flex:1"><div class="exp-name">Freelance — UI Design</div><div class="exp-meta">UPI/QR · 08 May</div></div><div><div class="inc-amt">+₹10,000</div></div></div>
+  </div>
+  <div class="m-sec">Previous Months</div>
+  <div class="m-tile">
+    <div class="inc-row"><div class="exp-ico" style="background:rgba(16,185,129,.09)">📅</div><div style="flex:1"><div class="exp-name">April 2026</div><div class="exp-meta">2 sources</div></div><div><div class="inc-amt">+₹80,000</div></div></div>
+    <div class="inc-row"><div class="exp-ico" style="background:rgba(16,185,129,.09)">📅</div><div style="flex:1"><div class="exp-name">March 2026</div><div class="exp-meta">2 sources</div></div><div><div class="inc-amt">+₹75,000</div></div></div>
+    <div class="inc-row"><div class="exp-ico" style="background:rgba(16,185,129,.09)">📅</div><div style="flex:1"><div class="exp-name">February 2026</div><div class="exp-meta">1 source</div></div><div><div class="inc-amt">+₹75,000</div></div></div>
+  </div>
+  <div style="height:78px"></div>
+</div>
+<div class="bottom-nav">
+  <button class="nav-btn"><span>🏠</span><small>Home</small></button>
+  <button class="nav-btn"><span>💸</span><small>Expenses</small></button>
+  <button class="nav-fab">＋</button>
+  <button class="nav-btn"><span>📊</span><small>Insights</small></button>
+  <button class="nav-btn active"><span>☰</span><small>More</small></button>
+</div>`,
+
+// 4: TRENDS
+4: `
+<div class="m-header">
+  <div class="m-logo">Trends</div>
+  <div class="m-hdr-right"><div class="m-month">May 2026</div></div>
+</div>
+<div class="m-content">
+  <div class="m-tile" style="padding:12px;margin-bottom:8px">
+    <div class="h-label" style="margin-bottom:8px">6-Month Spend</div>
+    <svg viewBox="0 0 270 90" style="width:100%;height:80px">
+      <rect x="5"  y="28" width="32" height="52" rx="4" fill="rgba(37,99,235,.25)"/>
+      <rect x="48" y="18" width="32" height="62" rx="4" fill="rgba(37,99,235,.25)"/>
+      <rect x="91" y="34" width="32" height="46" rx="4" fill="rgba(37,99,235,.25)"/>
+      <rect x="134" y="10" width="32" height="70" rx="4" fill="rgba(37,99,235,.3)"/>
+      <rect x="177" y="24" width="32" height="56" rx="4" fill="rgba(37,99,235,.3)"/>
+      <rect x="220" y="14" width="32" height="66" rx="4" fill="#2563eb" opacity=".85"/>
+      <text x="21"  y="88" text-anchor="middle" font-size="7" font-family="sans-serif">Dec</text>
+      <text x="64"  y="88" text-anchor="middle" font-size="7" font-family="sans-serif">Jan</text>
+      <text x="107" y="88" text-anchor="middle" font-size="7" font-family="sans-serif">Feb</text>
+      <text x="150" y="88" text-anchor="middle" font-size="7" font-family="sans-serif">Mar</text>
+      <text x="193" y="88" text-anchor="middle" font-size="7" font-family="sans-serif">Apr</text>
+      <text x="236" y="88" text-anchor="middle" font-size="7" fill="#60a5fa" font-family="sans-serif" font-weight="bold">May</text>
+    </svg>
+  </div>
+  <div class="m-sec">Month-over-Month (Apr → May)</div>
+  <div class="m-tile">
+    <div class="exp-row"><span style="width:20px">🍽️</span><div style="flex:1;font-size:.72rem">Food</div><div style="font-size:.7rem;color:#ef4444;font-weight:700">↑ +27%</div></div>
+    <div class="exp-row"><span style="width:20px">🏠</span><div style="flex:1;font-size:.72rem">Housing</div><div style="font-size:.7rem;color:#555;font-weight:700">— 0%</div></div>
+    <div class="exp-row"><span style="width:20px">🚗</span><div style="flex:1;font-size:.72rem">Transport</div><div style="font-size:.7rem;color:#ef4444;font-weight:700">↑ +52%</div></div>
+    <div class="exp-row"><span style="width:20px">🛍️</span><div style="flex:1;font-size:.72rem">Shopping</div><div style="font-size:.7rem;color:#10b981;font-weight:700">↓ -22%</div></div>
+    <div class="exp-row"><span style="width:20px">💊</span><div style="flex:1;font-size:.72rem">Health</div><div style="font-size:.7rem;color:#ef4444;font-weight:700">↑ +100%</div></div>
+  </div>
+  <div class="m-row2">
+    <div class="m-tile stat-tile"><div class="st-label">Fixed</div><div class="st-val">₹20,500</div><span class="m-badge b-blue">48%</span></div>
+    <div class="m-tile stat-tile"><div class="st-label">Variable</div><div class="st-val">₹22,300</div><span class="m-badge b-amber">52%</span></div>
+  </div>
+  <div style="height:78px"></div>
+</div>
+<div class="bottom-nav">
+  <button class="nav-btn"><span>🏠</span><small>Home</small></button>
+  <button class="nav-btn"><span>💸</span><small>Expenses</small></button>
+  <button class="nav-fab">＋</button>
+  <button class="nav-btn active"><span>📊</span><small>Insights</small></button>
+  <button class="nav-btn"><span>☰</span><small>More</small></button>
+</div>`,
+
+// 5: BUDGETS
+5: `
+<div class="m-header">
+  <div class="m-logo">Budgets</div>
+  <div class="m-hdr-right"><div class="m-icon">✏️</div></div>
+</div>
+<div class="m-content">
+  <div class="m-tile hero-tile">
+    <div class="h-label">Monthly Budget</div>
+    <div class="h-val">₹42,800 <span style="font-size:.9rem;color:#555;font-weight:400">/ ₹72,000</span></div>
+    <div class="m-pbar" style="margin:8px 0 3px"><div class="m-pbar-fill" style="width:59%"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:.6rem;color:#555"><span>0%</span><span style="color:#2563eb;font-weight:700">59%</span><span>100%</span></div>
+    <div style="margin-top:6px;display:flex;gap:4px">
+      <span class="m-badge b-blue">19 days left</span>
+      <span class="m-badge b-amber">₹1,512/day</span>
+    </div>
+  </div>
+  <div class="m-sec">By Category</div>
+  <div class="m-tile">
+    <div class="bud-row"><div class="bud-ico">🍽️</div><div class="bud-name">Food</div><div class="bud-track"><div class="bud-fill" style="background:#f97316;width:83%"></div></div><div class="bud-pct" style="color:#f97316">83%</div></div>
+    <div class="bud-row"><div class="bud-ico">🏠</div><div class="bud-name">Housing</div><div class="bud-track"><div class="bud-fill" style="background:#ef4444;width:100%"></div></div><div class="bud-pct" style="color:#ef4444">100%</div></div>
+    <div class="bud-row"><div class="bud-ico">🚗</div><div class="bud-name">Transport</div><div class="bud-track"><div class="bud-fill" style="background:#f59e0b;width:82%"></div></div><div class="bud-pct">82%</div></div>
+    <div class="bud-row"><div class="bud-ico">🛍️</div><div class="bud-name">Shopping</div><div class="bud-track"><div class="bud-fill" style="background:#8b5cf6;width:76%"></div></div><div class="bud-pct">76%</div></div>
+    <div class="bud-row"><div class="bud-ico">💊</div><div class="bud-name">Health</div><div class="bud-track"><div class="bud-fill" style="background:#ef4444;width:84%"></div></div><div class="bud-pct" style="color:#ef4444">84%</div></div>
+    <div class="bud-row"><div class="bud-ico">🎬</div><div class="bud-name">Entertainment</div><div class="bud-track"><div class="bud-fill" style="background:#10b981;width:50%"></div></div><div class="bud-pct" style="color:#10b981">50%</div></div>
+    <div class="bud-row"><div class="bud-ico">🪞</div><div class="bud-name">Personal</div><div class="bud-track"><div class="bud-fill" style="background:#10b981;width:47%"></div></div><div class="bud-pct" style="color:#10b981">47%</div></div>
+    <div class="bud-row"><div class="bud-ico">⚡</div><div class="bud-name">Utilities</div><div class="bud-track"><div class="bud-fill" style="background:#10b981;width:38%"></div></div><div class="bud-pct" style="color:#10b981">38%</div></div>
+  </div>
+  <div style="height:78px"></div>
+</div>
+<div class="bottom-nav">
+  <button class="nav-btn"><span>🏠</span><small>Home</small></button>
+  <button class="nav-btn"><span>💸</span><small>Expenses</small></button>
+  <button class="nav-fab">＋</button>
+  <button class="nav-btn"><span>📊</span><small>Insights</small></button>
+  <button class="nav-btn active"><span>☰</span><small>More</small></button>
+</div>`,
+
+// 6: GOALS
+6: `
+<div class="m-header">
+  <div class="m-logo">Goals</div>
+  <div class="m-hdr-right"><div class="m-icon">＋</div></div>
+</div>
+<div class="m-content">
+  <div class="m-row2">
+    <div class="m-tile stat-tile"><div class="st-label">Total Saved</div><div class="st-val">₹95,000</div><div class="st-sub">3 goals</div></div>
+    <div class="m-tile stat-tile"><div class="st-label">Best Progress</div><div class="st-val">60%</div><div class="st-sub">Goa Trip Fund</div></div>
+  </div>
+  <div class="m-sec">Your Goals</div>
+  <div class="m-tile goal-card">
+    <div class="g-ring"><svg viewBox="0 0 56 56" width="56" height="56"><circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="5"/><circle cx="28" cy="28" r="22" fill="none" stroke="#10b981" stroke-width="5" stroke-dasharray="34.5 103.7" stroke-linecap="round"/></svg><div class="g-pct" style="color:#10b981">25%</div></div>
+    <div class="g-info"><div class="g-name">🛡️ Emergency Fund</div><div class="g-saved">₹50,000 / ₹2,00,000</div><div class="g-pbar"><div class="g-fill" style="width:25%;background:#10b981"></div></div><div style="display:flex;justify-content:space-between;font-size:.58rem;color:#555;margin-top:2px"><span>Target: Dec 2026</span><span style="color:#10b981">₹1,50,000 left</span></div></div>
+  </div>
+  <div class="m-tile goal-card">
+    <div class="g-ring"><svg viewBox="0 0 56 56" width="56" height="56"><circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="5"/><circle cx="28" cy="28" r="22" fill="none" stroke="#3b82f6" stroke-width="5" stroke-dasharray="82.9 55.3" stroke-linecap="round"/></svg><div class="g-pct" style="color:#3b82f6">60%</div></div>
+    <div class="g-info"><div class="g-name">🏖️ Goa Trip Fund</div><div class="g-saved">₹15,000 / ₹25,000</div><div class="g-pbar"><div class="g-fill" style="width:60%;background:#3b82f6"></div></div><div style="display:flex;justify-content:space-between;font-size:.58rem;color:#555;margin-top:2px"><span>Target: Aug 2026</span><span style="color:#3b82f6">₹10,000 left</span></div></div>
+  </div>
+  <div class="m-tile goal-card">
+    <div class="g-ring"><svg viewBox="0 0 56 56" width="56" height="56"><circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="5"/><circle cx="28" cy="28" r="22" fill="none" stroke="#8b5cf6" stroke-width="5" stroke-dasharray="69.1 69.1" stroke-linecap="round"/></svg><div class="g-pct" style="color:#8b5cf6">50%</div></div>
+    <div class="g-info"><div class="g-name">💻 New Laptop</div><div class="g-saved">₹30,000 / ₹60,000</div><div class="g-pbar"><div class="g-fill" style="width:50%;background:#8b5cf6"></div></div><div style="display:flex;justify-content:space-between;font-size:.58rem;color:#555;margin-top:2px"><span>Target: Oct 2026</span><span style="color:#8b5cf6">₹30,000 left</span></div></div>
+  </div>
+  <div style="height:78px"></div>
+</div>
+<div class="bottom-nav">
+  <button class="nav-btn"><span>🏠</span><small>Home</small></button>
+  <button class="nav-btn"><span>💸</span><small>Expenses</small></button>
+  <button class="nav-fab">＋</button>
+  <button class="nav-btn"><span>📊</span><small>Insights</small></button>
+  <button class="nav-btn active"><span>☰</span><small>More</small></button>
+</div>`,
+
+// 7: INSIGHTS
+7: `
+<div class="m-header">
+  <div class="m-logo">Insights</div>
+  <div class="m-hdr-right"><div class="m-month">May 2026</div></div>
+</div>
+<div class="m-content">
+  <div class="m-tile health-card">
+    <div class="h-ring"><svg viewBox="0 0 68 68" width="68" height="68"><circle cx="34" cy="34" r="28" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="6"/><circle cx="34" cy="34" r="28" fill="none" stroke="#10b981" stroke-width="6" stroke-dasharray="128.2 47.1" stroke-linecap="round"/></svg><div class="h-ring-label"><div class="h-ring-num" style="color:#10b981">72</div><div style="font-size:.52rem;color:#555">/ 100</div></div></div>
+    <div style="flex:1"><div style="font-size:.82rem;font-weight:700;margin-bottom:3px">Financial Health</div><div style="font-size:.65rem;color:#10b981;font-weight:600">Good 🟢</div><div style="font-size:.62rem;color:#555;margin-top:4px;line-height:1.4">Good savings rate. Food & Transport slightly over budget this month.</div></div>
+  </div>
+  <div class="m-sec">Key Insights</div>
+  <div class="ins-grid">
+    <div class="m-tile ins-card"><div class="ins-icon">🍽️</div><div class="ins-val">Food</div><div class="ins-sub">Top category · 29%</div></div>
+    <div class="m-tile ins-card"><div class="ins-icon">🏪</div><div class="ins-val">Swiggy</div><div class="ins-sub">Top merchant · 11 orders</div></div>
+    <div class="m-tile ins-card"><div class="ins-icon">📱</div><div class="ins-val">UPI/QR</div><div class="ins-sub">67% of payments</div></div>
+    <div class="m-tile ins-card"><div class="ins-icon">📅</div><div class="ins-val">Tuesday</div><div class="ins-sub">Peak spend day</div></div>
+    <div class="m-tile ins-card"><div class="ins-icon">📈</div><div class="ins-val">Transport</div><div class="ins-sub">↑ 52% vs last month</div></div>
+    <div class="m-tile ins-card"><div class="ins-icon">🔄</div><div class="ins-val">₹20,648</div><div class="ins-sub">Monthly recurring</div></div>
+    <div class="m-tile ins-card"><div class="ins-icon">💰</div><div class="ins-val">21%</div><div class="ins-sub">Savings rate</div></div>
+    <div class="m-tile ins-card"><div class="ins-icon">🎯</div><div class="ins-val">3 days</div><div class="ins-sub">No-spend days 🔥</div></div>
+  </div>
+  <div style="height:78px"></div>
+</div>
+<div class="bottom-nav">
+  <button class="nav-btn"><span>🏠</span><small>Home</small></button>
+  <button class="nav-btn"><span>💸</span><small>Expenses</small></button>
+  <button class="nav-fab">＋</button>
+  <button class="nav-btn active"><span>📊</span><small>Insights</small></button>
+  <button class="nav-btn"><span>☰</span><small>More</small></button>
+</div>`,
+
+// 8: RECURRING
+8: `
+<div class="m-header">
+  <div class="m-logo">Recurring</div>
+</div>
+<div class="m-content">
+  <div class="m-row2">
+    <div class="m-tile stat-tile"><div class="st-label">Monthly Total</div><div class="st-val">₹20,648</div><div class="st-sub">7 subscriptions</div></div>
+    <div class="m-tile stat-tile" style="border-color:rgba(245,158,11,.25);background:rgba(245,158,11,.06)"><div class="st-label" style="color:#f59e0b">Due Soon</div><div class="st-val">2</div><div class="st-sub">Within 7 days</div></div>
+  </div>
+  <div class="m-sec">⏰ Due Soon</div>
+  <div class="m-tile" style="border-color:rgba(245,158,11,.2);background:rgba(245,158,11,.05)">
+    <div class="rec-row"><div class="exp-ico" style="background:rgba(16,185,129,.12)">🏠</div><div style="flex:1"><div class="rec-name">HDFC Home Loan EMI</div><div class="rec-meta">Housing · monthly</div></div><div><div class="rec-amt">₹18,000</div><div class="rec-due" style="color:#f59e0b">⏰ 4 days — 10 Jun</div></div></div>
+    <div class="rec-row"><div class="exp-ico" style="background:rgba(16,185,129,.12)">🧘</div><div style="flex:1"><div class="rec-name">Cult.fit Gym</div><div class="rec-meta">Personal · monthly</div></div><div><div class="rec-amt">₹1,500</div><div class="rec-due" style="color:#f59e0b">⏰ 2 days — 14 Jun</div></div></div>
+  </div>
+  <div class="m-sec">All Recurring</div>
+  <div class="m-tile">
+    <div class="rec-row"><div class="exp-ico" style="background:rgba(16,185,129,.12)">🏠</div><div style="flex:1"><div class="rec-name">HDFC EMI</div><div class="rec-meta">monthly</div></div><div><div class="rec-amt">₹18,000</div><div class="rec-due" style="color:#555">10 Jun</div></div></div>
+    <div class="rec-row"><div class="exp-ico" style="background:rgba(236,72,153,.12)">🎬</div><div style="flex:1"><div class="rec-name">Netflix</div><div class="rec-meta">monthly</div></div><div><div class="rec-amt">₹649</div><div class="rec-due" style="color:#555">09 Jun</div></div></div>
+    <div class="rec-row"><div class="exp-ico" style="background:rgba(16,185,129,.12)">🧘</div><div style="flex:1"><div class="rec-name">Cult.fit Gym</div><div class="rec-meta">monthly</div></div><div><div class="rec-amt">₹1,500</div><div class="rec-due" style="color:#f59e0b">14 Jun</div></div></div>
+    <div class="rec-row"><div class="exp-ico" style="background:rgba(37,99,235,.12)">🎵</div><div style="flex:1"><div class="rec-name">Spotify</div><div class="rec-meta">monthly</div></div><div><div class="rec-amt">₹119</div><div class="rec-due" style="color:#555">20 Jun</div></div></div>
+    <div class="rec-row"><div class="exp-ico" style="background:rgba(245,158,11,.12)">📱</div><div style="flex:1"><div class="rec-name">Jio Postpaid</div><div class="rec-meta">monthly</div></div><div><div class="rec-amt">₹599</div><div class="rec-due" style="color:#555">22 Jun</div></div></div>
+    <div class="rec-row"><div class="exp-ico" style="background:rgba(239,68,68,.12)">🛡️</div><div style="flex:1"><div class="rec-name">Car Insurance</div><div class="rec-meta">quarterly</div></div><div><div class="rec-amt">₹2,400</div><div class="rec-due" style="color:#555">15 Aug</div></div></div>
+  </div>
+  <div style="height:78px"></div>
+</div>
+<div class="bottom-nav">
+  <button class="nav-btn"><span>🏠</span><small>Home</small></button>
+  <button class="nav-btn"><span>💸</span><small>Expenses</small></button>
+  <button class="nav-fab">＋</button>
+  <button class="nav-btn"><span>📊</span><small>Insights</small></button>
+  <button class="nav-btn active"><span>☰</span><small>More</small></button>
+</div>`,
+
+// 9: TRIPS
+9: `
+<div class="m-header">
+  <div class="m-logo">✈️ Trips</div>
+  <div class="m-hdr-right"><div class="m-icon">＋</div></div>
+</div>
+<div class="m-content">
+  <div class="m-row2">
+    <div class="m-tile stat-tile"><div class="st-label">Total Trips</div><div class="st-val">3</div><div class="st-sub">2 past · 1 upcoming</div></div>
+    <div class="m-tile stat-tile"><div class="st-label">Total Spent</div><div class="st-val">₹58,000</div><div class="st-sub">Past trips</div></div>
+  </div>
+  <div class="m-sec">Your Trips</div>
+  <div class="m-tile trip-card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div><div class="trip-dest">🇹🇭 Bangkok Trip</div><div class="trip-dates">08 Apr – 15 Apr 2026 · 8 days</div></div>
+      <span class="m-badge" style="background:rgba(120,120,120,.15);color:#666">Past</span>
+    </div>
+    <div class="trip-row">
+      <div class="trip-stat"><strong>₹45,200</strong>Total</div>
+      <div class="trip-stat"><strong>8</strong>Expenses</div>
+      <div class="trip-stat"><strong>₹5,650</strong>Per day</div>
+    </div>
+    <div style="font-size:.6rem;color:#555;margin-top:6px">✈️ ₹18k · 🏨 ₹10k · 🍽️ ₹12k · 🛍️ ₹5k</div>
+  </div>
+  <div class="m-tile trip-card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div><div class="trip-dest">🏖️ Goa Weekend</div><div class="trip-dates">03 May – 05 May 2026 · 3 days</div></div>
+      <span class="m-badge" style="background:rgba(120,120,120,.15);color:#666">Past</span>
+    </div>
+    <div class="trip-row">
+      <div class="trip-stat"><strong>₹12,800</strong>Total</div>
+      <div class="trip-stat"><strong>5</strong>Expenses</div>
+      <div class="trip-stat"><strong>₹4,267</strong>Per day</div>
+    </div>
+    <div style="font-size:.6rem;color:#555;margin-top:6px">🏨 ₹6k · 🚗 ₹3.6k · 🍽️ ₹3.2k</div>
+  </div>
+  <div class="m-tile trip-card" style="opacity:.65;border-style:dashed">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div><div class="trip-dest">💼 Mumbai Business</div><div class="trip-dates">20 Jun – 22 Jun 2026</div></div>
+      <span class="m-badge b-blue">Upcoming</span>
+    </div>
+    <div class="trip-row">
+      <div class="trip-stat"><strong>0</strong>Expenses</div>
+      <div class="trip-stat"><strong>39 days</strong>Away</div>
+    </div>
+  </div>
+  <div style="height:78px"></div>
+</div>
+<div class="bottom-nav">
+  <button class="nav-btn"><span>🏠</span><small>Home</small></button>
+  <button class="nav-btn"><span>💸</span><small>Expenses</small></button>
+  <button class="nav-fab">＋</button>
+  <button class="nav-btn"><span>📊</span><small>Insights</small></button>
+  <button class="nav-btn active"><span>☰</span><small>More</small></button>
+</div>`,
+
+// 10: EXCHANGE
+10: `
+<div class="m-header">
+  <div class="m-logo">Exchange</div>
+  <div class="m-hdr-right"><div style="font-size:.62rem;color:#555">Live · 14:32</div></div>
+</div>
+<div class="m-content">
+  <div class="m-tile" style="padding:12px;margin-bottom:8px">
+    <div class="h-label" style="margin-bottom:8px">Quick Convert</div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <input class="form-input" value="100" style="width:70px;text-align:center;font-weight:700">
+      <select class="form-select" style="width:90px"><option>USD 🇺🇸</option><option>EUR 🇪🇺</option></select>
+      <span style="color:#555">→</span>
+      <div style="font-size:1.1rem;font-weight:800;color:#10b981">₹8,342</div>
+    </div>
+    <div style="font-size:.62rem;color:#555;margin-top:6px">1 USD = ₹83.42 · Base: 🇮🇳 INR</div>
+  </div>
+  <div class="m-sec">Live Rates → INR</div>
+  <div class="m-tile">
+    <div class="rate-row"><div class="rate-flag">🇺🇸</div><div class="rate-code">USD</div><div class="rate-name">US Dollar</div><div class="rate-val">₹83.42</div><div class="rate-chg" style="color:#10b981">▲</div></div>
+    <div class="rate-row"><div class="rate-flag">🇪🇺</div><div class="rate-code">EUR</div><div class="rate-name">Euro</div><div class="rate-val">₹90.18</div><div class="rate-chg" style="color:#ef4444">▼</div></div>
+    <div class="rate-row"><div class="rate-flag">🇬🇧</div><div class="rate-code">GBP</div><div class="rate-name">Pound</div><div class="rate-val">₹105.64</div><div class="rate-chg" style="color:#10b981">▲</div></div>
+    <div class="rate-row"><div class="rate-flag">🇦🇪</div><div class="rate-code">AED</div><div class="rate-name">Dirham</div><div class="rate-val">₹22.71</div><div class="rate-chg" style="color:#555">—</div></div>
+    <div class="rate-row"><div class="rate-flag">🇸🇬</div><div class="rate-code">SGD</div><div class="rate-name">Sing. Dollar</div><div class="rate-val">₹61.83</div><div class="rate-chg" style="color:#10b981">▲</div></div>
+    <div class="rate-row"><div class="rate-flag">🇯🇵</div><div class="rate-code">JPY</div><div class="rate-name">Yen</div><div class="rate-val">₹0.55</div><div class="rate-chg" style="color:#ef4444">▼</div></div>
+    <div class="rate-row"><div class="rate-flag">🇦🇺</div><div class="rate-code">AUD</div><div class="rate-name">AUS Dollar</div><div class="rate-val">₹53.92</div><div class="rate-chg" style="color:#10b981">▲</div></div>
+  </div>
+  <div style="height:78px"></div>
+</div>
+<div class="bottom-nav">
+  <button class="nav-btn"><span>🏠</span><small>Home</small></button>
+  <button class="nav-btn"><span>💸</span><small>Expenses</small></button>
+  <button class="nav-fab">＋</button>
+  <button class="nav-btn"><span>📊</span><small>Insights</small></button>
+  <button class="nav-btn active"><span>☰</span><small>More</small></button>
+</div>`,
+
+// 11: SETTINGS
+11: `
+<div class="m-header">
+  <div class="m-logo">Settings</div>
+</div>
+<div class="m-content">
+  <div class="settings-group m-tile">
+    <div class="settings-hdr">Profile</div>
+    <div class="setting-row"><div><div class="s-label">Email</div><div class="s-val">aguiar.lindsey@gmail.com</div></div><span style="font-size:.68rem;color:#10b981">✅</span></div>
+    <div class="setting-row"><div class="s-label">Display Name</div><span class="s-val">Lindsey A.</span></div>
+  </div>
+  <div class="settings-group m-tile">
+    <div class="settings-hdr">Preferences</div>
+    <div class="setting-row"><div class="s-label">Base Currency</div><span class="s-val">🇮🇳 INR ▾</span></div>
+    <div class="setting-row"><div class="s-label">Dark Mode</div><div class="toggle"></div></div>
+    <div class="setting-row"><div class="s-label">Colorblind Mode</div><div class="toggle off"></div></div>
+  </div>
+  <div class="settings-group m-tile">
+    <div class="settings-hdr">Security</div>
+    <div class="setting-row"><div><div class="s-label">Biometric Lock</div><div class="s-val">Fingerprint enrolled</div></div><span style="color:#10b981;font-size:.72rem">Active ✅</span></div>
+    <div class="setting-row"><div><div class="s-label">Backup OTP Email</div><div class="s-val">Configured</div></div><span style="color:#10b981;font-size:.72rem">✅</span></div>
+  </div>
+  <div class="settings-group m-tile">
+    <div class="settings-hdr">Notifications</div>
+    <div class="setting-row"><div><div class="s-label">Push Notifications</div><div class="s-val">Daily at 7:00 AM</div></div><div class="toggle"></div></div>
+    <div class="setting-row"><div class="s-label">Budget Alerts</div><div class="toggle"></div></div>
+    <div class="setting-row"><div class="s-label">Recurring Reminders</div><div class="toggle"></div></div>
+  </div>
+  <div class="settings-group m-tile">
+    <div class="settings-hdr">Data</div>
+    <div class="setting-row"><div class="s-label">Export CSV</div><span class="s-val">↓ Download</span></div>
+    <div class="setting-row"><div class="s-label">Import Data</div><span class="s-val">↑ Upload</span></div>
+    <div class="setting-row"><div class="s-label">Migrate from V5</div><span class="s-val">→</span></div>
+  </div>
+  <div class="settings-group m-tile">
+    <div class="settings-hdr" style="color:#ef4444">Danger Zone</div>
+    <div class="setting-row"><div class="s-label" style="color:#ef4444">Clear All Data</div><span style="font-size:.68rem;color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:2px 8px;cursor:pointer">Clear</span></div>
+  </div>
+  <div class="m-tile" style="padding:12px;text-align:center;margin-bottom:8px">
+    <div style="font-size:.85rem;font-weight:700;margin-bottom:4px">💸 Expense Tracker V7</div>
+    <div style="font-size:.6rem;color:#555">v7.11.1 · ~118h build time · 36 sessions</div>
+  </div>
+  <div style="height:78px"></div>
+</div>
+<div class="bottom-nav">
+  <button class="nav-btn"><span>🏠</span><small>Home</small></button>
+  <button class="nav-btn"><span>💸</span><small>Expenses</small></button>
+  <button class="nav-fab">＋</button>
+  <button class="nav-btn"><span>📊</span><small>Insights</small></button>
+  <button class="nav-btn active"><span>☰</span><small>More</small></button>
+</div>`,
+
+// 12: MORE MENU
+12: `
+<div class="m-header">
+  <div class="m-logo">More</div>
+</div>
+<div class="m-content">
+  <div class="more-grid">
+    <div class="m-tile more-item"><div class="more-icon">💰</div><div class="more-name">Income</div><div class="more-desc">Track earnings & sources</div></div>
+    <div class="m-tile more-item"><div class="more-icon">📈</div><div class="more-name">Trends</div><div class="more-desc">Month-over-month charts</div></div>
+    <div class="m-tile more-item"><div class="more-icon">🎯</div><div class="more-name">Budgets</div><div class="more-desc">Category spending limits</div></div>
+    <div class="m-tile more-item"><div class="more-icon">🏆</div><div class="more-name">Goals</div><div class="more-desc">Savings & milestones</div></div>
+    <div class="m-tile more-item"><div class="more-icon">🔄</div><div class="more-name">Recurring</div><div class="more-desc">Subscriptions & bills</div></div>
+    <div class="m-tile more-item"><div class="more-icon">✈️</div><div class="more-name">Trips</div><div class="more-desc">Travel expense tracking</div></div>
+    <div class="m-tile more-item"><div class="more-icon">💱</div><div class="more-name">Exchange</div><div class="more-desc">Live FX rates & converter</div></div>
+    <div class="m-tile more-item"><div class="more-icon">⚙️</div><div class="more-name">Settings</div><div class="more-desc">Profile, security & data</div></div>
+  </div>
+  <div style="height:78px"></div>
+</div>
+<div class="bottom-nav">
+  <button class="nav-btn"><span>🏠</span><small>Home</small></button>
+  <button class="nav-btn"><span>💸</span><small>Expenses</small></button>
+  <button class="nav-fab">＋</button>
+  <button class="nav-btn"><span>📊</span><small>Insights</small></button>
+  <button class="nav-btn active"><span>☰</span><small>More</small></button>
+</div>`
+
+}; // end screens
+
+// ── Render into all 3 phones ─────────────────────────────
+const appIds = ['app-iphone', 'app-samsung', 'app-pixel'];
+
+function showScreen(n) {
+  appIds.forEach(id => {
+    document.getElementById(id).innerHTML = screens[n] || screens[0];
+  });
+  document.querySelectorAll('.sel-btn').forEach((b,i) => b.classList.toggle('active', i===n));
+}
+
+// initial render
+showScreen(0);
+
+// light mode toggle
+let isLight = false;
+function toggleLight() {
+  isLight = !isLight;
+  document.querySelectorAll('.phone-screen').forEach(s => {
+    s.classList.toggle('light-app', isLight);
+  });
+  // re-render to pick up light styles
+  const cur = [...document.querySelectorAll('.sel-btn')].findIndex(b => b.classList.contains('active'));
+  showScreen(cur >= 0 ? cur : 0);
+  document.querySelectorAll('.phone-screen').forEach(s => s.classList.toggle('light-app', isLight));
+  document.querySelector('.ctrl-btn').textContent = isLight ? '🌙 Dark Mode' : '☀️ Light Mode';
+}
+</script>
+</body>
+</html>
