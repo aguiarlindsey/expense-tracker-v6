@@ -1191,10 +1191,11 @@ function AddContributionModal({ goal, goalContribs, onSave, onClose }) {
 
 const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSelected, onToggleSelect }) {
   const cat = CATS[item.category] || CATS['Other']
+  const icon = (cat.subIcons && item.subcategory && cat.subIcons[item.subcategory]) || cat.icon
   return (
     <div className={`item${isSelected ? ' item-selected' : ''}`} style={{ borderLeft: `3px solid ${item.customColor || cat.color}` }}>
       {bulkMode && <input type="checkbox" className="item-checkbox" checked={isSelected} onChange={() => onToggleSelect(item.id)} />}
-      <div className="item-icon">{cat.icon}</div>
+      <div className="item-icon">{icon}</div>
       <div className="item-body">
         <div className="item-desc">{item.description}</div>
         <div className="item-meta">
