@@ -1556,6 +1556,23 @@ export default function Tracker({ session }) {
   const [fxConvAmount, setFxConvAmount] = useState('100')
   const [fxConvFrom,   setFxConvFrom]   = useState('USD')
   const [fxSearch,     setFxSearch]     = useState('')
+  const [cryptoRates,  setCryptoRates]  = useState({}) // { btcInr, ethInr }
+
+  useEffect(() => {
+    const KEY = 'et_v6_crypto', TTL = 10 * 60 * 1000
+    const cached = (() => { try { return JSON.parse(localStorage.getItem(KEY)) } catch { return null } })()
+    if (cached && (Date.now() - cached.ts) < TTL) { setCryptoRates(cached); return }
+    const ctrl = new AbortController()
+    setTimeout(() => ctrl.abort(), 10000)
+    fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=inr', { signal: ctrl.signal })
+      .then(r => r.json())
+      .then(j => {
+        const d = { btcInr: j.bitcoin?.inr || 0, ethInr: j.ethereum?.inr || 0, ts: Date.now() }
+        try { localStorage.setItem(KEY, JSON.stringify(d)) } catch {}
+        setCryptoRates(d)
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => { localStorage.setItem('et_v6_base', baseCurrency) }, [baseCurrency])
   useEffect(() => {
@@ -3246,7 +3263,15 @@ export default function Tracker({ session }) {
                     <div key={grp}>
                       <div className="fx-grp-hdr">{grp} ({filtered.length})</div>
                       {filtered.map(c => {
-                        const rate = rateData.rates[c.code]
+                        const inrFactor = baseCurrency === 'INR' ? 1 : (rateData.rates['INR'] || 0)
+                        const cryptoInr = c.code === 'BTC' ? cryptoRates.btcInr : c.code === 'ETH' ? cryptoRates.ethInr : 0
+                        const rate = (c.code === 'BTC' || c.code === 'ETH')
+                          ? (cryptoInr && inrFactor ? cryptoInr * inrFactor : 0)
+                          : rateData.rates[c.code]
+                        const inv = rate ? 1 / rate : 0
+                        const fmtInv = inv < 0.00001
+                          ? inv.toExponential(4)
+                          : inv.toLocaleString(undefined, { minimumFractionDigits: inv < 0.01 ? 8 : 4, maximumFractionDigits: inv < 0.01 ? 8 : 5 })
                         return (
                           <div key={c.code} className="fx-row-item">
                             <div className="fx-code-wrap"><span className="fx-flag-ico">{c.flag}</span><span className="fx-code-lbl">{c.code}</span></div>
@@ -3255,7 +3280,7 @@ export default function Tracker({ session }) {
                               {rate ? `${(CM[baseCurrency] || CM['INR']).symbol}${rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}` : ''}
                             </div>
                             <div style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>
-                              {rate ? (1 / rate).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 5 }) : ''}
+                              {rate ? fmtInv : ''}
                             </div>
                           </div>
                         )
