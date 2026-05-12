@@ -46,7 +46,9 @@
 | 34 | 2026-05-07 | v7.9.0: Tesseract.js OCR receipt scanner — receiptParser.js (amount/date/merchant/category/payment parsers, 60+ merchant map), ReceiptScanner.jsx (camera/upload modal, progress bar, confidence indicators, raw text toggle), Tracker.jsx 📷 Scan button + applyOcr pre-fill, vite.config optimizeDeps exclude | 6.0 |
 | 35 | 2026-05-07 | v7.9.0 OCR refinements: CSP fixes (cdn.jsdelivr.net in script-src, wasm-unsafe-eval, camera permission); local Tesseract worker (no CDN); manual crop tool replacing broken auto-detect; objectFit letterbox coordinate fix; TORII parser fix (company suffix skipping, cleanName noise strip); food keyword expansion (salmon, steak, lobster, truffle, beer brands); petrol parser (¥/€/£ ₹ misread symbols, HP service variants, hasFuelContent fallback); fuel rate/quantity/type extraction + DB columns + form fields + list display; tax/GST/SGST/CGST/VAT/Service Charge extraction + DB columns; silent save error surfaced as toast; DD-MM-YYYY date format everywhere; unlimited multi-part scan (pages[] array, sequential OCR, progress scales per page); EXPTRAV7 reference doc | 8.0 |
 | 36 | 2026-05-12 | Vehicle maintenance KM fields in Add Expense form: KMs at Service + Next Service at KMs inputs; Next Service Date sets nextDueDate + isRecurring reminder; applyOcr populates new fields directly (no longer embeds in notes); ExpItem shows 🔧 KM summary line; useStorage vehicleCurrentKm ↔ vehicle_km_at_service + vehicleNextServiceKm ↔ vehicle_next_service_km; Supabase migration (add_vehicle_km.sql) | 0.5 |
-| **Total** | | | **~118 h** |
+| 37 | 2026-05-12 | v7.12.0 CSS Design System: glass tokens, shadow/radius/spacing/typography scales, dark mode fully expanded; v7.12.0 Glassmorphism Shell: frosted-glass app-header + sticky glass tab bar (top:59px), blue-purple shimmer stripe, glass sheen overlay (::after gradient), body gradient background (light: blue-indigo wash, dark: deep navy), card elevation with shadow-sm + radius-lg, tab active tint; icon updates (Personal 🪞, Utilities ⚡, Finance 💳, Social 🤝, Administrative 🏛️, Other 📦); Theatre sub-category; Luggage & Bags sub-category; app title/version corrected to V7 / v7.11.1; ROADMAP.md created (32 phases, 8 epics, v7.12.0→v7.24.0 version map); preview-phase1.html + preview-mobile.html created | 4.0 |
+| 38 | 2026-05-12 | v7.13.0 Bento Grid Dashboard: 5-tile CSS Grid (hero expenses with 3-point progress bar + badge chips, income, net savings, safe-to-spend, burn rate), responsive 3→2→1 col, hover lift, incognito masking, colored tile top-borders; badge chips on all tiles (⚡ % used, txn count, date, trend, income delta, savings rate, runway, acceleration); pie charts moved from Overview → Insights; v7.14.0 Exchange Tab Redesign: base currency info tile, quick converter (3-col grid with big result), 122-currency scrollable table in 8 regional groups with search filter, BTC + ETH live rates via CoinGecko free API (cached 10min, CSP updated), blank cells for unavailable rates, mobile horizontal scroll without hidden columns; tab labels shortened (Recur, FX) to fit all 10 tabs; About section updated to v7.14.0 | 5.0 |
+| **Total** | | | **~127.5 h** |
 
 ---
 
@@ -73,6 +75,44 @@ _2026-05-12_
 **DB migration (`supabase/add_vehicle_km.sql`)**
 - `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS vehicle_km_at_service integer DEFAULT NULL`
 - `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS vehicle_next_service_km integer DEFAULT NULL`
+
+---
+
+## [Session 38] — v7.13.0 + v7.14.0 UI Overhaul
+_2026-05-12_
+
+**v7.13.0 — Bento Grid Dashboard (`src/components/Tracker.jsx`, `src/styles/index.css`)**
+- Replaced `summary-grid` + `forecast-panel` on Overview tab with a 5-tile CSS Grid bento layout
+- **Hero tile** — spans 2/3 width; 3-point progress bar (₹0 · current · budget); badge chips (⚡ % used, txn count, date label, trend vs last month); colored top border (red)
+- **Income tile** — this-month income; badge showing delta vs previous month (green/red)
+- **Net Savings tile** — all-time net; savings rate % badge
+- **Safe-to-Spend tile** — daily allowance with days-left + remaining-budget badges; "Set a budget →" link if unset
+- **Burn Rate tile** — 7-day avg rate; acceleration badge (↑↓~flat); top burn category
+- Responsive: 3-col desktop → 2-col tablet → 1-col mobile; hover lift + shadow transition
+- Incognito masking on all bento amounts
+- Pie charts (By Category, By Payment) moved from Overview → Insights tab
+- Duplicate pie charts removed from Trends tab
+
+**v7.14.0 — Exchange Tab Redesign**
+- **Base currency info tile** — flag, name, live/cached status, last updated time, currency + region count, Refresh button
+- **Quick Converter** — 3-column grid: amount input + currency dropdown (grouped by region) → ⇄ → big green result + both-direction rate text
+- **Search bar** — instant filter by currency name or code across all 122 currencies
+- **Styled table** — 4 columns: Code (flag + bold) | Name | 1 Foreign → Base | 1 Base → Foreign; region group headers (8 groups); `min-width: 480px` + horizontal scroll on mobile; no maxHeight on mobile (full list visible)
+- **BTC + ETH live rates** — fetched from CoinGecko free API (`/api/v3/simple/price`), cached 10 minutes in localStorage; converted to base currency via INR factor; blank cells if unavailable (no "unavailable" text)
+- CSP updated: `api.coingecko.com` added to `connect-src` in `vercel.json`
+- Old `exchange-table` HTML table + chip-group card replaced entirely
+
+**v7.12.0 — CSS Design System + Glassmorphism Shell (Session 37)**
+- Glass tokens: `--glass-bg` (38% opacity), `--glass-border` (blue-tinted), `--glass-blur` (blur 32px saturate 200%), `--glass-inset` (2px white top highlight + sheen gradient)
+- Shadow scale, radius scale, spacing scale, typography scale added to `:root`
+- Dark mode tokens fully expanded in `.dark {}`
+- App-header glass: `backdrop-filter`, sticky top:0, z-index 50; blue-purple shimmer stripe (`::before` animation); glass sheen overlay (`::after` gradient)
+- Glass tab shell (`.glass-shell`): sticky top:59px, glass bg/border/shadow, punches through tracker padding
+- Body gradient: `linear-gradient(160deg, #dde6ff, #eef1f7, #e6eeff)` light; deep navy dark
+- Card elevation: `shadow-sm` + `radius-lg` on summary-card + chart-card
+- Tab labels shortened: "🔄 Recur" and "💱 FX" so all 10 fit without overflow
+
+**About section updated** — v7.14.0; new feature badges (Glass UI, Bento Dashboard, BTC/ETH Live)
 
 ---
 

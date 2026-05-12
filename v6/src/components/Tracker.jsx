@@ -3570,25 +3570,25 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title">💸 Expense Tracker V7</div>
               <div className="about-meta">
-                <span className="about-badge">v7.11.1</span>
-                <span className="about-badge">Incognito Mode</span>
-                <span className="about-badge">Rate Fallbacks</span>
+                <span className="about-badge">v7.14.0</span>
+                <span className="about-badge">Glass UI</span>
+                <span className="about-badge">Bento Dashboard</span>
                 <span className="about-badge">122 Currencies</span>
-                <span className="about-badge">Historical Rates</span>
+                <span className="about-badge">BTC · ETH Live</span>
                 <span className="about-badge">Cloud + Supabase</span>
                 <span className="about-badge">PWA</span>
               </div>
               <div className="about-row"><span>Architecture</span><span>Vite + React + Supabase</span></div>
-              <div className="about-row"><span>Auth</span><span>Magic-link email (Supabase Auth) · WebAuthn biometric lock · Email OTP fallback</span></div>
+              <div className="about-row"><span>Auth</span><span>Magic-link email · WebAuthn biometric lock · Email OTP fallback</span></div>
               <div className="about-row"><span>Database</span><span>Supabase Postgres + RLS · SQL views for aggregations</span></div>
               <div className="about-row"><span>Deployment</span><span>Vercel CDN · auto-deploy on push · cron jobs (reminders + maintenance)</span></div>
               <div className="about-row"><span>Offline</span><span>Dependency-ordered retry queue (topo sort) · auto-sync on reconnect</span></div>
-              <div className="about-row"><span>Security</span><span>Server-enforced biometric lock · alphanumeric OTP · rate limiting · RLS on all tables</span></div>
-              <div className="about-row"><span>PWA</span><span>Installable · service worker · auto-updates</span></div>
-              <div className="about-row"><span>Features</span><span>10 tabs · 18 insights · anomaly detection · burn-rate forecast · trip tracking · 259-color palette · live FX rates</span></div>
-              <div className="about-row"><span>Mobile</span><span>Fully responsive · UPI/Wallet selectors · horizontal tab scroll</span></div>
-              <div className="about-row"><span>V5 parity</span><span>100% — all V5 features ported + Goals/Budgets/Offline added</span></div>
-              <div className="about-row"><span>Last updated</span><span>2026-05-12 (v7.11.1)</span></div>
+              <div className="about-row"><span>Security</span><span>Server-enforced biometric lock · alphanumeric OTP · rate limiting · RLS on all tables · HTTP security headers</span></div>
+              <div className="about-row"><span>UI</span><span>Glassmorphism shell · Bento grid dashboard · badge chips · animated shimmer header · dark/light gradient backgrounds</span></div>
+              <div className="about-row"><span>Exchange</span><span>122 currencies in 8 regions · live FX rates · quick converter · BTC + ETH via CoinGecko · search filter</span></div>
+              <div className="about-row"><span>Features</span><span>10 tabs · receipt OCR scanner · anomaly detection · burn-rate forecast · trip tracking · vehicle maintenance KM tracking · 259-color palette</span></div>
+              <div className="about-row"><span>Mobile</span><span>Fully responsive · horizontal tab scroll · touch-friendly</span></div>
+              <div className="about-row"><span>Last updated</span><span>2026-05-12 (v7.14.0)</span></div>
             </div>
           </div>
         </main>
