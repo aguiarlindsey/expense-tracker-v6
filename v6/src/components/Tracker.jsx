@@ -2278,9 +2278,9 @@ export default function Tracker({ session }) {
     { id: 'budgets',    label: '💰 Budgets' },
     { id: 'goals',      label: '🎯 Goals' },
     { id: 'insights',   label: '💡 Insights' },
-    { id: 'recurring',  label: '🔄 Recurring' },
+    { id: 'recurring',  label: '🔄 Recur' },
     { id: 'trips',      label: '✈️ Trips' },
-    { id: 'exchange',   label: '💱 Exchange' },
+    { id: 'exchange',   label: '💱 FX' },
     { id: 'settings',   label: '⚙️ Settings' },
   ]
 
