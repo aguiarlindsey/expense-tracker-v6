@@ -1553,6 +1553,9 @@ export default function Tracker({ session }) {
   })
   const [rateData,     setRateData]     = useState(null)
   const [rateFetching, setRateFetching] = useState(false)
+  const [fxConvAmount, setFxConvAmount] = useState('100')
+  const [fxConvFrom,   setFxConvFrom]   = useState('USD')
+  const [fxSearch,     setFxSearch]     = useState('')
 
   useEffect(() => { localStorage.setItem('et_v6_base', baseCurrency) }, [baseCurrency])
   useEffect(() => {
@@ -3153,49 +3156,127 @@ export default function Tracker({ session }) {
       {/* ── Exchange tab ── */}
       {tab === 'exchange' && (
         <main>
-          <div className="card">
-            <div className="card-header-row">
-              <strong>Live Exchange Rates</strong>
-              {rateData && <span className="rate-badge">{rsLabel}</span>}
-              <button className="btn-primary btn-sm" style={{ marginLeft: 'auto' }} onClick={refreshRates} disabled={rateFetching}>
-                {rateFetching ? 'Fetching…' : '🔄 Refresh'}
+
+          {/* ── Base currency info ── */}
+          <div className="fx-info-tile">
+            <div>
+              <div className="bento-label">Base Currency</div>
+              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--fw-bold)', marginTop: 4 }}>
+                {(CM[baseCurrency] || CM['INR']).flag} {baseCurrency} — {(CM[baseCurrency] || CM['INR']).name}
+              </div>
+            </div>
+            <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                {rateData && <span className="rate-badge" style={{ marginRight: 6 }}>{rsLabel}</span>}
+                {rateData?.ts ? `Updated ${new Date(rateData.ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : 'Not loaded'}
+                {rateData?.source === 'fallback' && <span style={{ color: 'var(--color-exp)', marginLeft: 6 }}>⚠️ Fallback rates</span>}
+              </div>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-faint)' }}>{CURRENCIES.length} currencies · {Object.keys(CG).length} regions</div>
+              <button className="btn-primary btn-sm" onClick={refreshRates} disabled={rateFetching}>
+                {rateFetching ? '⏳ Fetching…' : '🔄 Refresh'}
               </button>
             </div>
-            <p className="exchange-desc">Rates from <strong>exchangerate-api.com</strong> — fetched with {baseCurrency} base. Cached 6 h. Falls back to cached → built-in rates if API is unavailable.{rateData?.source === 'fallback' && <span style={{color:'var(--color-exp)',marginLeft:6}}>⚠️ Built-in fallback rates are from April 2026 — may not reflect current values.</span>}</p>
-            {rateData?.rates ? (
-              <div className="exchange-table-wrap">
-                <table className="exchange-table">
-                  <thead><tr><th>Currency</th><th style={{ textAlign: 'right' }}>1 Unit → INR</th><th style={{ textAlign: 'right' }}>1 INR → Units</th></tr></thead>
-                  <tbody>
-                    {CURRENCIES.filter(c => c.code !== 'INR').map(c => {
-                      const rate = rateData.rates[c.code]
-                      if (!rate) return <tr key={c.code}><td colSpan="3" className="rate-unavail">{c.flag} {c.code} — unavailable</td></tr>
-                      return (
-                        <tr key={c.code}>
-                          <td><span style={{ marginRight: 6 }}>{c.flag}</span><strong>{c.code}</strong><span className="cur-name">{c.name}</span></td>
-                          <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
-                          <td style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: '0.8rem' }}>{(1 / rate).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 6 })} {c.code}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="empty-state"><div className="empty-icon">🔄</div><h3>Loading rates…</h3></div>
-            )}
           </div>
-          <div className="card" style={{ marginTop: 16 }}>
-            <div style={{ fontWeight: 600, marginBottom: 12 }}>All {CURRENCIES.length} Supported Currencies</div>
-            {Object.entries(CG).map(([grp, curs]) => (
-              <div key={grp} style={{ marginBottom: 14 }}>
-                <div className="cur-group-label">{grp} ({curs.length})</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                  {curs.map(c => <span key={c.code} title={`${c.name} (${c.symbol})`} className="cur-chip">{c.flag} {c.code}</span>)}
-                </div>
+
+          {/* ── Quick Converter ── */}
+          <div className="fx-converter">
+            <div className="chart-title" style={{ marginBottom: '1rem' }}>Quick Converter</div>
+            <div className="fx-conv-grid">
+              <div>
+                <div className="fx-conv-label">Amount</div>
+                <input type="number" className="fx-conv-input" value={fxConvAmount} min="0" onChange={e => setFxConvAmount(e.target.value)} />
+                <select className="fx-conv-select" value={fxConvFrom} onChange={e => setFxConvFrom(e.target.value)}>
+                  {Object.entries(CG).map(([grp, curs]) => (
+                    <optgroup key={grp} label={grp}>
+                      {curs.filter(c => c.code !== baseCurrency).map(c => (
+                        <option key={c.code} value={c.code}>{c.flag} {c.code} — {c.name}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
               </div>
-            ))}
+              <div className="fx-conv-arrow">⇄</div>
+              <div>
+                <div className="fx-conv-label">Converts to</div>
+                {rateData?.rates?.[fxConvFrom] ? (
+                  <>
+                    <div className="fx-conv-result">
+                      {(CM[baseCurrency] || CM['INR']).symbol} {(parseFloat(fxConvAmount || 0) * rateData.rates[fxConvFrom]).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 6 }}>
+                      1 {fxConvFrom} = {(CM[baseCurrency] || CM['INR']).symbol}{rateData.rates[fxConvFrom].toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                      &nbsp;·&nbsp;
+                      1 {baseCurrency} = {(1 / rateData.rates[fxConvFrom]).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 5 })} {fxConvFrom}
+                    </div>
+                  </>
+                ) : (
+                  <div className="fx-conv-result" style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>— loading —</div>
+                )}
+              </div>
+            </div>
           </div>
+
+          {/* ── Search ── */}
+          <input
+            className="fx-search-bar"
+            placeholder="🔍 Search by currency name or code…"
+            value={fxSearch}
+            onChange={e => setFxSearch(e.target.value)}
+          />
+
+          {/* ── Currency table ── */}
+          <div className="chart-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="fx-tbl-hdr">
+              <div>Code</div>
+              <div>Currency</div>
+              <div style={{ textAlign: 'right' }}>1 Foreign → {baseCurrency}</div>
+              <div style={{ textAlign: 'right' }}>1 {baseCurrency} → Foreign</div>
+            </div>
+            <div style={{ maxHeight: 540, overflowY: 'auto' }}>
+              {rateData?.rates ? (
+                Object.entries(CG).map(([grp, curs]) => {
+                  const filtered = curs.filter(c => {
+                    if (c.code === baseCurrency) return false
+                    if (!fxSearch) return true
+                    const q = fxSearch.toLowerCase()
+                    return c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)
+                  })
+                  if (filtered.length === 0) return null
+                  return (
+                    <div key={grp}>
+                      <div className="fx-grp-hdr">{grp} ({filtered.length})</div>
+                      {filtered.map(c => {
+                        const rate = rateData.rates[c.code]
+                        if (!rate) return (
+                          <div key={c.code} className="fx-row-item" style={{ opacity: 0.4 }}>
+                            <div className="fx-code-wrap"><span className="fx-flag-ico">{c.flag}</span><span className="fx-code-lbl">{c.code}</span></div>
+                            <div className="fx-cur-name">{c.name}</div>
+                            <div style={{ textAlign: 'right', fontSize: 'var(--text-xs)', color: 'var(--text-faint)' }}>unavailable</div>
+                            <div />
+                          </div>
+                        )
+                        return (
+                          <div key={c.code} className="fx-row-item">
+                            <div className="fx-code-wrap"><span className="fx-flag-ico">{c.flag}</span><span className="fx-code-lbl">{c.code}</span></div>
+                            <div className="fx-cur-name">{c.name}</div>
+                            <div style={{ textAlign: 'right', fontWeight: 'var(--fw-semibold)', fontSize: 'var(--text-sm)' }}>
+                              {(CM[baseCurrency] || CM['INR']).symbol}{rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                            </div>
+                            <div style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>
+                              {(1 / rate).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 5 })}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })
+              ) : (
+                <div className="empty-state"><div className="empty-icon">🔄</div><h3>Loading rates…</h3></div>
+              )}
+            </div>
+          </div>
+
         </main>
       )}
 
