@@ -178,14 +178,27 @@ body {
   border-bottom: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
   padding: 0 1.5rem;
-  height: 56px;
+  height: 59px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   position: sticky;
   top: 0;
   z-index: 50;
+  /* Coloured top stripe — instantly signals "this is the header" */
+  border-top: 3px solid transparent;
+  background-clip: padding-box;
 }
+.app-header::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #2563eb 0%, #7c3aed 50%, #2563eb 100%);
+  background-size: 200% 100%;
+  animation: shimmer 4s linear infinite;
+}
+@keyframes shimmer { 0% { background-position: 0% 0 } 100% { background-position: 200% 0 } }
 
 .app-logo { font-size: 1.1rem; font-weight: 600; }
 .app-header-right { display: flex; align-items: center; gap: 1rem; }
@@ -217,13 +230,13 @@ body {
 /* Glass tab shell — sticky frosted glass bar housing the tab row */
 .glass-shell {
   position: sticky;
-  top: 56px;
+  top: 59px;
   z-index: 40;
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  border-bottom: 1px solid var(--glass-border);
-  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  border-bottom: 2px solid rgba(37,99,235,0.2);
+  box-shadow: 0 4px 16px rgba(37,99,235,0.08);
   margin: 0 -1.5rem 1.25rem;
   padding: 0 1.5rem;
 }
