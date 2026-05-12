@@ -2342,85 +2342,105 @@ export default function Tracker({ session }) {
       {/* ══════════ OVERVIEW ══════════ */}
       {tab === 'overview' && (
         <main>
-          <div className="summary-grid">
-            <div className="summary-card"><div className="summary-label">Expenses{hasExpFilters ? ' (filtered)' : ''}</div><div className="summary-amount" style={{ color: 'var(--color-exp)' }}>{fmtINR(totalExp)}</div></div>
-            <div className="summary-card"><div className="summary-label">Income</div><div className="summary-amount" style={{ color: 'var(--color-inc)' }}>{fmtINR(allIncINR)}</div></div>
-            <div className="summary-card"><div className="summary-label">Net Savings</div><div className="summary-amount" style={{ color: netSavings >= 0 ? 'var(--color-inc)' : 'var(--color-exp)' }}>{netSavings >= 0 ? '+' : ''}{fmtINR(netSavings)}</div></div>
-            {budgets.monthly > 0 && <div className="summary-card"><div className="summary-label">Monthly Budget</div><div className="summary-amount" style={{ color: spentMonth > budgets.monthly ? 'var(--color-exp)' : 'var(--color-inc)' }}>{fmtINR(spentMonth)} / {fmtINR(budgets.monthly)}</div></div>}
-            {dailyAllowance > 0 && (
-              <div className="summary-card" title={`Spent today: ${fmtINR(spentToday)} · Allowance: ${fmtINR(dailyAllowance)}/day · ${daysRemaining}d left`}>
-                <div className="summary-label">Daily Allowance</div>
-                <div className="summary-amount" style={{ color: stsColor }}>{fmtINR(dailyAllowance)}</div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 2 }}>spent today: {fmtINR(spentToday)}</div>
-              </div>
-            )}
-            <div className="summary-card"><div className="summary-label">Showing</div><div className="summary-amount">{filteredExp.length} / {expenses.length}</div></div>
-          </div>
+          {/* ── Bento Grid ── */}
+          <div className="bento-grid">
 
-          {/* Month-End Forecast */}
-          {expenses.length > 0 && (
-            <div className="forecast-panel">
-              <div className="forecast-title">📅 Month-End Forecast — {monthStr}</div>
-              <div className="forecast-grid">
-                <div className="forecast-item">
-                  <div className="forecast-label">Spent so far</div>
-                  <div className="forecast-val" style={{ color: 'var(--color-exp)' }}>{fmtINR(monthForecast.spentSoFar)}</div>
-                  <div className="forecast-sub">day {monthForecast.dayOfMonth} of {monthForecast.daysInMonth}</div>
+            {/* Hero — Expenses this month */}
+            <div className="bento-tile bento-hero">
+              <div className="bento-label">Expenses — {monthStr}{hasExpFilters ? ' (filtered)' : ''}</div>
+              <div className="bento-amount bento-exp">{incognito ? '••••••' : fmtINR(spentMonth)}</div>
+              {expenses.length > 0 && (
+                <div className="bento-sub">
+                  Day {monthForecast.dayOfMonth} of {monthForecast.daysInMonth}
+                  {monthForecast.dailyRate > 0 && <> · {incognito ? '•••' : fmtINR(monthForecast.dailyRate)}/day avg</>}
                 </div>
-                <div className="forecast-item">
-                  <div className="forecast-label">Daily rate</div>
-                  <div className="forecast-val">{fmtINR(monthForecast.dailyRate)}/d</div>
-                  <div className="forecast-sub">running average</div>
-                </div>
-                <div className="forecast-item">
-                  <div className="forecast-label">Projected total</div>
-                  <div className="forecast-val" style={{ color: monthForecast.projected > (budgets.monthly || Infinity) ? 'var(--color-exp)' : 'var(--text)' }}>{fmtINR(monthForecast.projected)}</div>
-                  <div className="forecast-sub">
-                    {monthForecast.trend !== null
-                      ? (parseInt(monthForecast.trend) > 5 ? `↑${monthForecast.trend}% vs last month` : parseInt(monthForecast.trend) < -5 ? `↓${Math.abs(monthForecast.trend)}% vs last month` : `~flat vs last month`)
-                      : 'vs last month: —'}
+              )}
+              {budgets.monthly > 0 && (
+                <div className="bento-progress-wrap">
+                  <div className="bento-progress-track">
+                    <div className="bento-progress-bar" style={{
+                      width: `${Math.min(spentMonth / budgets.monthly * 100, 100)}%`,
+                      background: spentMonth > budgets.monthly ? 'var(--color-exp)' : spentMonth / budgets.monthly > 0.8 ? '#f59e0b' : 'var(--color-inc)'
+                    }} />
                   </div>
-                </div>
-                {monthForecast.projectedInc > 0 && (
-                  <div className="forecast-item">
-                    <div className="forecast-label">Projected savings</div>
-                    <div className="forecast-val" style={{ color: monthForecast.projectedSavings >= 0 ? 'var(--color-inc)' : 'var(--color-exp)' }}>
-                      {monthForecast.projectedSavings >= 0 ? '+' : ''}{fmtINR(monthForecast.projectedSavings)}
-                    </div>
-                    <div className="forecast-sub">income this month: {fmtINR(monthForecast.projectedInc)}</div>
-                  </div>
-                )}
-              </div>
-              {/* Burn Rate Row */}
-              <div className="forecast-burn-row">
-                <div className="forecast-item">
-                  <div className="forecast-label">7-day avg rate</div>
-                  <div className="forecast-val">{fmtINR(burnRate.last7Rate)}/d</div>
-                  <div className="forecast-sub" style={{ color: burnRate.acceleration === null ? 'var(--text-muted)' : burnRate.acceleration > 10 ? 'var(--color-exp)' : burnRate.acceleration < -10 ? 'var(--color-inc)' : 'var(--text-muted)' }}>
-                    {burnRate.acceleration === null ? 'no prior data' : burnRate.acceleration > 10 ? `↑${Math.min(Math.abs(burnRate.acceleration), 999).toFixed(0)}% vs prev week` : burnRate.acceleration < -10 ? `↓${Math.min(Math.abs(burnRate.acceleration), 999).toFixed(0)}% vs prev week` : '~flat vs prev week'}
+                  <div className="bento-progress-label">
+                    <span>{incognito ? '••••' : fmtINR(spentMonth)} / {incognito ? '••••' : fmtINR(budgets.monthly)}</span>
+                    {monthForecast.trend !== null && (
+                      <span style={{ color: parseInt(monthForecast.trend) > 5 ? 'var(--color-exp)' : parseInt(monthForecast.trend) < -5 ? 'var(--color-inc)' : 'var(--text-faint)' }}>
+                        {parseInt(monthForecast.trend) > 5 ? `↑${monthForecast.trend}%` : parseInt(monthForecast.trend) < -5 ? `↓${Math.abs(monthForecast.trend)}%` : '~flat'} vs last month
+                      </span>
+                    )}
                   </div>
                 </div>
-                {budgets.monthly > 0 && burnRate.runwayDays !== null && (
-                  <div className="forecast-item">
-                    <div className="forecast-label">Budget runway</div>
-                    <div className="forecast-val" style={{ color: burnRate.runwayDays <= 0 ? 'var(--color-exp)' : burnRate.willExceedBudget ? '#f59e0b' : 'var(--color-inc)' }}>
-                      {burnRate.runwayDays <= 0 ? 'Exceeded' : `${burnRate.runwayDays}d left`}
-                    </div>
-                    <div className="forecast-sub">
-                      {burnRate.runwayDays <= 0 ? `over by ${fmtINR(burnRate.spentSoFar - budgets.monthly)}` : `budget runs out ${burnRate.runwayDate}`}
-                    </div>
-                  </div>
-                )}
-                {burnRate.topCatRates[0] && (
-                  <div className="forecast-item">
-                    <div className="forecast-label">Top burn category</div>
-                    <div className="forecast-val">{CATS[burnRate.topCatRates[0].cat]?.icon || '📦'} {burnRate.topCatRates[0].cat}</div>
-                    <div className="forecast-sub">{fmtINR(burnRate.topCatRates[0].rate)}/d · {fmtINR(burnRate.topCatRates[0].total)} this month</div>
-                  </div>
-                )}
-              </div>
+              )}
+              {!budgets.monthly && expenses.length > 0 && monthForecast.trend !== null && (
+                <div className="bento-sub" style={{ color: parseInt(monthForecast.trend) > 5 ? 'var(--color-exp)' : parseInt(monthForecast.trend) < -5 ? 'var(--color-inc)' : 'var(--text-muted)' }}>
+                  {parseInt(monthForecast.trend) > 5 ? `↑${monthForecast.trend}%` : parseInt(monthForecast.trend) < -5 ? `↓${Math.abs(monthForecast.trend)}%` : '~flat'} vs last month
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Income this month */}
+            <div className="bento-tile bento-income">
+              <div className="bento-label">Income</div>
+              <div className="bento-amount bento-inc">{incognito ? '••••••' : fmtINR(currentMonthInc > 0 ? currentMonthInc : allIncINR)}</div>
+              <div className="bento-sub">{currentMonthInc > 0 ? 'this month' : allIncINR > 0 ? 'all time' : 'none recorded'}</div>
+            </div>
+
+            {/* Net Savings */}
+            <div className="bento-tile bento-savings">
+              <div className="bento-label">Net Savings</div>
+              <div className="bento-amount" style={{ color: netSavings >= 0 ? 'var(--color-inc)' : 'var(--color-exp)' }}>
+                {incognito ? '••••••' : (netSavings >= 0 ? '+' : '') + fmtINR(netSavings)}
+              </div>
+              {allIncINR > 0 && (
+                <div className="bento-sub">{((netSavings / allIncINR) * 100).toFixed(0)}% savings rate</div>
+              )}
+            </div>
+
+            {/* Safe to Spend */}
+            <div className="bento-tile bento-safe">
+              {budgets.monthly > 0 ? (
+                <>
+                  <div className="bento-label">Safe to Spend</div>
+                  <div className="bento-amount" style={{ color: stsColor }}>
+                    {incognito ? '••••••' : fmtINR(Math.max(dailyAllowance, 0))}<span className="bento-unit">/day</span>
+                  </div>
+                  <div className="bento-sub">
+                    {incognito ? '••••' : fmtINR(Math.max(budgets.monthly - spentMonth, 0))} left · {daysRemaining}d
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="bento-label">Monthly Budget</div>
+                  <div className="bento-amount" style={{ fontSize: '1rem', color: 'var(--text-muted)', marginTop: 4 }}>Not set</div>
+                  <div className="bento-sub" style={{ cursor: 'pointer', color: 'var(--primary)' }} onClick={() => setTab('budgets')}>Set a budget →</div>
+                </>
+              )}
+            </div>
+
+            {/* Burn Rate */}
+            <div className="bento-tile bento-burn">
+              <div className="bento-label">Burn Rate</div>
+              <div className="bento-amount">
+                {incognito ? '••••••' : fmtINR(burnRate.last7Rate)}<span className="bento-unit">/day</span>
+              </div>
+              <div className="bento-sub" style={{ color: burnRate.acceleration === null ? 'var(--text-muted)' : burnRate.acceleration > 10 ? 'var(--color-exp)' : burnRate.acceleration < -10 ? 'var(--color-inc)' : 'var(--text-muted)' }}>
+                {budgets.monthly > 0 && burnRate.runwayDays !== null
+                  ? (burnRate.runwayDays <= 0 ? 'Budget exceeded' : `${burnRate.runwayDays}d runway`)
+                  : burnRate.acceleration !== null
+                    ? (burnRate.acceleration > 10 ? `↑${Math.min(Math.abs(burnRate.acceleration), 999).toFixed(0)}% vs last week` : burnRate.acceleration < -10 ? `↓${Math.min(Math.abs(burnRate.acceleration), 999).toFixed(0)}% vs last week` : '~flat vs prev week')
+                    : '7-day average'
+                }
+              </div>
+              {burnRate.topCatRates[0] && (
+                <div className="bento-top-cat">
+                  {CATS[burnRate.topCatRates[0].cat]?.icon || '📦'} {burnRate.topCatRates[0].cat} · {incognito ? '•••' : fmtINR(burnRate.topCatRates[0].rate)}/d
+                </div>
+              )}
+            </div>
+
+          </div>
 
           {/* Recurring reminders banner */}
           {upcomingRecurring.length > 0 && (
