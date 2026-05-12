@@ -2643,10 +2643,6 @@ export default function Tracker({ session }) {
               <LineChart data={monthlyExpData} incognito={incognito} />
             </div>
           </div>
-          <div className="chart-row">
-            <div className="chart-card"><div className="chart-title">Category Breakdown</div><PieChart data={catData} incognito={incognito} /></div>
-            <div className="chart-card"><div className="chart-title">Payment Breakdown</div><PieChart data={payData} incognito={incognito} /></div>
-          </div>
           {catData.length > 0 && (
             <div className="chart-card" style={{ marginBottom: '1rem' }}>
               <div className="chart-title">Category Bars</div>
