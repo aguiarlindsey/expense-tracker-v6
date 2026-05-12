@@ -2329,13 +2329,15 @@ export default function Tracker({ session }) {
       </div>
 
       {/* ── Tabs ── */}
-      <nav className="tabs" role="tablist">
-        {TABS.map((t, i) => (
-          <button key={t.id} role="tab" aria-selected={tab === t.id}
-            className={`tab${tab === t.id ? ' active' : ''}`}
-            onClick={() => setTab(t.id)} title={`Key ${i + 1}`}>{t.label}</button>
-        ))}
-      </nav>
+      <div className="glass-shell">
+        <nav className="tabs" role="tablist">
+          {TABS.map((t, i) => (
+            <button key={t.id} role="tab" aria-selected={tab === t.id}
+              className={`tab${tab === t.id ? ' active' : ''}`}
+              onClick={() => setTab(t.id)} title={`Key ${i + 1}`}>{t.label}</button>
+          ))}
+        </nav>
+      </div>
 
       {/* ══════════ OVERVIEW ══════════ */}
       {tab === 'overview' && (
