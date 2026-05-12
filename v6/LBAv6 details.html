@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LBAv6 — Expense Tracker V6 Full Feature Reference</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; color: #d1d5db; background: #0a0a0f; }
+
+  /* Cover page */
+  .cover { background: linear-gradient(135deg, #863bff 0%, #4f46e5 100%); color: white; padding: 80px 60px; min-height: 300px; }
+  .cover h1 { font-size: 42px; font-weight: 800; letter-spacing: -1px; margin-bottom: 8px; }
+  .cover .subtitle { font-size: 18px; opacity: 0.85; margin-bottom: 32px; }
+  .cover .badges { display: flex; gap: 12px; flex-wrap: wrap; }
+  .cover .badge { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 6px 16px; font-size: 13px; }
+
+  /* TOC */
+  .toc { background: #111827; margin: 32px 48px; border-radius: 12px; padding: 32px 40px; box-shadow: 0 1px 4px rgba(0,0,0,0.4); border: 1px solid #1f2937; }
+  .toc h2 { font-size: 20px; color: #a78bfa; margin-bottom: 20px; border-bottom: 2px solid #2d2d44; padding-bottom: 10px; }
+  .toc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 40px; }
+  .toc a { color: #818cf8; text-decoration: none; font-size: 13px; display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+  .toc a:hover { color: #c4b5fd; }
+  .toc-num { background: #2d1f5e; color: #c4b5fd; border-radius: 4px; padding: 1px 7px; font-size: 11px; font-weight: 700; }
+
+  /* Sections */
+  .section { background: #111827; margin: 24px 48px; border-radius: 12px; padding: 36px 40px; box-shadow: 0 1px 4px rgba(0,0,0,0.4); border: 1px solid #1f2937; page-break-inside: avoid; }
+  .section-header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #1f2937; }
+  .section-icon { font-size: 28px; }
+  .section-title { font-size: 22px; font-weight: 700; color: #e2e8f0; }
+  .section-badge { background: #2d1f5e; color: #c4b5fd; border-radius: 6px; padding: 3px 10px; font-size: 12px; font-weight: 600; margin-left: auto; }
+
+  /* Screen diagram */
+  .screen-diagram { background: #0f0f0f; border-radius: 12px; padding: 0; margin: 20px 0 28px 0; overflow: hidden; font-family: 'Courier New', monospace; font-size: 12px; color: #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+  .screen-titlebar { background: #1a1a2e; padding: 10px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #2d2d44; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+  .url-bar { background: #2d2d44; border-radius: 4px; padding: 3px 12px; font-size: 11px; color: #9ca3af; margin-left: 8px; flex: 1; }
+  .screen-body { padding: 16px 20px; line-height: 1.7; }
+  .screen-header-bar { background: #1e1040; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; color: #c4b5fd; font-size: 11px; }
+  .screen-tabs { display: flex; gap: 4px; margin-bottom: 14px; flex-wrap: wrap; }
+  .screen-tab { background: #1f1f1f; border: 1px solid #333; border-radius: 4px; padding: 4px 10px; font-size: 10px; color: #9ca3af; }
+  .screen-tab.active { background: #863bff; border-color: #863bff; color: white; }
+  .screen-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 14px; }
+  .screen-card { background: #1a1a2e; border: 1px solid #2d2d44; border-radius: 6px; padding: 10px 8px; text-align: center; }
+  .screen-card .val { color: #a78bfa; font-size: 13px; font-weight: bold; }
+  .screen-card .lbl { color: #6b7280; font-size: 9px; margin-top: 2px; }
+  .screen-row { display: flex; gap: 10px; margin-bottom: 10px; }
+  .screen-chart-box { background: #1a1a2e; border: 1px solid #2d2d44; border-radius: 6px; padding: 12px; flex: 1; }
+  .screen-list-box { background: #1a1a2e; border: 1px solid #2d2d44; border-radius: 6px; padding: 10px; flex: 1; }
+  .screen-item { border-bottom: 1px solid #2d2d44; padding: 6px 0; font-size: 10px; display: flex; justify-content: space-between; color: #d1d5db; }
+  .screen-item:last-child { border-bottom: none; }
+  .screen-item .amt { color: #f87171; }
+  .screen-chart-title { color: #9ca3af; font-size: 10px; margin-bottom: 8px; }
+  .pie-ascii { text-align: center; color: #c4b5fd; font-size: 20px; line-height: 1.2; }
+  .screen-bar { height: 8px; border-radius: 4px; margin: 4px 0; }
+  .screen-label { font-size: 9px; color: #9ca3af; display: flex; justify-content: space-between; }
+  .screen-btn { background: #863bff; color: white; border: none; border-radius: 4px; padding: 5px 12px; font-size: 10px; cursor: pointer; }
+  .screen-input { background: #1f1f1f; border: 1px solid #374151; border-radius: 4px; padding: 5px 10px; font-size: 10px; color: #d1d5db; width: 100%; margin-bottom: 6px; }
+  .screen-form { background: #111; border: 1px solid #2d2d44; border-radius: 8px; padding: 14px; }
+  .form-row { display: flex; gap: 8px; margin-bottom: 6px; }
+  .form-col { flex: 1; }
+  .form-label { font-size: 9px; color: #6b7280; margin-bottom: 3px; }
+  .budget-bar-wrap { margin-bottom: 10px; }
+  .budget-bar-track { height: 10px; background: #2d2d44; border-radius: 5px; overflow: hidden; }
+  .budget-bar-fill { height: 100%; border-radius: 5px; }
+  .goal-card { background: #1a1a2e; border: 1px solid #2d2d44; border-radius: 6px; padding: 10px; margin-bottom: 8px; }
+  .goal-name { font-size: 11px; color: #c4b5fd; margin-bottom: 4px; }
+  .goal-progress { font-size: 9px; color: #9ca3af; margin-bottom: 6px; }
+  .insight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .insight-card { background: #1a1a2e; border: 1px solid #2d2d44; border-radius: 6px; padding: 10px; }
+  .insight-title { font-size: 9px; color: #9ca3af; margin-bottom: 4px; }
+  .insight-val { font-size: 13px; color: #a78bfa; font-weight: bold; }
+  .rec-item { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid #2d2d44; font-size: 10px; }
+  .rec-badge { border-radius: 4px; padding: 2px 6px; font-size: 9px; }
+  .badge-red { background: #7f1d1d; color: #fca5a5; }
+  .badge-amber { background: #78350f; color: #fcd34d; }
+  .badge-green { background: #14532d; color: #86efac; }
+  .exchange-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #1f1f1f; font-size: 10px; color: #d1d5db; }
+  .settings-row-s { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #2d2d44; font-size: 10px; }
+  .toggle { background: #863bff; border-radius: 10px; padding: 2px 8px; font-size: 9px; color: white; }
+  .toggle-off { background: #374151; }
+
+  /* Content elements */
+  h3 { font-size: 16px; color: #a78bfa; margin: 24px 0 10px 0; font-weight: 700; }
+  h4 { font-size: 14px; color: #818cf8; margin: 18px 0 8px 0; font-weight: 600; }
+  p { margin-bottom: 10px; line-height: 1.7; color: #d1d5db; }
+  ul { margin: 8px 0 12px 24px; }
+  li { margin-bottom: 5px; line-height: 1.6; color: #d1d5db; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin: 14px 0 20px 0; }
+  th { background: #6d28d9; color: white; padding: 10px 14px; text-align: left; font-size: 13px; font-weight: 600; }
+  th:first-child { border-radius: 6px 0 0 0; }
+  th:last-child { border-radius: 0 6px 0 0; }
+  td { padding: 9px 14px; border-bottom: 1px solid #1f2937; font-size: 13px; color: #d1d5db; }
+  tr:nth-child(even) td { background: #1a1f2e; }
+  tr:hover td { background: #2d1f5e; }
+
+  /* Callout boxes */
+  .callout { border-radius: 8px; padding: 14px 18px; margin: 14px 0; font-size: 13px; display: flex; gap: 12px; align-items: flex-start; }
+  .callout-tip { background: #052e16; border-left: 4px solid #22c55e; }
+  .callout-info { background: #0c1a3a; border-left: 4px solid #3b82f6; }
+  .callout-warn { background: #1c1100; border-left: 4px solid #f59e0b; }
+  .callout-icon { font-size: 18px; flex-shrink: 0; }
+  .callout-text { line-height: 1.6; color: #d1d5db; }
+
+  /* Keyboard shortcut chips */
+  .shortcut-grid { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
+  .shortcut { display: flex; align-items: center; gap: 8px; background: #1a1a2e; border: 1px solid #2d2d44; border-radius: 8px; padding: 8px 14px; }
+  .key { background: #2d1f5e; color: #c4b5fd; border-radius: 4px; padding: 3px 10px; font-family: monospace; font-size: 13px; font-weight: 700; border: 1px solid #4c1d95; }
+  .key-action { font-size: 12px; color: #9ca3af; }
+
+  /* Category grid */
+  .cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0; }
+  .cat-card { border-radius: 8px; padding: 12px 14px; border: 1px solid #2d2d44; background: #1a1a2e; }
+  .cat-card .cat-name { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+  .cat-card .cat-subs { font-size: 11px; color: #9ca3af; line-height: 1.6; }
+
+  /* Step boxes */
+  .steps { margin: 12px 0; }
+  .step { display: flex; gap: 14px; margin-bottom: 12px; align-items: flex-start; }
+  .step-num { background: #863bff; color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .step-text { padding-top: 3px; font-size: 13px; color: #d1d5db; line-height: 1.6; }
+
+  /* Dot status */
+  .dot-status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .dot-green { background: #10b981; }
+  .dot-amber { background: #f59e0b; }
+  .dot-red { background: #ef4444; }
+  .dot-gray { background: #9ca3af; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 40px; color: #6b7280; font-size: 12px; }
+
+  @media print {
+    .section { page-break-inside: avoid; }
+    body { background: #0a0a0f; color: #d1d5db; }
+  }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div style="font-size:48px; margin-bottom:16px;">💸</div>
+  <h1>Expense Tracker V6</h1>
+  <div class="subtitle">Complete Feature Reference &amp; User Guide — LBAv6</div>
+  <div class="badges">
+    <span class="badge">v6.7.0</span>
+    <span class="badge">All 8 Phases Complete</span>
+    <span class="badge">Cloud + Supabase</span>
+    <span class="badge">PWA</span>
+    <span class="badge">Real-Time Sync</span>
+    <span class="badge">Push Notifications</span>
+  </div>
+  <div style="margin-top:32px; font-size:13px; opacity:0.7;">
+    🌐 https://expense-tracker-v6.vercel.app
+  </div>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+  <h2>📋 Table of Contents</h2>
+  <div class="toc-grid">
+    <a href="#s1"><span class="toc-num">01</span> Getting Started</a>
+    <a href="#s11"><span class="toc-num">11</span> Keyboard Shortcuts</a>
+    <a href="#s2"><span class="toc-num">02</span> Overview Tab</a>
+    <a href="#s12"><span class="toc-num">12</span> Adding Expenses — Field Guide</a>
+    <a href="#s3"><span class="toc-num">03</span> Income Tab</a>
+    <a href="#s13"><span class="toc-num">13</span> Adding Income — Field Guide</a>
+    <a href="#s4"><span class="toc-num">04</span> Trends Tab</a>
+    <a href="#s14"><span class="toc-num">14</span> Multi-Currency Support</a>
+    <a href="#s5"><span class="toc-num">05</span> Budgets Tab</a>
+    <a href="#s15"><span class="toc-num">15</span> Offline Mode</a>
+    <a href="#s6"><span class="toc-num">06</span> Goals Tab</a>
+    <a href="#s16"><span class="toc-num">16</span> Real-Time Sync</a>
+    <a href="#s7"><span class="toc-num">07</span> Insights Tab</a>
+    <a href="#s17"><span class="toc-num">17</span> Push Notifications</a>
+    <a href="#s8"><span class="toc-num">08</span> Recurring Tab</a>
+    <a href="#s18"><span class="toc-num">18</span> PWA — Install on Device</a>
+    <a href="#s9"><span class="toc-num">09</span> Exchange Tab</a>
+    <a href="#s19"><span class="toc-num">19</span> Data Migration from V5</a>
+    <a href="#s10"><span class="toc-num">10</span> Settings Tab</a>
+    <a href="#s20"><span class="toc-num">20</span> Export, Import &amp; Danger Zone</a>
+  </div>
+</div>
+
+<!-- S1: GETTING STARTED -->
+<div class="section" id="s1">
+  <div class="section-header">
+    <span class="section-icon">🚀</span>
+    <span class="section-title">1. Getting Started</span>
+    <span class="section-badge">First Time</span>
+  </div>
+
+  <h3>Logging In</h3>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-text">Go to <strong>https://expense-tracker-v6.vercel.app</strong></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text">Enter your email address and click <strong>Send Magic Link</strong></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-text">Open the email and click the link — you are logged in automatically</div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-text">No password required. The magic link expires after 1 use.</div></div>
+  </div>
+
+  <div class="screen-diagram">
+    <div class="screen-titlebar">
+      <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+      <span class="url-bar">expense-tracker-v6.vercel.app</span>
+    </div>
+    <div class="screen-body" style="text-align:center; padding: 40px 20px;">
+      <div style="font-size:32px; margin-bottom:12px;">💸</div>
+      <div style="color:#c4b5fd; font-size:16px; font-weight:bold; margin-bottom:4px;">Expense Tracker V6</div>
+      <div style="color:#6b7280; font-size:11px; margin-bottom:24px;">Sign in to your account</div>
+      <div style="background:#1f1f1f; border:1px solid #374151; border-radius:6px; padding:8px 14px; color:#9ca3af; font-size:11px; margin-bottom:10px; text-align:left;">📧 your@email.com</div>
+      <div style="background:#863bff; border-radius:6px; padding:9px; color:white; font-size:12px; font-weight:bold;">Send Magic Link</div>
+      <div style="color:#4b5563; font-size:10px; margin-top:16px;">No password needed · Check your email inbox</div>
+    </div>
+  </div>
+
+  <h3>Recommended First-Time Setup</h3>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-text">Go to <strong>Settings</strong> → set your <strong>Base Currency</strong> (default is INR ₹)</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text">Go to <strong>Budgets</strong> → set your monthly, weekly, and daily spending limits</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-text">Go to <strong>Settings → Recurring Reminders → Enable</strong> for daily push notifications</div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-text">If migrating from the old V5 app → <strong>Settings → Migrate from V5</strong></div></div>
+  </div>
+</div>
+
+<!-- S2: OVERVIEW -->
+<div class="section" id="s2">
+  <div class="section-header">
+    <span class="section-icon">📊</span>
+    <span class="section-title">2. Overview Tab</span>
+    <span class="section-badge">Tab 1 · Key: 1</span>
+  </div>
+  <p>Your main dashboard — a snapshot of your financial health for the current month.</p>
+
+  <div class="screen-diagram">
+    <div class="screen-titlebar">
+      <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+      <span class="url-bar">expense-tracker-v6.vercel.app</span>
+    </div>
+    <div class="screen-body">
+      <div class="screen-header-bar">
+        <span>💸 Expense Tracker V6 &nbsp;·&nbsp; 142 expenses · 8 income</span>
+        <span>☀️ &nbsp; 👁️ &nbsp; 🔴 &nbsp; Sign out</span>
+      </div>
+      <div class="screen-tabs">
+        <span class="screen-tab active">📊 Overview</span>
+        <span class="screen-tab">💵 Income</span>
+        <span class="screen-tab">📈 Trends</span>
+        <span class="screen-tab">💰 Budgets</span>
+        <span class="screen-tab">🎯 Goals</span>
+        <span class="screen-tab">💡 Insights</span>
+        <span class="screen-tab">🔄 Recurring</span>
+        <span class="screen-tab">💱 Exchange</span>
+        <span class="screen-tab">⚙️ Settings</span>
+      </div>
+      <div class="screen-cards">
+        <div class="screen-card"><div class="val">₹18,240</div><div class="lbl">This Month</div></div>
+        <div class="screen-card"><div class="val">₹65,000</div><div class="lbl">Income</div></div>
+        <div class="screen-card"><div class="val" style="color:#4ade80;">₹46,760</div><div class="lbl">Balance</div></div>
+        <div class="screen-card"><div class="val">₹607</div><div class="lbl">Daily Avg</div></div>
+        <div class="screen-card"><div class="val" style="color:#fbbf24;">₹1,250</div><div class="lbl">Daily Allowance</div></div>
+      </div>
+      <div class="screen-row">
+        <div class="screen-chart-box" style="flex:0.6;">
+          <div class="screen-chart-title">📊 Spending by Category</div>
+          <div class="pie-ascii">◕</div>
+          <div style="font-size:9px; color:#9ca3af; margin-top:6px;">
+            🍽️ Food 34% &nbsp; 🚗 Transport 21%<br>
+            🛍️ Shopping 18% &nbsp; 💡 Utilities 15%<br>
+            📌 Other 12%
+          </div>
+        </div>
+        <div class="screen-list-box" style="flex:1.2;">
+          <div class="screen-chart-title">🕐 Recent Expenses</div>
+          <div class="screen-item"><span>🍽️ Swiggy Order</span><span class="amt">-₹340</span></div>
+          <div class="screen-item"><span>🚗 Petrol</span><span class="amt">-₹1,200</span></div>
+          <div class="screen-item"><span>🛍️ Amazon</span><span class="amt">-₹2,499</span></div>
+          <div class="screen-item"><span>💡 Electricity</span><span class="amt">-₹890</span></div>
+          <div class="screen-item"><span>🔄 Netflix</span><span class="amt">-₹649</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Summary Cards (top row)</h3>
+  <table>
+    <tr><th>Card</th><th>What it shows</th></tr>
+    <tr><td><strong>This Month</strong></td><td>Total expenses in the current calendar month</td></tr>
+    <tr><td><strong>Income</strong></td><td>Total income recorded this month</td></tr>
+    <tr><td><strong>Balance</strong></td><td>Income minus expenses this month</td></tr>
+    <tr><td><strong>Daily Avg</strong></td><td>Average daily spend this month so far</td></tr>
+    <tr><td><strong>Daily Allowance</strong></td><td>Safe-to-spend daily budget (calculated from income, fixed costs, savings goal)</td></tr>
+  </table>
+
+  <h3>Pie Chart</h3>
+  <p>Shows spending split by category for the current month. Hover or tap a slice to see the category name and exact amount. Updates live as you add expenses.</p>
+
+  <h3>Upcoming Recurring Banner</h3>
+  <p>Appears at the top when recurring expenses are due within 7 days. Each is shown as a colour-coded chip:</p>
+  <ul>
+    <li><strong style="color:#ef4444;">Red</strong> — due today or tomorrow</li>
+    <li><strong style="color:#f59e0b;">Amber</strong> — due in 2–3 days</li>
+    <li><strong style="color:#6366f1;">Blue</strong> — due in 4–7 days</li>
+  </ul>
+
+  <h3>Month-End Forecast</h3>
+  <p>Projects your total spend by end of month based on your current daily rate. Shows trend vs previous month (↑ higher / ↓ lower).</p>
+
+  <div class="callout callout-tip">
+    <span class="callout-icon">💡</span>
+    <span class="callout-text"><strong>Safe-to-Spend formula:</strong> (This month's income − fixed expenses − savings goal) ÷ remaining days in month. Set your savings goal in Settings.</span>
+  </div>
+</div>
+
+<!-- S3: INCOME -->
+<div class="section" id="s3">
+  <div class="section-header">
+    <span class="section-icon">💵</span>
+    <span class="section-title">3. Income Tab</span>
+    <span class="section-badge">Tab 2 · Key: 2</span>
+  </div>
+  <p>Record all money coming in — salary, freelance, business income, dividends, and more.</p>
+
+  <div class="screen-diagram">
+    <div class="screen-titlebar">
+      <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+      <span class="url-bar">expense-tracker-v6.vercel.app</span>
+    </div>
+    <div class="screen-body">
+      <div class="screen-tabs">
+        <span class="screen-tab">📊 Overview</span>
+        <span class="screen-tab active">💵 Income</span>
+        <span class="screen-tab">📈 Trends</span>
+        <span class="screen-tab">💰 Budgets</span>
+        <span class="screen-tab">🎯 Goals</span>
+      </div>
+      <div class="screen-cards" style="grid-template-columns: repeat(4,1fr);">
+        <div class="screen-card"><div class="val" style="color:#4ade80;">₹65,000</div><div class="lbl">This Month</div></div>
+        <div class="screen-card"><div class="val" style="color:#4ade80;">₹6,28,000</div><div class="lbl">All Time</div></div>
+        <div class="screen-card"><div class="val">₹52,333</div><div class="lbl">Monthly Avg</div></div>
+        <div class="screen-card"><div class="val">💼 Salary</div><div class="lbl">Top Source</div></div>
+      </div>
+      <div class="screen-list-box" style="margin-top:8px;">
+        <div class="screen-chart-title" style="display:flex;justify-content:space-between;">
+          <span>Income Records</span>
+          <span style="background:#22c55e;color:white;border-radius:4px;padding:2px 8px;font-size:9px;">+ Add Income</span>
+        </div>
+        <div class="screen-item"><span>💼 April Salary</span><span style="color:#4ade80;">+₹55,000</span></div>
+        <div class="screen-item"><span>💻 Freelance Project</span><span style="color:#4ade80;">+₹10,000</span></div>
+        <div class="screen-item"><span>📈 Dividend</span><span style="color:#4ade80;">+₹2,400</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Income Sources</h3>
+  <p>Salary · Freelance · Business · Rental · Dividends · Interest · Bonus · Gift · Refund · Side Income · Other</p>
+
+  <h3>Recurring Income</h3>
+  <p>Mark any income entry as recurring (e.g. monthly salary). It appears in the Recurring tab and generates reminders when due.</p>
+</div>
+
+<!-- S4: TRENDS -->
+<div class="section" id="s4">
+  <div class="section-header">
+    <span class="section-icon">📈</span>
+    <span class="section-title">4. Trends Tab</span>
+    <span class="section-badge">Tab 3 · Key: 3</span>
+  </div>
+  <p>Historical analysis of your spending — heatmap, charts, and year-on-year comparison.</p>
+
+  <div class="screen-diagram">
+    <div class="screen-titlebar">
+      <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+      <span class="url-bar">expense-tracker-v6.vercel.app</span>
+    </div>
+    <div class="screen-body">
+      <div class="screen-tabs">
+        <span class="screen-tab">📊 Overview</span>
+        <span class="screen-tab">💵 Income</span>
+        <span class="screen-tab active">📈 Trends</span>
+      </div>
+      <div class="screen-chart-box" style="margin-bottom:10px;">
+        <div class="screen-chart-title">📅 90-Day Spending Heatmap</div>
+        <div style="font-size:10px; color:#374151; line-height:2; letter-spacing:2px;">
+          <span style="color:#1a3a1a;">■</span><span style="color:#14532d;">■</span><span style="color:#166534;">■</span><span style="color:#15803d;">■</span><span style="color:#16a34a;">■</span><span style="color:#22c55e;">■</span><span style="color:#1a3a1a;">■</span><span style="color:#4ade80;">■</span><span style="color:#1a3a1a;">■</span><span style="color:#166534;">■</span>
+          <span style="color:#14532d;">■</span><span style="color:#22c55e;">■</span><span style="color:#1a3a1a;">■</span><span style="color:#4ade80;">■</span><span style="color:#86efac;">■</span><span style="color:#1a3a1a;">■</span><span style="color:#14532d;">■</span><span style="color:#166534;">■</span>
+          <br><span style="color:#6b7280; font-size:9px;">Darker green = higher spend · Tap any cell to see daily total</span>
+        </div>
+      </div>
+      <div class="screen-chart-box">
+        <div class="screen-chart-title">📊 Monthly Expenses (Last 12 Months)</div>
+        <div style="display:flex; align-items:flex-end; gap:6px; height:50px; padding-top:8px;">
+          <div style="flex:1; background:#4f46e5; height:60%; border-radius:2px 2px 0 0;"></div>
+          <div style="flex:1; background:#4f46e5; height:45%; border-radius:2px 2px 0 0;"></div>
+          <div style="flex:1; background:#4f46e5; height:75%; border-radius:2px 2px 0 0;"></div>
+          <div style="flex:1; background:#4f46e5; height:50%; border-radius:2px 2px 0 0;"></div>
+          <div style="flex:1; background:#4f46e5; height:80%; border-radius:2px 2px 0 0;"></div>
+          <div style="flex:1; background:#4f46e5; height:55%; border-radius:2px 2px 0 0;"></div>
+          <div style="flex:1; background:#863bff; height:65%; border-radius:2px 2px 0 0;"></div>
+        </div>
+        <div style="display:flex; gap:6px; font-size:8px; color:#6b7280; margin-top:2px;">
+          <div style="flex:1; text-align:center;">Oct</div><div style="flex:1; text-align:center;">Nov</div>
+          <div style="flex:1; text-align:center;">Dec</div><div style="flex:1; text-align:center;">Jan</div>
+          <div style="flex:1; text-align:center;">Feb</div><div style="flex:1; text-align:center;">Mar</div>
+          <div style="flex:1; text-align:center; color:#863bff;">Apr</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>What's in Trends</h3>
+  <ul>
+    <li><strong>90-Day Heatmap</strong> — grid of daily spend; darker = higher spend; tap for daily total</li>
+    <li><strong>Monthly Bar Chart</strong> — last 12 months total expenses</li>
+    <li><strong>Month-over-Month Table</strong> — this month vs last month vs same month last year</li>
+    <li><strong>Yearly Comparison Table</strong> — year-by-year: expenses, income, saved, transactions</li>
+  </ul>
+</div>
+
+<!-- S5: BUDGETS -->
+<div class="section" id="s5">
+  <div class="section-header">
+    <span class="section-icon">💰</span>
+    <span class="section-title">5. Budgets Tab</span>
+    <span class="section-badge">Tab 4 · Key: 4</span>
+  </div>
+  <p>Set spending limits and track progress in real time. Alerts fire automatically as you approach your limits.</p>
+
+  <div class="screen-diagram">
+    <div class="screen-titlebar">
+      <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+      <span class="url-bar">expense-tracker-v6.vercel.app</span>
+    </div>
+    <div class="screen-body">
+      <div class="screen-tabs">
+        <span class="screen-tab">📊 Overview</span><span class="screen-tab">💵 Income</span>
+        <span class="screen-tab">📈 Trends</span><span class="screen-tab active">💰 Budgets</span>
+      </div>
+      <div class="budget-bar-wrap">
+        <div class="screen-label"><span>🗓️ Monthly Budget</span><span style="color:#9ca3af;">₹18,240 / ₹25,000</span></div>
+        <div class="budget-bar-track"><div class="budget-bar-fill" style="width:73%; background:#f59e0b;"></div></div>
+        <div style="font-size:9px; color:#f59e0b;">73% used · ₹6,760 remaining</div>
+      </div>
+      <div class="budget-bar-wrap">
+        <div class="screen-label"><span>📅 Weekly Budget</span><span style="color:#9ca3af;">₹3,100 / ₹6,000</span></div>
+        <div class="budget-bar-track"><div class="budget-bar-fill" style="width:52%; background:#22c55e;"></div></div>
+        <div style="font-size:9px; color:#22c55e;">52% used · ₹2,900 remaining</div>
+      </div>
+      <div class="budget-bar-wrap">
+        <div class="screen-label"><span>☀️ Daily Budget</span><span style="color:#9ca3af;">₹890 / ₹1,500</span></div>
+        <div class="budget-bar-track"><div class="budget-bar-fill" style="width:59%; background:#22c55e;"></div></div>
+        <div style="font-size:9px; color:#22c55e;">59% used</div>
+      </div>
+      <div style="margin-top:10px; font-size:10px; color:#9ca3af;">Per-Category Budgets</div>
+      <div class="budget-bar-wrap" style="margin-top:6px;">
+        <div class="screen-label"><span>🍽️ Food</span><span style="color:#9ca3af;">₹6,200 / ₹8,000</span></div>
+        <div class="budget-bar-track"><div class="budget-bar-fill" style="width:78%; background:#f59e0b;"></div></div>
+      </div>
+      <div class="budget-bar-wrap">
+        <div class="screen-label"><span>🚗 Transport</span><span style="color:#9ca3af;">₹4,100 / ₹3,500</span></div>
+        <div class="budget-bar-track"><div class="budget-bar-fill" style="width:100%; background:#ef4444;"></div></div>
+        <div style="font-size:9px; color:#ef4444;">⚠ Over budget by ₹600</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Budget Types</h3>
+  <table>
+    <tr><th>Type</th><th>Resets</th><th>Use it for</th></tr>
+    <tr><td><strong>Daily</strong></td><td>Every day at midnight</td><td>Day-to-day spending control</td></tr>
+    <tr><td><strong>Weekly</strong></td><td>Every Monday</td><td>Weekly cash flow</td></tr>
+    <tr><td><strong>Monthly</strong></td><td>1st of each month</td><td>Overall monthly limit</td></tr>
+    <tr><td><strong>Per Category</strong></td><td>1st of each month</td><td>Limit specific categories (e.g. Food: ₹8,000)</td></tr>
+  </table>
+
+  <h3>Toast Alerts</h3>
+  <ul>
+    <li>⚡ <strong>50% alert</strong> — yellow toast when you hit half your budget</li>
+    <li>⚠️ <strong>80% alert</strong> — orange toast when approaching the limit</li>
+    <li>🚨 <strong>100% alert</strong> — red toast when budget is exceeded</li>
+  </ul>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">ℹ️</span>
+    <span class="callout-text">Budget changes save to Supabase instantly and are visible across all your devices in real time.</span>
+  </div>
+</div>
+
+<!-- S6: GOALS -->
+<div class="section" id="s6">
+  <div class="section-header">
+    <span class="section-icon">🎯</span>
+    <span class="section-title">6. Goals Tab</span>
+    <span class="section-badge">Tab 5 · Key: 5</span>
+  </div>
+  <p>Track savings goals — emergency fund, vacation, gadget purchases, anything you're saving toward.</p>
+
+  <div class="screen-diagram">
+    <div class="screen-titlebar">
+      <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+      <span class="url-bar">expense-tracker-v6.vercel.app</span>
+    </div>
+    <div class="screen-body">
+      <div class="screen-tabs">
+        <span class="screen-tab">📊 Overview</span><span class="screen-tab">💰 Budgets</span>
+        <span class="screen-tab active">🎯 Goals</span>
+      </div>
+      <div class="goal-card">
+        <div class="goal-name">🏖️ Goa Vacation Fund</div>
+        <div class="goal-progress">₹32,000 saved of ₹60,000 target · Due: Dec 2026</div>
+        <div class="budget-bar-track"><div class="budget-bar-fill" style="width:53%; background:#863bff;"></div></div>
+        <div style="font-size:9px; color:#9ca3af; margin-top:4px; display:flex; justify-content:space-between;">
+          <span>53% complete</span><span>₹28,000 remaining</span>
+        </div>
+      </div>
+      <div class="goal-card">
+        <div class="goal-name">🏦 Emergency Fund</div>
+        <div class="goal-progress">₹95,000 saved of ₹1,00,000 target</div>
+        <div class="budget-bar-track"><div class="budget-bar-fill" style="width:95%; background:#22c55e;"></div></div>
+        <div style="font-size:9px; color:#22c55e; margin-top:4px;">95% — Almost there! 🎉</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Creating a Goal</h3>
+  <p>Click <strong>+ New Goal</strong> and fill in: name, target amount, target date (optional), emoji icon, and a note.</p>
+
+  <h3>Adding Contributions</h3>
+  <p>Click <strong>+ Add</strong> on any goal card. Enter the date, amount, and optional note. Contributions accumulate toward the total.</p>
+
+  <h3>Milestone Toasts</h3>
+  <p>Toast notifications fire automatically at 25%, 50%, 75%, and 100% completion. Reaching 100% triggers a 🎉 confetti animation.</p>
+</div>
+
+<!-- S7: INSIGHTS -->
+<div class="section" id="s7">
+  <div class="section-header">
+    <span class="section-icon">💡</span>
+    <span class="section-title">7. Insights Tab</span>
+    <span class="section-badge">Tab 6 · Key: 6</span>
+  </div>
+  <p>16 analytical cards that surface patterns in your spending you might not notice yourself.</p>
+
+  <div class="screen-diagram">
+    <div class="screen-titlebar">
+      <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+      <span class="url-bar">expense-tracker-v6.vercel.app</span>
+    </div>
+    <div class="screen-body">
+      <div class="screen-tabs">
+        <span class="screen-tab">📊 Overview</span><span class="screen-tab active">💡 Insights</span>
+      </div>
+      <div class="insight-grid">
+        <div class="insight-card"><div class="insight-title">🏆 Top Category</div><div class="insight-val">🍽️ Food</div><div style="font-size:9px;color:#6b7280;">₹6,200 this month</div></div>
+        <div class="insight-card"><div class="insight-title">💥 Biggest Expense</div><div class="insight-val">₹12,499</div><div style="font-size:9px;color:#6b7280;">MacBook Accessories</div></div>
+        <div class="insight-card"><div class="insight-title">📱 Top Payment</div><div class="insight-val">UPI/QR</div><div style="font-size:9px;color:#6b7280;">67% of transactions</div></div>
+        <div class="insight-card"><div class="insight-title">📅 Weekend vs Weekday</div><div class="insight-val">+34%</div><div style="font-size:9px;color:#6b7280;">You spend more on weekends</div></div>
+        <div class="insight-card"><div class="insight-title">🧟 Zombie Subscriptions</div><div class="insight-val">2 found</div><div style="font-size:9px;color:#f87171;">Not used in 45+ days</div></div>
+        <div class="insight-card"><div class="insight-title">📈 vs Last Month</div><div class="insight-val" style="color:#f87171;">↑ 12%</div><div style="font-size:9px;color:#6b7280;">₹1,960 more than March</div></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>All 16 Insight Cards</h3>
+  <table>
+    <tr><th>#</th><th>Insight</th><th>What it tells you</th></tr>
+    <tr><td>1</td><td>Top Spending Category</td><td>Your biggest category this month</td></tr>
+    <tr><td>2</td><td>Biggest Single Expense</td><td>Largest transaction this month</td></tr>
+    <tr><td>3</td><td>Most Used Payment Method</td><td>How you pay most often</td></tr>
+    <tr><td>4</td><td>Average Transaction Size</td><td>Mean expense amount</td></tr>
+    <tr><td>5</td><td>Weekend vs Weekday Spend</td><td>Where you spend more</td></tr>
+    <tr><td>6</td><td>Expense Type Breakdown</td><td>Variable / Fixed / Luxury / Need / Want / Investment split</td></tr>
+    <tr><td>7</td><td>Day-of-Week Chart</td><td>Which day of the week you spend most</td></tr>
+    <tr><td>8</td><td>Recurring Expenses Summary</td><td>Count and total value of recurring templates</td></tr>
+    <tr><td>9</td><td>Split Expenses</td><td>Expenses shared with others</td></tr>
+    <tr><td>10</td><td>Month-over-Month Delta</td><td>% change vs last month</td></tr>
+    <tr><td>11</td><td>Dining App Breakdown</td><td>Swiggy / Zomato / other food delivery spend</td></tr>
+    <tr><td>12</td><td>Tags Analysis</td><td>Breakdown by grocery/food tags</td></tr>
+    <tr><td>13</td><td>Category Trend</td><td>Which categories are growing vs shrinking</td></tr>
+    <tr><td>14</td><td>Income vs Expense Ratio</td><td>Your savings rate this month</td></tr>
+    <tr><td>15</td><td>Subscription Detective</td><td>Auto-detects recurring charges that look like subscriptions</td></tr>
+    <tr><td>16</td><td>Zombie Subscriptions</td><td>Subscriptions not used in 45+ days, price creep alerts</td></tr>
+  </table>
+</div>
+
+<!-- S8: RECURRING -->
+<div class="section" id="s8">
+  <div class="section-header">
+    <span class="section-icon">🔄</span>
+    <span class="section-title">8. Recurring Tab</span>
+    <span class="section-badge">Tab 7 · Key: 7</span>
+  </div>
+  <p>Manage all repeating expenses and income — rent, subscriptions, salary, EMIs.</p>
+
+  <div class="screen-diagram">
+    <div class="screen-titlebar">
+      <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+      <span class="url-bar">expense-tracker-v6.vercel.app</span>
+    </div>
+    <div class="screen-body">
+      <div class="screen-tabs">
+        <span class="screen-tab">📊 Overview</span><span class="screen-tab active">🔄 Recurring</span>
+      </div>
+      <div style="font-size:10px; color:#9ca3af; margin-bottom:8px;">Recurring Expenses (4)</div>
+      <div class="rec-item"><span>🏠 House Rent</span><span>₹18,000 · monthly</span><span class="rec-badge badge-amber">Due in 3d</span></div>
+      <div class="rec-item"><span>🎬 Netflix</span><span>₹649 · monthly</span><span class="rec-badge badge-green">Due in 12d</span></div>
+      <div class="rec-item"><span>🚗 Car EMI</span><span>₹8,500 · monthly</span><span class="rec-badge badge-red">Overdue</span></div>
+      <div class="rec-item"><span>💡 Internet</span><span>₹999 · monthly</span><span class="rec-badge badge-green">Due in 20d</span></div>
+      <div style="font-size:10px; color:#9ca3af; margin-top:14px; margin-bottom:8px;">Recurring Income (1)</div>
+      <div class="rec-item"><span>💼 Monthly Salary</span><span>₹55,000 · monthly</span><span class="rec-badge badge-green">Due in 27d</span></div>
+    </div>
+  </div>
+
+  <h3>Due Date Badges</h3>
+  <ul>
+    <li><strong style="color:#ef4444;">Red — Overdue</strong>: past the due date, needs attention</li>
+    <li><strong style="color:#f59e0b;">Amber — Due soon</strong>: due within 3 days</li>
+    <li><strong style="color:#22c55e;">Green — Upcoming</strong>: due in 4+ days</li>
+  </ul>
+
+  <h3>Recurring Periods</h3>
+  <p>Daily · Weekly · Bi-weekly · Monthly · Quarterly · Yearly</p>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">ℹ️</span>
+    <span class="callout-text">A recurring entry is a <strong>template</strong> — not automatically duplicated. When the expense comes due, you add it as a new transaction and update the next due date.</span>
+  </div>
+</div>
+
+<!-- S9: EXCHANGE -->
+<div class="section" id="s9">
+  <div class="section-header">
+    <span class="section-icon">💱</span>
+    <span class="section-title">9. Exchange Tab</span>
+    <span class="section-badge">Tab 8 · Key: 8</span>
+  </div>
+  <p>Live currency exchange rates for all 27 supported currencies.</p>
+
+  <div class="screen-diagram">
+    <div class="screen-titlebar">
+      <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+      <span class="url-bar">expense-tracker-v6.vercel.app</span>
+    </div>
+    <div class="screen-body">
+      <div class="screen-tabs">
+        <span class="screen-tab active">💱 Exchange</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div style="font-size:10px; color:#9ca3af;">Live Exchange Rates · Base: 🇮🇳 INR</div>
+        <div style="background:#863bff; color:white; border-radius:4px; padding:3px 8px; font-size:9px;">🔄 Refresh Rates</div>
+      </div>
+      <div class="exchange-row" style="font-weight:bold; color:#9ca3af;"><span>Currency</span><span>1 INR =</span><span>1 unit =</span></div>
+      <div class="exchange-row"><span>🇺🇸 USD</span><span>0.0120</span><span>₹83.42</span></div>
+      <div class="exchange-row"><span>🇪🇺 EUR</span><span>0.0110</span><span>₹90.15</span></div>
+      <div class="exchange-row"><span>🇬🇧 GBP</span><span>0.0094</span><span>₹106.20</span></div>
+      <div class="exchange-row"><span>🇦🇪 AED</span><span>0.0440</span><span>₹22.71</span></div>
+      <div class="exchange-row"><span>🇸🇬 SGD</span><span>0.0161</span><span>₹62.08</span></div>
+      <div style="font-size:9px; color:#4b5563; margin-top:8px;">Rates cached for 6 hours · Last updated: 4:30 PM</div>
+    </div>
+  </div>
+
+  <h3>27 Supported Currencies</h3>
+  <table>
+    <tr><th>Group</th><th>Currencies</th></tr>
+    <tr><td>Major</td><td>INR 🇮🇳 · USD 🇺🇸 · EUR 🇪🇺 · GBP 🇬🇧 · JPY 🇯🇵 · CHF 🇨🇭 · CAD 🇨🇦 · AUD 🇦🇺</td></tr>
+    <tr><td>Asia-Pacific</td><td>SGD 🇸🇬 · MYR 🇲🇾 · THB 🇹🇭 · CNY 🇨🇳 · HKD 🇭🇰 · KRW 🇰🇷</td></tr>
+    <tr><td>Middle East</td><td>AED 🇦🇪 · SAR 🇸🇦 · QAR 🇶🇦 · TRY 🇹🇷</td></tr>
+    <tr><td>Europe</td><td>SEK 🇸🇪 · NOK 🇳🇴 · DKK 🇩🇰 · PLN 🇵🇱 · RUB 🇷🇺</td></tr>
+    <tr><td>Americas</td><td>BRL 🇧🇷 · MXN 🇲🇽</td></tr>
+    <tr><td>Africa</td><td>ZAR 🇿🇦</td></tr>
+    <tr><td>Alternative Assets</td><td>BTC ₿ · ETH Ξ</td></tr>
+  </table>
+</div>
+
+<!-- S10: SETTINGS -->
+<div class="section" id="s10">
+  <div class="section-header">
+    <span class="section-icon">⚙️</span>
+    <span class="section-title">10. Settings Tab</span>
+    <span class="section-badge">Tab 9 · Key: 9</span>
+  </div>
+
+  <div class="screen-diagram">
+    <div class="screen-titlebar">
+      <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+      <span class="url-bar">expense-tracker-v6.vercel.app</span>
+    </div>
+    <div class="screen-body">
+      <div class="screen-tabs"><span class="screen-tab active">⚙️ Settings</span></div>
+      <div style="font-size:10px; color:#9ca3af; margin-bottom:8px;">🎨 Appearance</div>
+      <div class="settings-row-s"><span style="color:#d1d5db;">Dark Mode</span><span class="toggle">ON</span></div>
+      <div class="settings-row-s"><span style="color:#d1d5db;">Colorblind Mode</span><span class="toggle toggle-off">OFF</span></div>
+      <div style="font-size:10px; color:#9ca3af; margin:10px 0 8px;">💱 Base Currency</div>
+      <div class="settings-row-s"><span style="color:#d1d5db;">🇮🇳 Indian Rupee (INR)</span><span style="color:#863bff; font-size:9px;">Change ▾</span></div>
+      <div style="font-size:10px; color:#9ca3af; margin:10px 0 8px;">🔔 Recurring Reminders</div>
+      <div class="settings-row-s"><span style="color:#4ade80;">Active — daily reminders enabled</span><span style="background:#7f1d1d;color:#fca5a5;border-radius:4px;padding:2px 8px;font-size:9px;">🔕 Disable</span></div>
+      <div style="font-size:10px; color:#9ca3af; margin:10px 0 8px;">📤 Export Data</div>
+      <div class="settings-row-s">
+        <span style="color:#d1d5db;">Download backup</span>
+        <span>
+          <span style="background:#1d4ed8;color:white;border-radius:4px;padding:2px 8px;font-size:9px;margin-right:4px;">JSON</span>
+          <span style="background:#166534;color:white;border-radius:4px;padding:2px 8px;font-size:9px;">CSV</span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <h3>All Settings Sections</h3>
+  <table>
+    <tr><th>Section</th><th>What you can do</th></tr>
+    <tr><td>🎨 Appearance</td><td>Toggle Dark Mode and Colorblind Mode (blue/orange palette instead of red/green)</td></tr>
+    <tr><td>💱 Base Currency</td><td>Set your primary display currency — all amounts shown in this currency throughout the app</td></tr>
+    <tr><td>📊 Data Summary</td><td>See live counts of your expenses, income, goals, and contributions</td></tr>
+    <tr><td>💡 Safe-to-Spend</td><td>Set monthly savings goal — used to calculate your daily spending allowance</td></tr>
+    <tr><td>🔄 Exchange Rates</td><td>View rate status and manually refresh live rates</td></tr>
+    <tr><td>🔔 Recurring Reminders</td><td>Enable or disable push notifications for this device</td></tr>
+    <tr><td>📤 Export Data</td><td>Download full JSON backup or CSV (expenses only)</td></tr>
+    <tr><td>📥 Import Data</td><td>Upload a V6 JSON backup — duplicates skipped automatically</td></tr>
+    <tr><td>🔀 Migrate from V5</td><td>Import data from the old single-file HTML app</td></tr>
+    <tr><td>🚨 Danger Zone</td><td>Clear expenses / income / all data / factory reset (each requires confirmation)</td></tr>
+    <tr><td>ℹ️ About</td><td>Version number, architecture info, feature summary</td></tr>
+  </table>
+</div>
+
+<!-- S11: KEYBOARD SHORTCUTS -->
+<div class="section" id="s11">
+  <div class="section-header">
+    <span class="section-icon">⌨️</span>
+    <span class="section-title">11. Keyboard Shortcuts</span>
+    <span class="section-badge">Power Users</span>
+  </div>
+  <div class="shortcut-grid">
+    <div class="shortcut"><span class="key">1</span><span class="key-action">Overview tab</span></div>
+    <div class="shortcut"><span class="key">2</span><span class="key-action">Income tab</span></div>
+    <div class="shortcut"><span class="key">3</span><span class="key-action">Trends tab</span></div>
+    <div class="shortcut"><span class="key">4</span><span class="key-action">Budgets tab</span></div>
+    <div class="shortcut"><span class="key">5</span><span class="key-action">Goals tab</span></div>
+    <div class="shortcut"><span class="key">6</span><span class="key-action">Insights tab</span></div>
+    <div class="shortcut"><span class="key">7</span><span class="key-action">Recurring tab</span></div>
+    <div class="shortcut"><span class="key">8</span><span class="key-action">Exchange tab</span></div>
+    <div class="shortcut"><span class="key">9</span><span class="key-action">Settings tab</span></div>
+    <div class="shortcut"><span class="key">N</span><span class="key-action">Add Expense</span></div>
+    <div class="shortcut"><span class="key">I</span><span class="key-action">Add Income</span></div>
+    <div class="shortcut"><span class="key">D</span><span class="key-action">Toggle Dark Mode</span></div>
+    <div class="shortcut"><span class="key">Esc</span><span class="key-action">Close modal / form</span></div>
+  </div>
+</div>
+
+<!-- S12: ADD EXPENSE -->
+<div class="section" id="s12">
+  <div class="section-header">
+    <span class="section-icon">➕</span>
+    <span class="section-title">12. Adding Expenses — Full Field Guide</span>
+    <span class="section-badge">Press N to open</span>
+  </div>
+
+  <div class="screen-diagram">
+    <div class="screen-titlebar">
+      <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+      <span class="url-bar">expense-tracker-v6.vercel.app · Add Expense</span>
+    </div>
+    <div class="screen-body">
+      <div class="screen-form">
+        <div style="color:#c4b5fd; font-size:12px; font-weight:bold; margin-bottom:10px;">➕ Add Expense</div>
+        <div class="form-row">
+          <div class="form-col"><div class="form-label">DATE</div><div class="screen-input">2026-04-03</div></div>
+          <div class="form-col"><div class="form-label">AMOUNT</div><div class="screen-input">₹ 340.00</div></div>
+        </div>
+        <div class="form-row">
+          <div class="form-col" style="flex:2;"><div class="form-label">DESCRIPTION</div><div class="screen-input">Swiggy Order — Biryani</div></div>
+          <div class="form-col"><div class="form-label">CURRENCY</div><div class="screen-input">🇮🇳 INR</div></div>
+        </div>
+        <div class="form-row">
+          <div class="form-col"><div class="form-label">CATEGORY</div><div class="screen-input">🍽️ Food</div></div>
+          <div class="form-col"><div class="form-label">SUBCATEGORY</div><div class="screen-input">Takeaway</div></div>
+        </div>
+        <div class="form-row">
+          <div class="form-col"><div class="form-label">PAYMENT</div><div class="screen-input">UPI/QR</div></div>
+          <div class="form-col"><div class="form-label">UPI APP</div><div class="screen-input">GPay</div></div>
+          <div class="form-col"><div class="form-label">DINING APP</div><div class="screen-input">Swiggy</div></div>
+        </div>
+        <div class="form-row">
+          <div class="form-col"><div class="form-label">EXPENSE TYPE</div><div class="screen-input">Variable</div></div>
+          <div class="form-col"><div class="form-label">CUSTOM COLOR</div><div style="background:#ed6b2a; width:20px; height:20px; border-radius:4px; margin-top:12px;"></div></div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <div style="background:#863bff; color:white; border-radius:4px; padding:6px 16px; font-size:10px;">Save Expense</div>
+          <div style="background:#2d2d44; color:#9ca3af; border-radius:4px; padding:6px 16px; font-size:10px;">Cancel</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <table>
+    <tr><th>Field</th><th>Description</th><th>Options</th></tr>
+    <tr><td><strong>Date</strong></td><td>Transaction date</td><td>Defaults to today</td></tr>
+    <tr><td><strong>Description</strong></td><td>What you spent on</td><td>Free text</td></tr>
+    <tr><td><strong>Amount</strong></td><td>How much</td><td>Numeric</td></tr>
+    <tr><td><strong>Currency</strong></td><td>Currency of the transaction</td><td>27 currencies</td></tr>
+    <tr><td><strong>Conversion Rate</strong></td><td>Auto-filled from live rates when currency ≠ base</td><td>Editable</td></tr>
+    <tr><td><strong>Category</strong></td><td>Spending category</td><td>14 categories</td></tr>
+    <tr><td><strong>Subcategory</strong></td><td>Sub-type within category</td><td>4–6 per category</td></tr>
+    <tr><td><strong>Expense Type</strong></td><td>Classification</td><td>Variable / Fixed / Luxury / Need / Want / Investment</td></tr>
+    <tr><td><strong>Payment Method</strong></td><td>How you paid</td><td>Cash / Credit Card / Debit Card / UPI/QR / Net Banking / Wallet / Cheque / EMI / Other</td></tr>
+    <tr><td><strong>UPI App</strong></td><td>If UPI/QR selected</td><td>GPay / PhonePe / Paytm / PayZapp / BHIM / Amazon Pay / WhatsApp Pay / Cred / Slice</td></tr>
+    <tr><td><strong>Wallet App</strong></td><td>If Wallet selected</td><td>Amazon Pay / Paytm / PhonePe / Mobikwik / Freecharge / Ola Money / Jio Money</td></tr>
+    <tr><td><strong>Dining App</strong></td><td>Food category only</td><td>Swiggy / Zomato / Keta / Dineout / EatSure / Blinkit / Zepto / Direct</td></tr>
+    <tr><td><strong>Grocery Tags</strong></td><td>Food category only — multi-select</td><td>Food, Dairy, Produce, Meat/Fish, Snacks, Grains, etc.</td></tr>
+    <tr><td><strong>Tags</strong></td><td>Custom free labels</td><td>Multi-select chips</td></tr>
+    <tr><td><strong>Notes</strong></td><td>Additional details</td><td>Free text</td></tr>
+    <tr><td><strong>Custom Color</strong></td><td>Override category color</td><td>259-colour palette</td></tr>
+    <tr><td><strong>Budget Category</strong></td><td>Link to a per-category budget</td><td>Dropdown</td></tr>
+    <tr><td><strong>Split With</strong></td><td>Person you split the bill with</td><td>Free text</td></tr>
+    <tr><td><strong>Split Parts</strong></td><td>Number of ways to split</td><td>Number</td></tr>
+    <tr><td><strong>Receipt / Order ID</strong></td><td>Reference number</td><td>Free text</td></tr>
+    <tr><td><strong>Recurring</strong></td><td>Mark as a repeating template</td><td>Checkbox</td></tr>
+    <tr><td><strong>Recurring Period</strong></td><td>How often it repeats</td><td>Daily / Weekly / Bi-weekly / Monthly / Quarterly / Yearly</td></tr>
+    <tr><td><strong>Next Due Date</strong></td><td>Auto-calculated, editable</td><td>Date</td></tr>
+  </table>
+
+  <h3>14 Expense Categories</h3>
+  <div class="cat-grid">
+    <div class="cat-card" style="border-color:#f97316;"><div class="cat-name" style="color:#f97316;">🍽️ Food</div><div class="cat-subs">Groceries · Restaurants · Snacks · Beverages · Sweets · Takeaway</div></div>
+    <div class="cat-card" style="border-color:#3b82f6;"><div class="cat-name" style="color:#3b82f6;">🚗 Transport</div><div class="cat-subs">Fuel · Auto/Cab · Bus/Train · Flight · Parking · Vehicle Maintenance</div></div>
+    <div class="cat-card" style="border-color:#8b5cf6;"><div class="cat-name" style="color:#8b5cf6;">🛍️ Shopping</div><div class="cat-subs">Clothes · Electronics · Furniture · Books · Accessories · Appliances</div></div>
+    <div class="cat-card" style="border-color:#ef4444;"><div class="cat-name" style="color:#ef4444;">💊 Health</div><div class="cat-subs">Medicine · Doctor · Lab Tests · Hospital · Wellness · Dental</div></div>
+    <div class="cat-card" style="border-color:#ec4899;"><div class="cat-name" style="color:#ec4899;">🎬 Entertainment</div><div class="cat-subs">Movies · OTT/Streaming · Gaming · Events · Hobbies · Sports</div></div>
+    <div class="cat-card" style="border-color:#f59e0b;"><div class="cat-name" style="color:#f59e0b;">💡 Utilities</div><div class="cat-subs">Electricity · Water · Gas · Internet · Phone · Cable</div></div>
+    <div class="cat-card" style="border-color:#10b981;"><div class="cat-name" style="color:#10b981;">🏠 Housing</div><div class="cat-subs">Rent · EMI · Maintenance · Repairs · Security · Interior</div></div>
+    <div class="cat-card" style="border-color:#06b6d4;"><div class="cat-name" style="color:#06b6d4;">📚 Education</div><div class="cat-subs">Fees · Books · Courses · Stationery · Coaching · Exams</div></div>
+    <div class="cat-card" style="border-color:#84cc16;"><div class="cat-name" style="color:#84cc16;">💆 Personal</div><div class="cat-subs">Haircut · Skincare · Gym · Spa · Personal Care · Fashion</div></div>
+    <div class="cat-card" style="border-color:#6366f1;"><div class="cat-name" style="color:#6366f1;">✈️ Travel</div><div class="cat-subs">Hotel · Sightseeing · Visa · Insurance · Souvenirs · Transport</div></div>
+    <div class="cat-card" style="border-color:#14b8a6;"><div class="cat-name" style="color:#14b8a6;">💰 Finance</div><div class="cat-subs">Insurance · Tax · Loan Payment · Investment · Bank Fees · Savings</div></div>
+    <div class="cat-card" style="border-color:#f43f5e;"><div class="cat-name" style="color:#f43f5e;">🎉 Social</div><div class="cat-subs">Gifts · Parties · Donations · Subscriptions · Events · Dining Out</div></div>
+    <div class="cat-card" style="border-color:#0ea5e9;"><div class="cat-name" style="color:#0ea5e9;">🗂️ Administrative</div><div class="cat-subs">License Renewal · Passport · Government Fees · Notary/Legal</div></div>
+    <div class="cat-card" style="border-color:#94a3b8;"><div class="cat-name" style="color:#94a3b8;">📌 Other</div><div class="cat-subs">Miscellaneous · Uncategorized · Refund · Transfer</div></div>
+  </div>
+</div>
+
+<!-- S13: ADD INCOME -->
+<div class="section" id="s13">
+  <div class="section-header">
+    <span class="section-icon">💵</span>
+    <span class="section-title">13. Adding Income — Full Field Guide</span>
+    <span class="section-badge">Press I to open</span>
+  </div>
+  <table>
+    <tr><th>Field</th><th>Description</th><th>Options</th></tr>
+    <tr><td><strong>Date</strong></td><td>When the income was received</td><td>Defaults to today</td></tr>
+    <tr><td><strong>Description</strong></td><td>What the income is for</td><td>Free text</td></tr>
+    <tr><td><strong>Amount</strong></td><td>How much</td><td>Numeric</td></tr>
+    <tr><td><strong>Currency</strong></td><td>Currency received</td><td>27 currencies</td></tr>
+    <tr><td><strong>Conversion Rate</strong></td><td>Auto-filled from live rates</td><td>Editable</td></tr>
+    <tr><td><strong>Source</strong></td><td>Where it came from</td><td>Salary / Freelance / Business / Rental / Dividends / Interest / Bonus / Gift / Refund / Side Income / Other</td></tr>
+    <tr><td><strong>Payment Method</strong></td><td>How it was received</td><td>Net Banking / UPI/QR / Cash / Cheque / etc.</td></tr>
+    <tr><td><strong>Notes</strong></td><td>Optional details</td><td>Free text</td></tr>
+    <tr><td><strong>Recurring</strong></td><td>Mark as recurring</td><td>Checkbox</td></tr>
+    <tr><td><strong>Recurring Period</strong></td><td>How often</td><td>Daily / Weekly / Bi-weekly / Monthly / Quarterly / Yearly</td></tr>
+  </table>
+</div>
+
+<!-- S14: MULTI-CURRENCY -->
+<div class="section" id="s14">
+  <div class="section-header">
+    <span class="section-icon">💱</span>
+    <span class="section-title">14. Multi-Currency Support</span>
+  </div>
+  <ul>
+    <li>Every expense and income can be in any of 27 currencies</li>
+    <li>The app always stores the <strong>INR equivalent</strong> alongside the original amount</li>
+    <li>All totals, charts, and summaries display in your chosen <strong>base currency</strong></li>
+    <li>When you select a non-base currency, the conversion rate is auto-filled from cached live rates</li>
+    <li>You can manually override the rate if needed</li>
+    <li>Exchange rates are cached for <strong>6 hours</strong> — refresh manually in Settings or Exchange tab</li>
+  </ul>
+</div>
+
+<!-- S15: OFFLINE -->
+<div class="section" id="s15">
+  <div class="section-header">
+    <span class="section-icon">📡</span>
+    <span class="section-title">15. Offline Mode</span>
+  </div>
+  <p>The app works fully offline. Changes made without internet are saved locally and synced automatically when you reconnect.</p>
+
+  <div class="screen-diagram">
+    <div class="screen-titlebar">
+      <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+      <span class="url-bar">expense-tracker-v6.vercel.app</span>
+    </div>
+    <div class="screen-body">
+      <div style="background:#78350f; border:1px solid #92400e; border-radius:6px; padding:10px 14px; margin-bottom:10px; display:flex; justify-content:space-between; font-size:10px; color:#fcd34d;">
+        <span>📡 You're offline · 3 changes queued</span>
+        <span style="color:#9ca3af;">Changes will sync when reconnected</span>
+      </div>
+      <div style="background:#1e3a5f; border:1px solid #1d4ed8; border-radius:6px; padding:10px 14px; margin-bottom:10px; font-size:10px; color:#93c5fd; display:flex; align-items:center; gap:8px;">
+        <span style="border:2px solid #93c5fd; border-top-color:#1d4ed8; border-radius:50%; width:12px; height:12px; display:inline-block;"></span>
+        Syncing 3 changes…
+      </div>
+      <div class="screen-item"><span>⏳ Swiggy Order</span><span class="amt">-₹340</span></div>
+      <div style="font-size:9px; color:#6b7280; padding-left:4px; margin-bottom:4px;">⏳ = pending sync to cloud</div>
+    </div>
+  </div>
+
+  <table>
+    <tr><th>Indicator</th><th>What it means</th></tr>
+    <tr><td>🟡 Amber banner at top</td><td>You are offline — shows how many changes are queued</td></tr>
+    <tr><td>🔵 Blue syncing banner</td><td>Reconnected — queued changes are being sent to the cloud</td></tr>
+    <tr><td>⏳ on an expense item</td><td>This change has not yet been confirmed to Supabase</td></tr>
+  </table>
+
+  <div class="callout callout-warn">
+    <span class="callout-icon">⚠️</span>
+    <span class="callout-text">Items that fail to sync 5 times are automatically removed from the queue. If you see an expense disappear after reconnecting, re-add it manually.</span>
+  </div>
+</div>
+
+<!-- S16: REAL-TIME -->
+<div class="section" id="s16">
+  <div class="section-header">
+    <span class="section-icon">🟢</span>
+    <span class="section-title">16. Real-Time Sync</span>
+  </div>
+  <p>Changes made on one device appear on all other open devices within ~1 second — no page refresh needed.</p>
+
+  <h3>Status Dot (top-right header)</h3>
+  <div style="margin: 12px 0;">
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <div class="dot-status"><span class="status-dot dot-green" style="animation: none; box-shadow: 0 0 0 3px rgba(16,185,129,0.3);"></span> <strong>Pulsing green</strong> — Live and connected. All changes sync instantly.</div>
+      <div class="dot-status"><span class="status-dot dot-amber"></span> <strong>Spinning amber</strong> — Connecting to live sync.</div>
+      <div class="dot-status"><span class="status-dot dot-red"></span> <strong>Red</strong> — Sync error. Changes still save locally.</div>
+      <div class="dot-status"><span class="status-dot dot-gray"></span> <strong>Gray</strong> — Offline.</div>
+    </div>
+  </div>
+
+  <h3>What syncs in real time</h3>
+  <p>Expenses · Income · Budgets · Goals · Goal contributions — all 5 tables sync live across all devices simultaneously.</p>
+</div>
+
+<!-- S17: PUSH -->
+<div class="section" id="s17">
+  <div class="section-header">
+    <span class="section-icon">🔔</span>
+    <span class="section-title">17. Push Notifications</span>
+  </div>
+  <p>Daily reminders when a recurring expense is due within 3 days — even when the app is closed.</p>
+
+  <h3>Enabling Notifications</h3>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-text">Go to <strong>Settings → Recurring Reminders</strong></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text">Click <strong>🔔 Enable</strong></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-text">Allow the browser permission prompt</div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-text">Status shows: "Active — you will receive daily reminders"</div></div>
+  </div>
+
+  <h3>How Notifications Work</h3>
+  <ul>
+    <li>Fire at <strong>07:00 AM IST</strong> every day</li>
+    <li>Show expense description, amount, and days until due</li>
+    <li>Tapping the notification opens the app directly to the Recurring tab</li>
+    <li>Each device subscribes separately — enable on phone and desktop independently</li>
+  </ul>
+
+  <h3>Browser Compatibility</h3>
+  <table>
+    <tr><th>Browser</th><th>Status</th><th>Notes</th></tr>
+    <tr><td>Chrome (PC + Android)</td><td>✅ Works</td><td>Out of the box</td></tr>
+    <tr><td>Brave</td><td>⚙️ Needs config</td><td>Enable "Use Google services for push messaging" in brave://settings/privacy</td></tr>
+    <tr><td>Firefox (desktop)</td><td>✅ Works</td><td>Out of the box</td></tr>
+    <tr><td>Safari / iOS</td><td>⚠️ Limited</td><td>iOS 16.4+ only, app must be installed as PWA (added to Home Screen)</td></tr>
+  </table>
+</div>
+
+<!-- S18: PWA -->
+<div class="section" id="s18">
+  <div class="section-header">
+    <span class="section-icon">📱</span>
+    <span class="section-title">18. PWA — Install on Device</span>
+  </div>
+  <p>Install the app like a native app — no App Store required.</p>
+
+  <table>
+    <tr><th>Device</th><th>How to install</th></tr>
+    <tr><td>Android (Chrome/Brave)</td><td>Tap three-dot menu → <strong>Add to Home Screen</strong> or <strong>Install App</strong></td></tr>
+    <tr><td>iPhone/iPad (Safari only)</td><td>Tap Share button → <strong>Add to Home Screen</strong> · Requires iOS 16.4+ for push notifications</td></tr>
+    <tr><td>Windows/Mac (Chrome/Edge)</td><td>Click the install icon in the address bar → <strong>Install</strong></td></tr>
+  </table>
+
+  <h3>PWA Features</h3>
+  <ul>
+    <li>Works offline (service worker caches the app)</li>
+    <li>Auto-updates when a new version is deployed — no manual refresh needed</li>
+    <li>Full screen, no browser chrome</li>
+    <li>Push notifications (when enabled)</li>
+    <li>Installable icon on home screen / taskbar</li>
+  </ul>
+</div>
+
+<!-- S19: MIGRATION -->
+<div class="section" id="s19">
+  <div class="section-header">
+    <span class="section-icon">🔀</span>
+    <span class="section-title">19. Data Migration from V5</span>
+  </div>
+  <p>Bring all your history from the old single-file HTML app into V6.</p>
+
+  <h3>Steps</h3>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-text">Open the old V5 HTML file in a browser</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text">Go to <strong>Settings → Export Data → Download JSON</strong></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-text">In V6, go to <strong>Settings → Migrate from V5 → Choose V5 File</strong></div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-text">Select the JSON file — migration runs automatically</div></div>
+  </div>
+
+  <table>
+    <tr><th>What migrates</th><th>What does NOT migrate</th></tr>
+    <tr><td>All expenses (categories, tags, notes, recurring flags)</td><td>Budgets — re-set in Budgets tab</td></tr>
+    <tr><td>All income records</td><td>Goals — re-create in Goals tab</td></tr>
+    <tr><td>Original fingerprints (dedup protection)</td><td>App settings (dark mode, base currency)</td></tr>
+  </table>
+
+  <div class="callout callout-tip">
+    <span class="callout-icon">✅</span>
+    <span class="callout-text">Safe to run multiple times — duplicate records are detected by fingerprint and automatically skipped.</span>
+  </div>
+</div>
+
+<!-- S20: EXPORT/IMPORT/DANGER -->
+<div class="section" id="s20">
+  <div class="section-header">
+    <span class="section-icon">📦</span>
+    <span class="section-title">20. Export, Import &amp; Danger Zone</span>
+  </div>
+
+  <h3>Export</h3>
+  <table>
+    <tr><th>Format</th><th>Contains</th><th>Use for</th></tr>
+    <tr><td><strong>JSON</strong></td><td>Everything: expenses, income, budgets, goals, contributions</td><td>Full backup, restore, archiving</td></tr>
+    <tr><td><strong>CSV</strong></td><td>Expenses only</td><td>Excel / Google Sheets analysis</td></tr>
+  </table>
+
+  <h3>Import (V6 JSON)</h3>
+  <ul>
+    <li>Upload a previously exported V6 JSON file</li>
+    <li>Duplicates detected by content fingerprint — skipped automatically</li>
+    <li>Safe to run multiple times</li>
+  </ul>
+
+  <h3>Danger Zone</h3>
+  <div class="callout callout-warn">
+    <span class="callout-icon">🚨</span>
+    <span class="callout-text">All Danger Zone actions are <strong>permanent and cannot be undone</strong>. Each requires a confirmation click before executing.</span>
+  </div>
+  <table>
+    <tr><th>Action</th><th>What is permanently deleted</th></tr>
+    <tr><td>Clear Expenses</td><td>All expense records</td></tr>
+    <tr><td>Clear Income</td><td>All income records</td></tr>
+    <tr><td>Clear All Data</td><td>All expenses + income</td></tr>
+    <tr><td>Factory Reset</td><td>Everything: expenses, income, budgets, goals, contributions, and all local settings</td></tr>
+  </table>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div style="font-size:24px; margin-bottom:8px;">💸</div>
+  <div><strong>Expense Tracker V6</strong> · v6.7.0 · All 8 Phases Complete</div>
+  <div style="margin-top:4px;">https://expense-tracker-v6.vercel.app</div>
+  <div style="margin-top:4px;">Built with Vite + React + Supabase + Vercel</div>
+</div>
+
+</body>
+</html>
