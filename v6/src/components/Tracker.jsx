@@ -2355,24 +2355,21 @@ export default function Tracker({ session }) {
                   {monthForecast.dailyRate > 0 && <> · {incognito ? '•••' : fmtINR(monthForecast.dailyRate)}/day avg</>}
                 </div>
               )}
-              {budgets.monthly > 0 && (
-                <div className="bento-progress-wrap">
-                  <div className="bento-progress-track">
-                    <div className="bento-progress-bar" style={{
-                      width: `${Math.min(spentMonth / budgets.monthly * 100, 100)}%`,
-                      background: spentMonth > budgets.monthly ? 'var(--color-exp)' : spentMonth / budgets.monthly > 0.8 ? '#f59e0b' : 'var(--color-inc)'
-                    }} />
+              {budgets.monthly > 0 && (() => {
+                const pct = Math.min(spentMonth / budgets.monthly * 100, 100)
+                const barColor = spentMonth > budgets.monthly ? 'var(--color-exp)' : pct > 80 ? '#f59e0b' : 'var(--color-inc)'
+                return (
+                  <div className="bento-progress-wrap">
+                    <div className="bento-progress-track">
+                      <div className="bento-progress-bar" style={{ width: `${pct}%`, background: barColor }} />
+                    </div>
+                    <div className="bento-progress-label">
+                      <span>{incognito ? '••••' : fmtINR(spentMonth)} of {incognito ? '••••' : fmtINR(budgets.monthly)} · {daysRemaining}d left · {incognito ? '•••' : fmtINR(Math.max(dailyAllowance, 0))}/day remaining</span>
+                      <span className="bento-progress-pct" style={{ color: barColor }}>{pct.toFixed(0)}%</span>
+                    </div>
                   </div>
-                  <div className="bento-progress-label">
-                    <span>{incognito ? '••••' : fmtINR(spentMonth)} / {incognito ? '••••' : fmtINR(budgets.monthly)}</span>
-                    {monthForecast.trend !== null && (
-                      <span style={{ color: parseInt(monthForecast.trend) > 5 ? 'var(--color-exp)' : parseInt(monthForecast.trend) < -5 ? 'var(--color-inc)' : 'var(--text-faint)' }}>
-                        {parseInt(monthForecast.trend) > 5 ? `↑${monthForecast.trend}%` : parseInt(monthForecast.trend) < -5 ? `↓${Math.abs(monthForecast.trend)}%` : '~flat'} vs last month
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
+                )
+              })()}
               {!budgets.monthly && expenses.length > 0 && monthForecast.trend !== null && (
                 <div className="bento-sub" style={{ color: parseInt(monthForecast.trend) > 5 ? 'var(--color-exp)' : parseInt(monthForecast.trend) < -5 ? 'var(--color-inc)' : 'var(--text-muted)' }}>
                   {parseInt(monthForecast.trend) > 5 ? `↑${monthForecast.trend}%` : parseInt(monthForecast.trend) < -5 ? `↓${Math.abs(monthForecast.trend)}%` : '~flat'} vs last month
