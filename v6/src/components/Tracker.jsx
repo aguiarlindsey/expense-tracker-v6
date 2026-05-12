@@ -3225,14 +3225,14 @@ export default function Tracker({ session }) {
           />
 
           {/* ── Currency table ── */}
-          <div className="chart-card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div className="fx-tbl-hdr">
-              <div>Code</div>
-              <div>Currency</div>
-              <div style={{ textAlign: 'right' }}>1 Foreign → {baseCurrency}</div>
-              <div style={{ textAlign: 'right' }}>1 {baseCurrency} → Foreign</div>
-            </div>
-            <div className="fx-tbl-scroll" style={{ maxHeight: 540, overflowY: 'auto' }}>
+          <div className="fx-tbl-outer">
+            <div className="fx-tbl-scroll">
+              <div className="fx-tbl-hdr">
+                <div>Code</div>
+                <div>Currency</div>
+                <div style={{ textAlign: 'right' }}>1 Foreign → {baseCurrency}</div>
+                <div style={{ textAlign: 'right' }}>1 {baseCurrency} → Foreign</div>
+              </div>
               {rateData?.rates ? (
                 Object.entries(CG).map(([grp, curs]) => {
                   const filtered = curs.filter(c => {
@@ -3247,23 +3247,15 @@ export default function Tracker({ session }) {
                       <div className="fx-grp-hdr">{grp} ({filtered.length})</div>
                       {filtered.map(c => {
                         const rate = rateData.rates[c.code]
-                        if (!rate) return (
-                          <div key={c.code} className="fx-row-item" style={{ opacity: 0.4 }}>
-                            <div className="fx-code-wrap"><span className="fx-flag-ico">{c.flag}</span><span className="fx-code-lbl">{c.code}</span></div>
-                            <div className="fx-cur-name">{c.name}</div>
-                            <div style={{ textAlign: 'right', fontSize: 'var(--text-xs)', color: 'var(--text-faint)' }}>unavailable</div>
-                            <div />
-                          </div>
-                        )
                         return (
                           <div key={c.code} className="fx-row-item">
                             <div className="fx-code-wrap"><span className="fx-flag-ico">{c.flag}</span><span className="fx-code-lbl">{c.code}</span></div>
                             <div className="fx-cur-name">{c.name}</div>
                             <div style={{ textAlign: 'right', fontWeight: 'var(--fw-semibold)', fontSize: 'var(--text-sm)' }}>
-                              {(CM[baseCurrency] || CM['INR']).symbol}{rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                              {rate ? `${(CM[baseCurrency] || CM['INR']).symbol}${rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}` : ''}
                             </div>
                             <div style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>
-                              {(1 / rate).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 5 })}
+                              {rate ? (1 / rate).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 5 }) : ''}
                             </div>
                           </div>
                         )
