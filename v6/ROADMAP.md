@@ -8,14 +8,14 @@
 ## Overall Progress
 
 ```
-░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0%   0 / 32 phases complete
+█░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  3%   1 / 32 phases complete
 ```
 
 | | Count | Hours |
 |---|---|---|
-| ✅ Complete | 0 phases | 0h |
+| ✅ Complete | 1 phase | ~3.5h |
 | 🔨 In Progress | 0 phases | — |
-| 📋 Planned | 32 phases | ~140h est. |
+| 📋 Planned | 31 phases | ~137h est. |
 | **Total** | **32 phases** | **~140h · ~37 days** |
 
 ---
@@ -24,7 +24,7 @@
 
 | Epic | Focus | Progress | Phases | Est. Hours |
 |------|-------|----------|--------|-----------|
-| [1 — Foundation](#epic-1--foundation) | CSS system | `░░░░░░░░░░` 0% | 0/2 | ~7h |
+| [1 — Foundation](#epic-1--foundation) | CSS system | `█████░░░░░` 50% | 1/2 | ~7h |
 | [2 — Visual Redesign](#epic-2--visual-redesign) | Glass UI, Bento Grid | `░░░░░░░░░░` 0% | 0/4 | ~12h |
 | [3 — Navigation & UX](#epic-3--navigation--ux) | Tabs, ⌘K, drawers | `░░░░░░░░░░` 0% | 0/5 | ~25h |
 | [4 — Onboarding](#epic-4--onboarding) | First-run wizard | `░░░░░░░░░░` 0% | 0/3 | ~11h |
@@ -40,12 +40,12 @@
 > Sets the design language and CSS architecture everything else is built on.
 
 ```
-░░░░░░░░░░  0%   0 / 2 phases
+█████░░░░░  50%   1 / 2 phases
 ```
 
 | Status | Phase | Description | Complexity | Est. |
 |--------|-------|-------------|-----------|------|
-| 📋 | **1.1 — CSS Design System** | New CSS tokens — glass variables, spacing scale, shadow system, typography update, dark/light variable overhaul | Low | 3–4h |
+| ✅ | **1.1 — CSS Design System** | Glass tokens, shadow scale, radius scale, spacing scale, typography tokens, dark mode fully expanded | Low | 3–4h |
 | 📋 | **1.2 — Preview Approval** | Update preview HTML files to reflect final agreed design before any real code is touched | Low | 2–3h |
 
 ---
@@ -204,4 +204,4 @@
 
 ---
 
-*Last updated: 12-05-2026 · Session 36 · v7.11.1*
+*Last updated: 12-05-2026 · Session 37 · v7.12.0*
