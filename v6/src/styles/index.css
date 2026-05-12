@@ -20,10 +20,11 @@ html { overflow-x: hidden; }
   --color-inc:    #10b981;
 
   /* ── Glass system ── */
-  --glass-bg:     rgba(255,255,255,0.60);
-  --glass-border: rgba(100,120,255,0.15);
-  --glass-blur:   blur(24px) saturate(180%);
-  --glass-shadow: 0 4px 24px rgba(37,99,235,0.10), 0 1px 4px rgba(0,0,0,0.06);
+  --glass-bg:     rgba(255,255,255,0.38);
+  --glass-border: rgba(100,120,255,0.20);
+  --glass-blur:   blur(32px) saturate(200%) brightness(1.04);
+  --glass-shadow: 0 4px 24px rgba(37,99,235,0.12), 0 1px 4px rgba(0,0,0,0.06);
+  --glass-inset:  inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(255,255,255,0.2);
 
   /* ── Shadow scale ── */
   --shadow-sm:    0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
@@ -176,7 +177,7 @@ body {
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border-bottom: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
+  box-shadow: var(--glass-shadow), var(--glass-inset);
   padding: 0 1.5rem;
   height: 59px;
   display: flex;
@@ -236,7 +237,7 @@ body {
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border-bottom: 2px solid rgba(37,99,235,0.2);
-  box-shadow: 0 4px 16px rgba(37,99,235,0.08);
+  box-shadow: 0 4px 16px rgba(37,99,235,0.10), var(--glass-inset);
   margin: 0 -1.5rem 1.25rem;
   padding: 0 1.5rem;
 }
@@ -545,9 +546,10 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
   --border-light: #222222;
 
   /* ── Glass system ── */
-  --glass-bg:     rgba(15,18,40,0.75);
-  --glass-border: rgba(99,130,255,0.18);
-  --glass-shadow: 0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(99,130,255,0.1);
+  --glass-bg:     rgba(12,15,35,0.55);
+  --glass-border: rgba(99,130,255,0.22);
+  --glass-shadow: 0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(99,130,255,0.12);
+  --glass-inset:  inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(255,255,255,0.04);
 
   /* ── Shadow scale ── */
   --shadow-sm:    0 1px 3px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.2);
