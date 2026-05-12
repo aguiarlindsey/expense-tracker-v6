@@ -3408,7 +3408,7 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title">💸 Expense Tracker V6</div>
               <div className="about-meta">
-                <span className="about-badge">v7.9.1</span>
+                <span className="about-badge">v7.11.1</span>
                 <span className="about-badge">Incognito Mode</span>
                 <span className="about-badge">Rate Fallbacks</span>
                 <span className="about-badge">122 Currencies</span>
@@ -3426,7 +3426,7 @@ export default function Tracker({ session }) {
               <div className="about-row"><span>Features</span><span>10 tabs · 18 insights · anomaly detection · burn-rate forecast · trip tracking · 259-color palette · live FX rates</span></div>
               <div className="about-row"><span>Mobile</span><span>Fully responsive · UPI/Wallet selectors · horizontal tab scroll</span></div>
               <div className="about-row"><span>V5 parity</span><span>100% — all V5 features ported + Goals/Budgets/Offline added</span></div>
-              <div className="about-row"><span>Last updated</span><span>2026-05-12 (v7.9.1)</span></div>
+              <div className="about-row"><span>Last updated</span><span>2026-05-12 (v7.11.1)</span></div>
             </div>
           </div>
         </main>

@@ -1,7 +1,7 @@
 # EXPTRAV7 — Full Feature Reference
 
 **Expense Tracker V7** · `https://expense-tracker-v6.vercel.app`  
-**Version:** v7.9.1 · **Built:** Vite + React 19 + Supabase · **Deployed:** Vercel  
+**Version:** v7.11.1 · **Built:** Vite + React 19 + Supabase · **Deployed:** Vercel  
 **Last updated:** 12-05-2026
 
 ---
