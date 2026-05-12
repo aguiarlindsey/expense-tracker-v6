@@ -2224,7 +2224,7 @@ export default function Tracker({ session }) {
     const projectedInc = income.filter(i => (i.date || '').startsWith(monthStr)).reduce((s, i) => s + toINR(i), 0)
     const projectedSavings = projectedInc - projected
     const trend = prevTotal > 0 ? ((projected - prevTotal) / prevTotal * 100).toFixed(0) : null
-    return { spentSoFar, dailyRate, projected, prevTotal, trend, projectedInc, projectedSavings, daysInMonth, dayOfMonth }
+    return { spentSoFar, dailyRate, projected, prevTotal, trend, projectedInc, projectedSavings, daysInMonth, dayOfMonth, prevMonthStr }
   }, [expenses, income, monthStr, todayStr])
 
   // ── Subscription zombie detection ────────────────────
@@ -2346,54 +2346,87 @@ export default function Tracker({ session }) {
           <div className="bento-grid">
 
             {/* Hero — Expenses this month */}
-            <div className="bento-tile bento-hero">
-              <div className="bento-label">Expenses — {monthStr}{hasExpFilters ? ' (filtered)' : ''}</div>
-              <div className="bento-amount bento-exp">{incognito ? '••••••' : fmtINR(spentMonth)}</div>
-              {expenses.length > 0 && (
-                <div className="bento-sub">
-                  Day {monthForecast.dayOfMonth} of {monthForecast.daysInMonth}
-                  {monthForecast.dailyRate > 0 && <> · {incognito ? '•••' : fmtINR(monthForecast.dailyRate)}/day avg</>}
-                </div>
-              )}
-              {budgets.monthly > 0 && (() => {
-                const pct = Math.min(spentMonth / budgets.monthly * 100, 100)
-                const barColor = spentMonth > budgets.monthly ? 'var(--color-exp)' : pct > 80 ? '#f59e0b' : 'var(--color-inc)'
-                return (
-                  <div className="bento-progress-wrap">
-                    <div className="bento-progress-track">
-                      <div className="bento-progress-bar" style={{ width: `${pct}%`, background: barColor }} />
+            {(() => {
+              const pct       = budgets.monthly > 0 ? Math.min(spentMonth / budgets.monthly * 100, 100) : 0
+              const barColor  = spentMonth > budgets.monthly ? 'var(--color-exp)' : pct > 80 ? '#f59e0b' : 'var(--color-inc)'
+              const txnCount  = expenses.filter(e => (e.date || '').startsWith(monthStr)).length
+              const today     = new Date(todayStr + 'T12:00:00')
+              const dayLabel  = `${today.getDate()} ${today.toLocaleString('default', { month: 'short' })}`
+              const trendVal  = monthForecast.trend !== null ? parseInt(monthForecast.trend) : null
+              return (
+                <div className="bento-tile bento-hero">
+                  <div className="bento-label">Total Spent — {monthStr}</div>
+                  <div className="bento-amount bento-exp">{incognito ? '••••••' : fmtINR(spentMonth)}</div>
+                  {expenses.length > 0 && (
+                    <div className="bento-sub">
+                      Day {monthForecast.dayOfMonth} of {monthForecast.daysInMonth}
+                      {monthForecast.dailyRate > 0 && <> · {incognito ? '•••' : fmtINR(monthForecast.dailyRate)}/day avg</>}
                     </div>
-                    <div className="bento-progress-label">
-                      <span>{incognito ? '••••' : fmtINR(spentMonth)} of {incognito ? '••••' : fmtINR(budgets.monthly)} · {daysRemaining}d left · {incognito ? '•••' : fmtINR(Math.max(dailyAllowance, 0))}/day remaining</span>
-                      <span className="bento-progress-pct" style={{ color: barColor }}>{pct.toFixed(0)}%</span>
+                  )}
+                  {budgets.monthly > 0 && (
+                    <div className="bento-progress-wrap">
+                      <div className="bento-progress-3pt">
+                        <span>₹0</span>
+                        <span className="bento-progress-3pt-mid">{incognito ? '••••' : fmtINR(spentMonth)}</span>
+                        <span>{incognito ? '••••' : fmtINR(budgets.monthly)}</span>
+                      </div>
+                      <div className="bento-progress-track">
+                        <div className="bento-progress-bar" style={{ width: `${pct}%`, background: barColor }} />
+                      </div>
                     </div>
+                  )}
+                  <div className="bento-badges">
+                    {budgets.monthly > 0 && <span className={`bb ${pct > 80 ? 'bb-red' : 'bb-amber'}`}>⚡ {pct.toFixed(0)}% used</span>}
+                    {txnCount > 0 && <span className="bb bb-blue">{txnCount} transactions</span>}
+                    <span className="bb bb-purple">{dayLabel}</span>
+                    {trendVal !== null && (
+                      <span className={`bb ${trendVal > 5 ? 'bb-red' : trendVal < -5 ? 'bb-green' : 'bb-blue'}`}>
+                        {trendVal > 5 ? `↑${trendVal}%` : trendVal < -5 ? `↓${Math.abs(trendVal)}%` : '~flat'} vs last month
+                      </span>
+                    )}
                   </div>
-                )
-              })()}
-              {!budgets.monthly && expenses.length > 0 && monthForecast.trend !== null && (
-                <div className="bento-sub" style={{ color: parseInt(monthForecast.trend) > 5 ? 'var(--color-exp)' : parseInt(monthForecast.trend) < -5 ? 'var(--color-inc)' : 'var(--text-muted)' }}>
-                  {parseInt(monthForecast.trend) > 5 ? `↑${monthForecast.trend}%` : parseInt(monthForecast.trend) < -5 ? `↓${Math.abs(monthForecast.trend)}%` : '~flat'} vs last month
                 </div>
-              )}
-            </div>
+              )
+            })()}
 
             {/* Income this month */}
-            <div className="bento-tile bento-income">
-              <div className="bento-label">Income</div>
-              <div className="bento-amount bento-inc">{incognito ? '••••••' : fmtINR(currentMonthInc > 0 ? currentMonthInc : allIncINR)}</div>
-              <div className="bento-sub">{currentMonthInc > 0 ? 'this month' : allIncINR > 0 ? 'all time' : 'none recorded'}</div>
-            </div>
+            {(() => {
+              const prevInc = allMonthlyInc[monthForecast.prevMonthStr] || 0
+              const incDiff = currentMonthInc > 0 && prevInc > 0 ? currentMonthInc - prevInc : null
+              return (
+                <div className="bento-tile bento-income">
+                  <div className="bento-label">Income</div>
+                  <div className="bento-amount bento-inc">{incognito ? '••••••' : fmtINR(currentMonthInc > 0 ? currentMonthInc : allIncINR)}</div>
+                  <div className="bento-sub">{currentMonthInc > 0 ? 'this month' : allIncINR > 0 ? 'all time' : 'none recorded'}</div>
+                  {incDiff !== null && (
+                    <div className="bento-badges">
+                      <span className={`bb ${incDiff >= 0 ? 'bb-green' : 'bb-red'}`}>
+                        {incDiff >= 0 ? '↑' : '↓'} {incognito ? '•••' : fmtINR(Math.abs(incDiff))} vs last month
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
 
             {/* Net Savings */}
-            <div className="bento-tile bento-savings">
-              <div className="bento-label">Net Savings</div>
-              <div className="bento-amount" style={{ color: netSavings >= 0 ? 'var(--color-inc)' : 'var(--color-exp)' }}>
-                {incognito ? '••••••' : (netSavings >= 0 ? '+' : '') + fmtINR(netSavings)}
-              </div>
-              {allIncINR > 0 && (
-                <div className="bento-sub">{((netSavings / allIncINR) * 100).toFixed(0)}% savings rate</div>
-              )}
-            </div>
+            {(() => {
+              const savRate = allIncINR > 0 ? Math.round((netSavings / allIncINR) * 100) : null
+              return (
+                <div className="bento-tile bento-savings">
+                  <div className="bento-label">Net Savings</div>
+                  <div className="bento-amount" style={{ color: netSavings >= 0 ? 'var(--color-inc)' : 'var(--color-exp)' }}>
+                    {incognito ? '••••••' : (netSavings >= 0 ? '+' : '') + fmtINR(netSavings)}
+                  </div>
+                  <div className="bento-sub">Income − Spent</div>
+                  {savRate !== null && (
+                    <div className="bento-badges">
+                      <span className={`bb ${savRate >= 20 ? 'bb-green' : savRate >= 0 ? 'bb-blue' : 'bb-red'}`}>{savRate}% rate</span>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
 
             {/* Safe to Spend */}
             <div className="bento-tile bento-safe">
@@ -2403,8 +2436,12 @@ export default function Tracker({ session }) {
                   <div className="bento-amount" style={{ color: stsColor }}>
                     {incognito ? '••••••' : fmtINR(Math.max(dailyAllowance, 0))}<span className="bento-unit">/day</span>
                   </div>
-                  <div className="bento-sub">
-                    {incognito ? '••••' : fmtINR(Math.max(budgets.monthly - spentMonth, 0))} left · {daysRemaining}d
+                  <div className="bento-sub">Budget left today</div>
+                  <div className="bento-badges">
+                    <span className="bb bb-blue">{daysRemaining}d left</span>
+                    <span className={`bb ${stsStatus === 'danger' ? 'bb-red' : stsStatus === 'warn' ? 'bb-amber' : 'bb-green'}`}>
+                      {incognito ? '••••' : fmtINR(Math.max(budgets.monthly - spentMonth, 0))} remaining
+                    </span>
                   </div>
                 </>
               ) : (
@@ -2417,25 +2454,35 @@ export default function Tracker({ session }) {
             </div>
 
             {/* Burn Rate */}
-            <div className="bento-tile bento-burn">
-              <div className="bento-label">Burn Rate</div>
-              <div className="bento-amount">
-                {incognito ? '••••••' : fmtINR(burnRate.last7Rate)}<span className="bento-unit">/day</span>
-              </div>
-              <div className="bento-sub" style={{ color: burnRate.acceleration === null ? 'var(--text-muted)' : burnRate.acceleration > 10 ? 'var(--color-exp)' : burnRate.acceleration < -10 ? 'var(--color-inc)' : 'var(--text-muted)' }}>
-                {budgets.monthly > 0 && burnRate.runwayDays !== null
-                  ? (burnRate.runwayDays <= 0 ? 'Budget exceeded' : `${burnRate.runwayDays}d runway`)
-                  : burnRate.acceleration !== null
-                    ? (burnRate.acceleration > 10 ? `↑${Math.min(Math.abs(burnRate.acceleration), 999).toFixed(0)}% vs last week` : burnRate.acceleration < -10 ? `↓${Math.min(Math.abs(burnRate.acceleration), 999).toFixed(0)}% vs last week` : '~flat vs prev week')
-                    : '7-day average'
-                }
-              </div>
-              {burnRate.topCatRates[0] && (
-                <div className="bento-top-cat">
-                  {CATS[burnRate.topCatRates[0].cat]?.icon || '📦'} {burnRate.topCatRates[0].cat} · {incognito ? '•••' : fmtINR(burnRate.topCatRates[0].rate)}/d
+            {(() => {
+              const accel = burnRate.acceleration
+              const badgeColor = accel === null ? 'bb-blue' : accel > 10 ? 'bb-red' : accel < -10 ? 'bb-green' : 'bb-blue'
+              const badgeText = accel === null ? '7-day avg'
+                : accel > 10 ? `↑ ${Math.min(Math.abs(accel), 999).toFixed(0)}% vs last week`
+                : accel < -10 ? `↓ ${Math.min(Math.abs(accel), 999).toFixed(0)}% vs last week`
+                : '~flat vs last week'
+              return (
+                <div className="bento-tile bento-burn">
+                  <div className="bento-label">Burn Rate</div>
+                  <div className="bento-amount">
+                    {incognito ? '••••••' : fmtINR(burnRate.last7Rate)}<span className="bento-unit">/day</span>
+                  </div>
+                  <div className="bento-sub">
+                    {budgets.monthly > 0 && burnRate.runwayDays !== null
+                      ? (burnRate.runwayDays <= 0 ? 'Budget exceeded' : `${burnRate.runwayDays}d runway left`)
+                      : 'per day this month'}
+                  </div>
+                  <div className="bento-badges">
+                    <span className={`bb ${badgeColor}`}>{badgeText}</span>
+                  </div>
+                  {burnRate.topCatRates[0] && (
+                    <div className="bento-top-cat">
+                      {CATS[burnRate.topCatRates[0].cat]?.icon || '📦'} {burnRate.topCatRates[0].cat} · {incognito ? '•••' : fmtINR(burnRate.topCatRates[0].rate)}/d
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              )
+            })()}
 
           </div>
 

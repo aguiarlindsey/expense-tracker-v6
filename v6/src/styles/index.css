@@ -308,6 +308,19 @@ body {
 .bento-progress-label { font-size: var(--text-xs); color: var(--text-muted); display: flex; justify-content: space-between; gap: 4px; flex-wrap: wrap; }
 .bento-progress-pct   { font-weight: var(--fw-bold); font-size: var(--text-sm); }
 .bento-top-cat { font-size: var(--text-xs); color: var(--text-muted); margin-top: 4px; }
+.bento-badges  { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 0.5rem; }
+.bb {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 0.68rem; font-weight: var(--fw-semibold);
+  padding: 2px 8px; border-radius: var(--radius-full);
+}
+.bb-green  { background: rgba(16,185,129,0.12);  color: #10b981; }
+.bb-red    { background: rgba(239,68,68,0.12);   color: #ef4444; }
+.bb-blue   { background: rgba(37,99,235,0.12);   color: #60a5fa; }
+.bb-amber  { background: rgba(245,158,11,0.12);  color: #f59e0b; }
+.bb-purple { background: rgba(124,58,237,0.12);  color: #a78bfa; }
+.bento-progress-3pt { display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 6px; }
+.bento-progress-3pt-mid { font-weight: var(--fw-semibold); color: var(--primary); }
 
 /* Bento responsive */
 @media (max-width: 768px) {
