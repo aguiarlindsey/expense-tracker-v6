@@ -24,7 +24,7 @@ html { overflow-x: hidden; }
   --glass-border: rgba(100,120,255,0.20);
   --glass-blur:   blur(32px) saturate(200%) brightness(1.04);
   --glass-shadow: 0 4px 24px rgba(37,99,235,0.12), 0 1px 4px rgba(0,0,0,0.06);
-  --glass-inset:  inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(255,255,255,0.2);
+  --glass-inset:  inset 0 2px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.4);
 
   /* ── Shadow scale ── */
   --shadow-sm:    0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
@@ -200,6 +200,22 @@ body {
   animation: shimmer 4s linear infinite;
 }
 @keyframes shimmer { 0% { background-position: 0% 0 } 100% { background-position: 200% 0 } }
+
+/* Glass sheen — top-half white gradient, like light hitting glass */
+.app-header::after, .glass-shell::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 55%;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.22), transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+.dark .app-header::after, .dark .glass-shell::after {
+  background: linear-gradient(to bottom, rgba(255,255,255,0.08), transparent);
+}
+/* Ensure header children sit above the sheen */
+.app-header > *, .glass-shell > * { position: relative; z-index: 1; }
 
 .app-logo { font-size: 1.1rem; font-weight: 600; }
 .app-header-right { display: flex; align-items: center; gap: 1rem; }
@@ -549,7 +565,7 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
   --glass-bg:     rgba(12,15,35,0.55);
   --glass-border: rgba(99,130,255,0.22);
   --glass-shadow: 0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(99,130,255,0.12);
-  --glass-inset:  inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(255,255,255,0.04);
+  --glass-inset:  inset 0 2px 0 rgba(255,255,255,0.30), inset 0 -1px 0 rgba(255,255,255,0.08);
 
   /* ── Shadow scale ── */
   --shadow-sm:    0 1px 3px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.2);
