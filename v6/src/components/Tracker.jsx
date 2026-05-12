@@ -3406,7 +3406,7 @@ export default function Tracker({ session }) {
           <div className="settings-section" style={{ marginTop: 16 }}>
             <h3>ℹ️ About</h3>
             <div className="about-card">
-              <div className="about-title">💸 Expense Tracker V6</div>
+              <div className="about-title">💸 Expense Tracker V7</div>
               <div className="about-meta">
                 <span className="about-badge">v7.11.1</span>
                 <span className="about-badge">Incognito Mode</span>
