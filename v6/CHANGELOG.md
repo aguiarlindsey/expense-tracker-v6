@@ -45,7 +45,34 @@
 | 33 | 2026-05-07 | Lock screen race condition fix (requestAnimationFrame); mobile overflow (overflow-x hidden, max-width 100vw); categories (Laundry, Dry Cleaning, Ironing, Housekeeping, House Maid, Pest Control); Forex Card; Grab dining app; device-independent biometrics (et_v6_credential_id); OTP backup fixes; security audit (4 bugs); session creation revert to generateLink+verifyOtp | 6.0 |
 | 34 | 2026-05-07 | v7.9.0: Tesseract.js OCR receipt scanner — receiptParser.js (amount/date/merchant/category/payment parsers, 60+ merchant map), ReceiptScanner.jsx (camera/upload modal, progress bar, confidence indicators, raw text toggle), Tracker.jsx 📷 Scan button + applyOcr pre-fill, vite.config optimizeDeps exclude | 6.0 |
 | 35 | 2026-05-07 | v7.9.0 OCR refinements: CSP fixes (cdn.jsdelivr.net in script-src, wasm-unsafe-eval, camera permission); local Tesseract worker (no CDN); manual crop tool replacing broken auto-detect; objectFit letterbox coordinate fix; TORII parser fix (company suffix skipping, cleanName noise strip); food keyword expansion (salmon, steak, lobster, truffle, beer brands); petrol parser (¥/€/£ ₹ misread symbols, HP service variants, hasFuelContent fallback); fuel rate/quantity/type extraction + DB columns + form fields + list display; tax/GST/SGST/CGST/VAT/Service Charge extraction + DB columns; silent save error surfaced as toast; DD-MM-YYYY date format everywhere; unlimited multi-part scan (pages[] array, sequential OCR, progress scales per page); EXPTRAV7 reference doc | 8.0 |
-| **Total** | | | **~117.5 h** |
+| 36 | 2026-05-12 | Vehicle maintenance KM fields in Add Expense form: KMs at Service + Next Service at KMs inputs; Next Service Date sets nextDueDate + isRecurring reminder; applyOcr populates new fields directly (no longer embeds in notes); ExpItem shows 🔧 KM summary line; useStorage vehicleCurrentKm ↔ vehicle_km_at_service + vehicleNextServiceKm ↔ vehicle_next_service_km; Supabase migration (add_vehicle_km.sql) | 0.5 |
+| **Total** | | | **~118 h** |
+
+---
+
+## [Session 36] — Vehicle Maintenance KM Tracking
+_2026-05-12_
+
+**Vehicle maintenance fields in Add Expense form (`src/components/Tracker.jsx`)**
+- New **🔧 Service Details** section appears when category = Transport / subcategory = Vehicle Maintenance (manual selection or OCR auto-detect)
+- **KMs at Service** — integer input; stored in `vehicle_km_at_service` DB column
+- **Next Service at KMs** — integer input; stored in `vehicle_next_service_km` DB column
+- **Next Service Date** — date input; sets `nextDueDate` + `isRecurring = true` to trigger the recurring reminder system
+
+**OCR integration (`applyOcr`)**
+- `currentKm` and `nextServiceKm` from parser now populate the new form fields directly instead of being embedded in the notes string
+- Notes field is now cleaner (only vehicle model, reg, service type, next service type)
+
+**Expense list display (`ExpItem`)**
+- Vehicle Maintenance items show a `🔧 12,500 km at service · Next at 15,000 km · Due 15-11-2026` summary line (only when `vehicleCurrentKm` is set)
+
+**Storage layer (`src/hooks/useStorage.js`)**
+- `expenseToDb`: maps `vehicleCurrentKm` → `vehicle_km_at_service`, `vehicleNextServiceKm` → `vehicle_next_service_km`
+- `expenseFromDb`: reads both columns back and maps to camelCase fields
+
+**DB migration (`supabase/add_vehicle_km.sql`)**
+- `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS vehicle_km_at_service integer DEFAULT NULL`
+- `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS vehicle_next_service_km integer DEFAULT NULL`
 
 ---
 

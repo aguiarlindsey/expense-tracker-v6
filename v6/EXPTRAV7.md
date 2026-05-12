@@ -1,8 +1,8 @@
 # EXPTRAV7 — Full Feature Reference
 
 **Expense Tracker V7** · `https://expense-tracker-v6.vercel.app`  
-**Version:** v7.9.0 · **Built:** Vite + React 19 + Supabase · **Deployed:** Vercel  
-**Last updated:** 07-05-2026
+**Version:** v7.9.1 · **Built:** Vite + React 19 + Supabase · **Deployed:** Vercel  
+**Last updated:** 12-05-2026
 
 ---
 
@@ -364,6 +364,7 @@ Click **+ Expense** or press **N**. Use **📷 Scan** to pre-fill fields from a 
 | **Notes** | Additional details | Free text |
 | **Tax / GST Breakdown** | Individual tax amounts | SGST / CGST / IGST / VAT / Service Charge / Cess · collapsed by default · auto-expanded when OCR detects taxes |
 | **Fuel Details** | Shown when category = Transport / Fuel | Rate per Litre (₹/L) · Quantity (Litres) · Fuel Type (Petrol/Diesel/CNG/LPG/Premium) |
+| **Service Details** | Shown when category = Transport / Vehicle Maintenance (or auto-detected via scan) | **KMs at Service** — odometer reading at time of service · **Next Service at KMs** — odometer target for next service · **Next Service Date** — sets a recurring reminder (appears in Recurring tab and triggers a toast when due) |
 | **Custom Color** | Override the category dot colour | 259-colour palette |
 | **Budget Category** | Link to a per-category budget | Dropdown |
 | **Split With** | Person you split the bill with | Free text |
@@ -438,6 +439,9 @@ For receipts that are too tall to photograph clearly in one shot:
 | **Fuel Rate per Litre** | "Rate Per Litre 103 80" — space-as-decimal normalised to 103.80, rounded to 2dp |
 | **Fuel Quantity** | "Sale Quantity 19 36" — normalised to 19.36, rounded to 2dp |
 | **Fuel Type** | "Product Name Petrol / Diesel / CNG / LPG" |
+| **KMs at Service** | Odometer / KMs / Odo keywords followed by 3–7 digit number |
+| **Next Service at KMs** | "Next Service at 15000 km" or similar patterns |
+| **Next Service Date** | "Next Due" / "Next Service Date" followed by a date — sets recurring reminder |
 
 ### Results Screen
 - Each extracted field shows a **✓** (found with confidence) or **?** (not found / uncertain)
@@ -445,7 +449,7 @@ For receipts that are too tall to photograph clearly in one shot:
 - **Fuel chip row** — rate, litres, fuel type
 - **Show raw OCR text ▼** — reveals the full text Tesseract extracted for debugging
 - **Re-scan** — go back and try again
-- **Apply to Form** — pre-fills all matching fields; tax section auto-expands; fuel section appears if Transport/Fuel
+- **Apply to Form** — pre-fills all matching fields; tax section auto-expands; fuel section appears if Transport/Fuel; service details section appears if Transport/Vehicle Maintenance
 
 ### Important Notes
 - **First scan** downloads Tesseract's English language model (~10 MB from CDN); cached in browser IndexedDB after that — subsequent scans are fast
