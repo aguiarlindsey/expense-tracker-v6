@@ -2554,13 +2554,6 @@ export default function Tracker({ session }) {
             </div>
           )}
 
-          {filteredExp.length > 0 && !bulkMode && (
-            <div className="chart-row">
-              <div className="chart-card"><div className="chart-title">By Category</div><PieChart data={catData} incognito={incognito} /></div>
-              <div className="chart-card"><div className="chart-title">By Payment</div><PieChart data={payData} incognito={incognito} /></div>
-            </div>
-          )}
-
           {grouped.length === 0 ? (
             expenses.length === 0 ? (
               <div className="empty-state"><div className="empty-icon">💸</div><h3>No expenses yet</h3><p>Press <kbd>N</kbd> to add your first expense</p></div>
@@ -2866,6 +2859,14 @@ export default function Tracker({ session }) {
         <main>
           {/* Anomaly Detection — always visible at top */}
           {AnomalyPanel(expenses, anomalyHistory, fmtINR)}
+
+          {/* Spend breakdown charts */}
+          {catData.length > 0 && (
+            <div className="chart-row" style={{ marginBottom: '1rem' }}>
+              <div className="chart-card"><div className="chart-title">By Category</div><PieChart data={catData} incognito={incognito} /></div>
+              <div className="chart-card"><div className="chart-title">By Payment</div><PieChart data={payData} incognito={incognito} /></div>
+            </div>
+          )}
 
           {expenses.length === 0 ? (
             <div className="empty-state"><div className="empty-icon">💡</div><h3>No data yet</h3><p>Add some expenses to see insights.</p></div>
