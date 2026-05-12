@@ -474,6 +474,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
     splitWith: '', splitParts: 1, receiptRef: '',
     taxAmount: 0, taxBreakdown: {},
     fuelRate: '', fuelQuantity: '', fuelType: '',
+    vehicleCurrentKm: '', vehicleNextServiceKm: '',
     useCatAlloc: false, categoryAllocations: {},
   })
   const [showPalette, setShowPalette] = useState(false)
@@ -508,19 +509,14 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
       s('nextDueDate', parsed.nextServiceDate)
       s('isRecurring', true)
     }
-    if (parsed.vehicleModel || parsed.vehicleReg || parsed.currentKm || parsed.serviceType) {
+    if (parsed.currentKm)       s('vehicleCurrentKm', String(parsed.currentKm))
+    if (parsed.nextServiceKm)   s('vehicleNextServiceKm', String(parsed.nextServiceKm))
+    if (parsed.vehicleModel || parsed.vehicleReg || parsed.serviceType) {
       const parts = []
       if (parsed.vehicleModel)    parts.push(parsed.vehicleModel)
       if (parsed.vehicleReg)      parts.push(`Reg: ${parsed.vehicleReg}`)
-      if (parsed.currentKm)       parts.push(`${Number(parsed.currentKm).toLocaleString()} km at service`)
       if (parsed.serviceType)     parts.push(parsed.serviceType)
-      if (parsed.nextServiceKm)   parts.push(`Next svc at ${Number(parsed.nextServiceKm).toLocaleString()} km`)
-      if (parsed.nextServiceType && parsed.nextServiceDate) {
-        const [y,m,d] = parsed.nextServiceDate.split('-')
-        parts.push(`Next: ${parsed.nextServiceType} by ${d}-${m}-${y}`)
-      } else if (parsed.nextServiceType) {
-        parts.push(`Next: ${parsed.nextServiceType}`)
-      }
+      if (parsed.nextServiceType) parts.push(`Next: ${parsed.nextServiceType}`)
       s('notes', parts.join(' | '))
     }
   }
@@ -596,6 +592,8 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
       nextDueDate: form.isRecurring ? (form.nextDueDate || calcNextDue(form.date, form.recurringPeriod)) : '',
       category: primaryCat,
       categoryAllocations: catAlloc,
+      vehicleCurrentKm:    form.vehicleCurrentKm    ? parseInt(form.vehicleCurrentKm, 10)    || null : null,
+      vehicleNextServiceKm: form.vehicleNextServiceKm ? parseInt(form.vehicleNextServiceKm, 10) || null : null,
     })
     onClose()
   }
@@ -700,6 +698,35 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
                   <option value="">—</option>
                   {['Petrol','Diesel','CNG','LPG','Premium','Speed','Power'].map(t => <option key={t}>{t}</option>)}
                 </select>
+              </div>
+            </div>
+          )}
+          {/* Vehicle maintenance details — only for Transport / Vehicle Maintenance */}
+          {form.category === 'Transport' && form.subcategory === 'Vehicle Maintenance' && (
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '0.75rem', marginBottom: '0.5rem' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🔧 Service Details</div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>KMs at Service</label>
+                  <input type="number" min="0" step="1" placeholder="e.g. 12500"
+                    value={form.vehicleCurrentKm || ''}
+                    onChange={e => s('vehicleCurrentKm', e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Next Service at KMs</label>
+                  <input type="number" min="0" step="1" placeholder="e.g. 15000"
+                    value={form.vehicleNextServiceKm || ''}
+                    onChange={e => s('vehicleNextServiceKm', e.target.value)} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Next Service Date <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>— sets a reminder</span></label>
+                <input type="date"
+                  value={form.nextDueDate || ''}
+                  onChange={e => {
+                    s('nextDueDate', e.target.value)
+                    s('isRecurring', !!e.target.value)
+                  }} />
               </div>
             </div>
           )}
@@ -1181,6 +1208,13 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
         {item.subcategory === 'Fuel' && item.fuelRate && (
           <div className="item-notes">
             ⛽ ₹{Number(item.fuelRate).toFixed(2)}/L{item.fuelQuantity ? ` · ${Number(item.fuelQuantity).toFixed(2)} L` : ''}{item.fuelType ? ` · ${item.fuelType}` : ''}
+          </div>
+        )}
+        {item.subcategory === 'Vehicle Maintenance' && item.vehicleCurrentKm && (
+          <div className="item-notes">
+            🔧 {Number(item.vehicleCurrentKm).toLocaleString()} km at service
+            {item.vehicleNextServiceKm ? ` · Next at ${Number(item.vehicleNextServiceKm).toLocaleString()} km` : ''}
+            {item.nextDueDate ? ` · Due ${fmtDate(item.nextDueDate)}` : ''}
           </div>
         )}
       </div>
