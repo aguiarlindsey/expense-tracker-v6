@@ -3232,7 +3232,7 @@ export default function Tracker({ session }) {
               <div style={{ textAlign: 'right' }}>1 Foreign → {baseCurrency}</div>
               <div style={{ textAlign: 'right' }}>1 {baseCurrency} → Foreign</div>
             </div>
-            <div style={{ maxHeight: 540, overflowY: 'auto' }}>
+            <div className="fx-tbl-scroll" style={{ maxHeight: 540, overflowY: 'auto' }}>
               {rateData?.rates ? (
                 Object.entries(CG).map(([grp, curs]) => {
                   const filtered = curs.filter(c => {

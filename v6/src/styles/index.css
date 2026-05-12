@@ -1069,13 +1069,12 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 .fx-flag-ico  { font-size: 1.1rem; line-height: 1; }
 .fx-code-lbl  { font-size: var(--text-sm); font-weight: var(--fw-bold); }
 .fx-cur-name  { font-size: var(--text-xs); color: var(--text-muted); }
+/* Mobile: stack converter, scroll table horizontally — never hide columns */
 @media (max-width: 600px) {
-  .fx-conv-grid { grid-template-columns: 1fr; gap: var(--space-sm); }
+  .fx-conv-grid  { grid-template-columns: 1fr; gap: var(--space-sm); }
   .fx-conv-arrow { display: none; }
-  .fx-tbl-hdr  { grid-template-columns: 56px 1fr 110px; }
-  .fx-tbl-hdr > :last-child { display: none; }
-  .fx-row-item { grid-template-columns: 56px 1fr 110px; }
-  .fx-row-item > :last-child { display: none; }
+  .fx-tbl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .fx-tbl-hdr, .fx-row-item { min-width: 480px; }
 }
 
 /* ── Settings Tab ── */
