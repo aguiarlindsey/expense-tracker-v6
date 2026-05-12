@@ -143,7 +143,7 @@ export const CG = CURRENCIES.reduce((acc, c) => {
 export const CATS = {
   'Food':          { icon: '🍽️', color: '#f97316', subs: ['Groceries','Restaurants','Snacks','Beverages','Sweets','Takeaway'] },
   'Transport':     { icon: '🚗', color: '#3b82f6', subs: ['Fuel','Auto/Cab','Bus/Train','Flight','Parking','Vehicle Maintenance'] },
-  'Shopping':      { icon: '🛍️', color: '#8b5cf6', subs: ['Clothes','Electronics','Furniture','Books','Accessories','Appliances'] },
+  'Shopping':      { icon: '🛍️', color: '#8b5cf6', subs: ['Clothes','Electronics','Furniture','Books','Accessories','Appliances','Luggage & Bags'] },
   'Health':        { icon: '💊', color: '#ef4444', subs: ['Medicine','Doctor','Lab Tests','Hospital','Wellness','Dental'] },
   'Entertainment': { icon: '🎬', color: '#ec4899', subs: ['Movies','OTT/Streaming','Gaming','Events','Hobbies','Sports'] },
   'Utilities':     { icon: '💡', color: '#f59e0b', subs: ['Electricity','Water','Gas','Internet','Phone','Cable'] },
