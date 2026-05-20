@@ -2545,7 +2545,7 @@ export default function Tracker({ session }) {
                     <polyline points={polyPts} fill="none" stroke="#2563eb" strokeWidth="1.5"
                       strokeLinejoin="round" strokeLinecap="round" />
                     {sparkDays[peakIdx].total > 0 && (
-                      <React.Fragment>
+                      <>
                         <circle cx={pts[peakIdx][0]} cy={pts[peakIdx][1]} r="3.5" fill="#7c3aed" />
                         {!incognito && (
                           <text x={pts[peakIdx][0]} y={Math.max(pts[peakIdx][1] - 5, 8)} textAnchor={peakAnchor}
@@ -2553,7 +2553,7 @@ export default function Tracker({ session }) {
                             {fmtINR(sparkDays[peakIdx].total)}
                           </text>
                         )}
-                      </React.Fragment>
+                      </>
                     )}
                     <circle cx={pts[29][0]} cy={pts[29][1]} r="3" fill="#2563eb" />
                   </svg>
@@ -2571,7 +2571,7 @@ export default function Tracker({ session }) {
 
           {/* Category tiles */}
           {Object.keys(spentByCatMonth).length > 0 && (
-            <React.Fragment>
+            <>
               <div className="cat-sec">Spending by Category</div>
               <div className="cat-grid">
                 {Object.entries(spentByCatMonth)
@@ -2607,7 +2607,7 @@ export default function Tracker({ session }) {
                     )
                   })}
               </div>
-            </React.Fragment>
+            </>
           )}
 
           {/* Recurring reminders banner */}
