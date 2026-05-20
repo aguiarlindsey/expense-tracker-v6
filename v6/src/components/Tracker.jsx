@@ -1279,6 +1279,88 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
   )
 }
 
+// ─── Command Palette ──────────────────────────────────────
+
+function CommandPalette({ open, onClose, commands }) {
+  const [query, setQuery]     = useState('')
+  const [activeIdx, setActive] = useState(0)
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    if (open) { setQuery(''); setActive(0); setTimeout(() => inputRef.current?.focus(), 30) }
+  }, [open])
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return commands
+    const q = query.toLowerCase()
+    return commands.filter(c =>
+      c.label.toLowerCase().includes(q) ||
+      (c.keywords || []).some(k => k.includes(q))
+    )
+  }, [query, commands])
+
+  useEffect(() => { setActive(0) }, [filtered])
+
+  const run = (cmd) => { cmd.action(); onClose() }
+
+  useEffect(() => {
+    if (!open) return
+    const h = e => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setActive(i => Math.min(i + 1, filtered.length - 1)) }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(i => Math.max(i - 1, 0)) }
+      else if (e.key === 'Enter') { e.preventDefault(); if (filtered[activeIdx]) run(filtered[activeIdx]) }
+      else if (e.key === 'Escape') { e.preventDefault(); onClose() }
+    }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [open, filtered, activeIdx]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!open) return null
+
+  const groups = {}
+  filtered.forEach(c => { if (!groups[c.group]) groups[c.group] = []; groups[c.group].push(c) })
+
+  return (
+    <div className="cmd-overlay" onMouseDown={onClose}>
+      <div className="cmd-modal" onMouseDown={e => e.stopPropagation()} role="dialog" aria-label="Command palette">
+        <div className="cmd-search-wrap">
+          <span className="cmd-search-icon">⌘</span>
+          <input ref={inputRef} className="cmd-search" autoComplete="off" spellCheck={false}
+            placeholder="Jump to tab, search actions…"
+            value={query} onChange={e => setQuery(e.target.value)} />
+          <kbd className="cmd-kbd-hint">esc</kbd>
+        </div>
+        <div className="cmd-list">
+          {filtered.length === 0 && (
+            <div className="cmd-empty">No results for "{query}"</div>
+          )}
+          {Object.entries(groups).map(([group, items]) => (
+            <div key={group} className="cmd-group">
+              <div className="cmd-group-label">{group}</div>
+              {items.map(cmd => {
+                const gi = filtered.indexOf(cmd)
+                return (
+                  <button key={cmd.id}
+                    className={'cmd-item' + (gi === activeIdx ? ' active' : '')}
+                    onMouseEnter={() => setActive(gi)}
+                    onClick={() => run(cmd)}>
+                    <span className="cmd-item-icon">{cmd.icon}</span>
+                    <span className="cmd-item-label">{cmd.label}</span>
+                    {cmd.hint && <span className="cmd-item-hint">{cmd.hint}</span>}
+                  </button>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+        <div className="cmd-footer">
+          <span>↑↓ navigate</span><span>↵ select</span><span>esc close</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Tracker ─────────────────────────────────────────
 
 export default function Tracker({ session }) {
@@ -1334,6 +1416,7 @@ export default function Tracker({ session }) {
   const [showEF, setShowEF]               = useState(false)
   const [showIF, setShowIF]               = useState(false)
   const [showMore, setShowMore]           = useState(false)
+  const [showCmd,  setShowCmd]            = useState(false)
   const [editExpTarget, setEditExpTarget] = useState(null)
   const [editIncTarget, setEditIncTarget] = useState(null)
   const [delTarget, setDelTarget]         = useState(null)
@@ -1735,6 +1818,24 @@ export default function Tracker({ session }) {
     localStorage.setItem('et_v6_incognito', incognito ? '1' : '0')
   }, [incognito])
 
+  // ── Command palette commands ──────────────────────────
+  const cmdCommands = useMemo(() => [
+    { id: 'nav-overview',   group: 'Go to',   icon: '📊', label: 'Overview',              keywords: ['home','dashboard','bento','spend'],       action: () => setTab('overview') },
+    { id: 'nav-income',     group: 'Go to',   icon: '💵', label: 'Income',                keywords: ['salary','earnings','revenue'],            action: () => setTab('income') },
+    { id: 'nav-insights',   group: 'Go to',   icon: '💡', label: 'Analytics — Insights',  keywords: ['analytics','charts','stats','anomaly'],   action: () => { setTab('analytics'); setAnalyticsTab('insights') } },
+    { id: 'nav-trends',     group: 'Go to',   icon: '📈', label: 'Analytics — Trends',    keywords: ['analytics','monthly','comparison','mom'],  action: () => { setTab('analytics'); setAnalyticsTab('trends') } },
+    { id: 'nav-budgets',    group: 'Go to',   icon: '💰', label: 'Planning — Budgets',    keywords: ['planning','budget','limit','category'],   action: () => { setTab('planning'); setPlanningTab('budgets') } },
+    { id: 'nav-goals',      group: 'Go to',   icon: '🎯', label: 'Planning — Goals',      keywords: ['planning','savings','targets','milestone'],action: () => { setTab('planning'); setPlanningTab('goals') } },
+    { id: 'nav-recurring',  group: 'Go to',   icon: '🔄', label: 'Recurring',             keywords: ['subscriptions','repeat','monthly','emi'],  action: () => setTab('recurring') },
+    { id: 'nav-trips',      group: 'Go to',   icon: '✈️', label: 'Trips',                 keywords: ['travel','journey','vacation'],            action: () => setTab('trips') },
+    { id: 'nav-exchange',   group: 'Go to',   icon: '💱', label: 'Exchange (FX)',         keywords: ['currency','rates','forex','usd','btc'],   action: () => setTab('exchange') },
+    { id: 'nav-settings',   group: 'Go to',   icon: '⚙️', label: 'Settings',              keywords: ['preferences','account','export','import'],action: () => setTab('settings') },
+    { id: 'act-add-exp',    group: 'Actions', icon: '➕', label: 'Add Expense',           keywords: ['new','spend','record','create'],          action: () => setShowEF(true), hint: 'N' },
+    { id: 'act-add-inc',    group: 'Actions', icon: '💚', label: 'Add Income',            keywords: ['new','salary','earn','create'],           action: () => setShowIF(true), hint: 'I' },
+    { id: 'act-theme',      group: 'Actions', icon: dark ? '☀️' : '🌙', label: dark ? 'Switch to Light Mode' : 'Switch to Dark Mode', keywords: ['theme','appearance','dark','light'], action: () => setTheme(dark ? 'light' : 'dark'), hint: 'D' },
+    { id: 'act-incognito',  group: 'Actions', icon: '🙈', label: incognito ? 'Show Amounts' : 'Hide Amounts', keywords: ['privacy','blur','incognito','hide'], action: () => setIncognito(m => !m) },
+  ], [dark, incognito]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Filters — expenses ───────────────────────────────
   const [expSearch,    setExpSearch]    = useState('')
   const [expMonth,     setExpMonth]     = useState('')
@@ -1781,6 +1882,7 @@ export default function Tracker({ session }) {
   useEffect(() => {
     const TABS = ['overview', 'income', 'analytics', 'planning', 'recurring', 'trips', 'exchange', 'settings']
     const h = e => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setShowCmd(m => !m); return }
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
       const n = parseInt(e.key); if (n >= 1 && n <= TABS.length) setTab(TABS[n - 1])
       if (e.key === 'n' || e.key === 'N') setShowEF(true)
@@ -1795,7 +1897,7 @@ export default function Tracker({ session }) {
         setEditExpTarget(null); setEditIncTarget(null)
         setBulkMode(false); setSelectedIds({})
         setShowGoalForm(false); setContribGoal(null)
-        setShowMore(false)
+        setShowMore(false); setShowCmd(false)
       }
     }
     window.addEventListener('keydown', h)
@@ -2388,6 +2490,9 @@ export default function Tracker({ session }) {
               ⚠️ {conflicts.length}
             </span>
           )}
+          <button className="cmd-pill" title="Command palette (⌘K)" onClick={() => setShowCmd(true)}>
+            <span>⌘K</span>
+          </button>
           <button className="btn-ghost btn-sm" title="Toggle theme (D)" onClick={() => setTheme(dark ? 'light' : 'dark')}>
             {themeMode === 'system' ? '🖥️' : dark ? '🌙' : '☀️'}
           </button>
@@ -3882,6 +3987,7 @@ export default function Tracker({ session }) {
       })()}
 
       {/* ── Modals ── */}
+      <CommandPalette open={showCmd} onClose={() => setShowCmd(false)} commands={cmdCommands} />
       {showEF && <ExpenseForm initialData={editExpTarget} onSubmit={editExpTarget ? handleEditExpense : handleAddExpense} onClose={() => { setShowEF(false); setEditExpTarget(null) }} rateData={rateData} />}
       {showIF && <IncomeForm  initialData={editIncTarget} onSubmit={editIncTarget ? handleEditIncome  : handleAddIncome}  onClose={() => { setShowIF(false); setEditIncTarget(null) }} rateData={rateData} />}
       {delTarget && <ConfirmDialog message={delTarget.many ? `Permanently delete ${Object.keys(delTarget.ids).length} expenses?` : `Delete this ${delTarget.type}? Cannot be undone.`} onConfirm={handleDelete} onCancel={() => setDelTarget(null)} />}
