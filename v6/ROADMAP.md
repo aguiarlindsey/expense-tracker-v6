@@ -8,14 +8,14 @@
 ## Overall Progress
 
 ```
-█████░░░░░░░░░░░░░░░░░░░░░░░░░░░  15%   5 / 32 phases complete
+███████░░░░░░░░░░░░░░░░░░░░░░░░░  22%   7 / 32 phases complete
 ```
 
 | | Count | Hours |
 |---|---|---|
-| ✅ Complete | 5 phases | ~20h |
+| ✅ Complete | 7 phases | ~23.5h |
 | 🔨 In Progress | 0 phases | — |
-| 📋 Planned | 27 phases | ~120h est. |
+| 📋 Planned | 25 phases | ~116.5h est. |
 | **Total** | **32 phases** | **~140h · ~37 days** |
 
 ---
@@ -25,7 +25,7 @@
 | Epic | Focus | Progress | Phases | Est. Hours |
 |------|-------|----------|--------|-----------|
 | [1 — Foundation](#epic-1--foundation) | CSS system | `██████████` 100% | 2/2 | ~7h |
-| [2 — Visual Redesign](#epic-2--visual-redesign) | Glass UI, Bento Grid | `██████░░░░` 75% | 3/4 | ~12h |
+| [2 — Visual Redesign](#epic-2--visual-redesign) | Glass UI, Bento Grid | `██████████` 100% | 4/4 | ~12h |
 | [3 — Navigation & UX](#epic-3--navigation--ux) | Tabs, ⌘K, drawers | `░░░░░░░░░░` 0% | 0/5 | ~25h |
 | [4 — Onboarding](#epic-4--onboarding) | First-run wizard | `░░░░░░░░░░` 0% | 0/3 | ~11h |
 | [5 — Analytics Tab](#epic-5--analytics-tab) | Insights + Trends merged | `░░░░░░░░░░` 0% | 0/3 | ~18h |
@@ -55,7 +55,7 @@
 > The new look and feel — glass, depth, hierarchy.
 
 ```
-██████░░░░  75%   3 / 4 phases
+██████████  100%   4 / 4 phases
 ```
 
 | Status | Phase | Description | Complexity | Est. |
@@ -63,8 +63,8 @@
 | ✅ | **2.1 — Glassmorphism Shell** | Frosted-glass header + tab bar · `backdrop-filter` · sticky tab bar · body gradient · shimmer stripe · glass sheen overlay · dark mode variants | Low | 2–3h |
 | ✅ | **2.2 — Bento Grid Dashboard** | 5-tile CSS Grid — hero (3-pt progress bar + badge chips + trend), income, net savings, safe-to-spend, burn rate · responsive 3→2→1 col · hover lift · incognito masking | Low | 4–5h |
 | ✅ | **2.3a — Exchange Tab Redesign** | Base currency tile · quick converter · 122-currency scrollable table in 8 regional groups · search filter · BTC/ETH via CoinGecko · mobile horizontal scroll | Low | 2h |
-| 📋 | **2.3 — Sparkline + Category Tiles** | 30-day SVG sparkline · category tiles with budget progress bars · replaces pie chart | Low | 3–4h |
-| 📋 | **2.4 — Dark / Light Polish** | Glass effect tuned per mode · auto system-preference detection · consistent across all tabs | Low | 1–2h |
+| ✅ | **2.3 — Sparkline + Category Tiles** | 30-day SVG sparkline · category tiles with budget progress bars · replaces pie chart | Low | 3–4h |
+| ✅ | **2.4 — Dark / Light Polish** | Glass effect tuned per mode · auto system-preference detection · FOUC prevention · prefers-reduced-motion | Low | 1–2h |
 
 ---
 
@@ -179,8 +179,9 @@
 | v7.11.1 | Vehicle maintenance KM fields | ✅ |
 | v7.12.0 | CSS Design System + Glass Shell | ✅ |
 | v7.13.0 | Bento Grid Dashboard + badges + 3-pt progress | ✅ |
-| v7.14.0 | Exchange tab redesign · BTC/ETH rates · pie charts → Insights | ✅ Current |
-| v7.15.0 | Sparkline + Category tiles (Phase 2.3) | 📋 Next |
+| v7.14.0 | Exchange tab redesign · BTC/ETH rates · pie charts → Insights | ✅ |
+| v7.15.0 | Sparkline + Category tiles (Phase 2.3) | ✅ |
+| v7.15.1 | Dark/Light polish · system theme · FOUC fix · reduced-motion (Phase 2.4) | ✅ Current |
 | v7.16.0 | Tab Restructure (Analytics + Planning) | 📋 |
 | v7.15.0 | ⌘K Command Center | 📋 |
 | v7.16.0 | Dynamic Drawers + Bottom Nav | 📋 |
@@ -207,4 +208,4 @@
 
 ---
 
-*Last updated: 12-05-2026 · Session 38 · v7.14.0 shipped*
+*Last updated: 21-05-2026 · Session 39 · v7.15.1 shipped*

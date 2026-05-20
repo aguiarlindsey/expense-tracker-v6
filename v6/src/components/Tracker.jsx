@@ -3703,7 +3703,7 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title">💸 Expense Tracker V7</div>
               <div className="about-meta">
-                <span className="about-badge">v7.14.0</span>
+                <span className="about-badge">v7.15.1</span>
                 <span className="about-badge">Glass UI</span>
                 <span className="about-badge">Bento Dashboard</span>
                 <span className="about-badge">122 Currencies</span>
@@ -3717,11 +3717,11 @@ export default function Tracker({ session }) {
               <div className="about-row"><span>Deployment</span><span>Vercel CDN · auto-deploy on push · cron jobs (reminders + maintenance)</span></div>
               <div className="about-row"><span>Offline</span><span>Dependency-ordered retry queue (topo sort) · auto-sync on reconnect</span></div>
               <div className="about-row"><span>Security</span><span>Server-enforced biometric lock · alphanumeric OTP · rate limiting · RLS on all tables · HTTP security headers</span></div>
-              <div className="about-row"><span>UI</span><span>Glassmorphism shell · Bento grid dashboard · badge chips · animated shimmer header · dark/light gradient backgrounds</span></div>
+              <div className="about-row"><span>UI</span><span>Glassmorphism shell · Bento grid dashboard · 30-day sparkline · category tiles · shimmer header · system/dark/light theme</span></div>
               <div className="about-row"><span>Exchange</span><span>122 currencies in 8 regions · live FX rates · quick converter · BTC + ETH via CoinGecko · search filter</span></div>
               <div className="about-row"><span>Features</span><span>10 tabs · receipt OCR scanner · anomaly detection · burn-rate forecast · trip tracking · vehicle maintenance KM tracking · 259-color palette</span></div>
-              <div className="about-row"><span>Mobile</span><span>Fully responsive · horizontal tab scroll · touch-friendly</span></div>
-              <div className="about-row"><span>Last updated</span><span>2026-05-12 (v7.14.0)</span></div>
+              <div className="about-row"><span>Mobile</span><span>Fully responsive · horizontal tab scroll · touch-friendly · prefers-reduced-motion support</span></div>
+              <div className="about-row"><span>Last updated</span><span>2026-05-21 (v7.15.1)</span></div>
             </div>
           </div>
         </main>
