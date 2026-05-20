@@ -2555,7 +2555,7 @@ export default function Tracker({ session }) {
 
             {/* Sparkline — 30-day spend trend */}
             {sparkDays.some(d => d.total > 0) && (() => {
-              const W = 400, H = 60, PAD = 6
+              const W = 400, H = 56, PAD = 4
               const maxAmt = Math.max.apply(null, sparkDays.map(d => d.total).concat([1]))
               const pts = sparkDays.map((d, i) => [
                 Math.round((i / 29) * W),
@@ -2565,32 +2565,32 @@ export default function Tracker({ session }) {
               const fillD = 'M' + pts[0].join(',') + ' ' + pts.slice(1).map(p => 'L' + p.join(',')).join(' ') + ' L' + W + ',' + H + ' L0,' + H + ' Z'
               const peakIdx = sparkDays.reduce((mi, d, i) => d.total > sparkDays[mi].total ? i : mi, 0)
               const fmtDay = iso => { const d = new Date(iso + 'T12:00:00'); return d.getDate() + ' ' + d.toLocaleString('default', { month: 'short' }) }
-              const peakAnchor = peakIdx < 3 ? 'start' : peakIdx > 26 ? 'end' : 'middle'
               return (
                 <div className="bento-tile bento-spark">
-                  <div className="bento-label" style={{ marginBottom: 6 }}>30-Day Spend Trend</div>
+                  <div className="spark-header">
+                    <div className="bento-label">30-Day Spend Trend</div>
+                    {sparkDays[peakIdx].total > 0 && (
+                      <div className="spark-peak">
+                        <span className="spark-peak-dot" />
+                        {incognito ? '••••' : fmtINR(sparkDays[peakIdx].total)}
+                        <span className="spark-peak-label">peak · {fmtDay(sparkDays[peakIdx].date)}</span>
+                      </div>
+                    )}
+                  </div>
                   <svg className="spark-svg" viewBox={'0 0 ' + W + ' ' + H} preserveAspectRatio="none">
                     <defs>
                       <linearGradient id="spark-grad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#2563eb" stopOpacity="0.2" />
+                        <stop offset="0%" stopColor="#2563eb" stopOpacity="0.25" />
                         <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
                       </linearGradient>
                     </defs>
                     <path d={fillD} fill="url(#spark-grad)" />
-                    <polyline points={polyPts} fill="none" stroke="#2563eb" strokeWidth="1.5"
+                    <polyline points={polyPts} fill="none" stroke="#2563eb" strokeWidth="2"
                       strokeLinejoin="round" strokeLinecap="round" />
                     {sparkDays[peakIdx].total > 0 && (
-                      <>
-                        <circle cx={pts[peakIdx][0]} cy={pts[peakIdx][1]} r="3.5" fill="#7c3aed" />
-                        {!incognito && (
-                          <text x={pts[peakIdx][0]} y={Math.max(pts[peakIdx][1] - 5, 8)} textAnchor={peakAnchor}
-                            fontSize="7" fill="#a78bfa" fontFamily="sans-serif">
-                            {fmtINR(sparkDays[peakIdx].total)}
-                          </text>
-                        )}
-                      </>
+                      <circle cx={pts[peakIdx][0]} cy={pts[peakIdx][1]} r="3.5" fill="#7c3aed" />
                     )}
-                    <circle cx={pts[29][0]} cy={pts[29][1]} r="3" fill="#2563eb" />
+                    <circle cx={pts[29][0]} cy={pts[29][1]} r="3.5" fill="#2563eb" />
                   </svg>
                   <div className="spark-axis">
                     <span>{fmtDay(sparkDays[0].date)}</span>
