@@ -615,6 +615,22 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 .dark .item-badge-rec { background: #2d1f5e; border-color: #6d28d9; color: #c4b5fd; }
 .dark .error-banner { background: #450a0a; color: #fca5a5; border-color: #7f1d1d; }
 
+/* ─── Theme segmented control ─────────────────────────── */
+.theme-seg { display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.theme-seg-btn { flex: 1; background: none; border: none; border-right: 1px solid var(--border); padding: 0.35rem 0.6rem; font-size: var(--text-sm); color: var(--text-muted); cursor: pointer; transition: background 0.15s, color 0.15s; white-space: nowrap; font-family: var(--font-sans); }
+.theme-seg-btn:last-child { border-right: none; }
+.theme-seg-btn:hover { background: var(--surface-alt); color: var(--text); }
+.theme-seg-btn.active { background: var(--primary); color: #fff; font-weight: var(--fw-semibold); }
+
+/* ─── Reduced motion ──────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* ─── Colorblind mode ─────────────────────────────────── */
 .colorblind {
   --color-exp: #0071e3;

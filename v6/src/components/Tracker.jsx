@@ -1315,6 +1315,8 @@ export default function Tracker({ session }) {
     return valid.includes(p) ? p : 'overview'
   })
   const [dark, setDark]                   = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s !== null ? s === '1' : window.matchMedia('(prefers-color-scheme: dark)').matches })
+  const [themeMode, setThemeMode]         = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s === null ? 'system' : s === '1' ? 'dark' : 'light' })
+  const darkRef                           = useRef(null)
   const [colorblind, setColorblind]       = useState(() => localStorage.getItem('et_v6_cb') === '1')
   const [incognito, setIncognito]         = useState(() => localStorage.getItem('et_v6_incognito') === '1')
   // Shadow module-level fmtINR — all JSX in this component uses this version
@@ -1536,7 +1538,7 @@ export default function Tracker({ session }) {
     else if (confirmAction.type === 'clear-all')      await clearAll()
     else if (confirmAction.type === 'factory-reset') {
       await factoryReset()
-      setDark(false)
+      setDark(false); setThemeMode('light'); localStorage.setItem('et_v6_dark', '0')
       setColorblind(false)
       setBaseCurrency('INR')
       _firedToasts.current.clear()
@@ -1692,10 +1694,28 @@ export default function Tracker({ session }) {
   }, [])
 
   // ── Theme effects ─────────────────────────────────────
+  useEffect(() => { darkRef.current = dark }, [dark])
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
-    localStorage.setItem('et_v6_dark', dark ? '1' : '0')
   }, [dark])
+  const setTheme = useCallback((mode) => {
+    setThemeMode(mode)
+    if (mode === 'system') {
+      localStorage.removeItem('et_v6_dark')
+      setDark(window.matchMedia('(prefers-color-scheme: dark)').matches)
+    } else {
+      const isDark = mode === 'dark'
+      localStorage.setItem('et_v6_dark', isDark ? '1' : '0')
+      setDark(isDark)
+    }
+  }, [])
+  useEffect(() => {
+    if (themeMode !== 'system') return
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const onChange = (e) => setDark(e.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [themeMode])
   useEffect(() => {
     document.documentElement.classList.toggle('colorblind', colorblind)
     localStorage.setItem('et_v6_cb', colorblind ? '1' : '0')
@@ -1755,7 +1775,11 @@ export default function Tracker({ session }) {
       const n = parseInt(e.key); if (n >= 1 && n <= TABS.length) setTab(TABS[n - 1])
       if (e.key === 'n' || e.key === 'N') setShowEF(true)
       if (e.key === 'i' || e.key === 'I') setShowIF(true)
-      if (e.key === 'd' || e.key === 'D') setDark(m => !m)
+      if (e.key === 'd' || e.key === 'D') {
+        const next = !darkRef.current
+        setDark(next); setThemeMode(next ? 'dark' : 'light')
+        localStorage.setItem('et_v6_dark', next ? '1' : '0')
+      }
       if (e.key === 'Escape') {
         setShowEF(false); setShowIF(false); setDelTarget(null)
         setEditExpTarget(null); setEditIncTarget(null)
@@ -2354,7 +2378,9 @@ export default function Tracker({ session }) {
               ⚠️ {conflicts.length}
             </span>
           )}
-          <button className="btn-ghost btn-sm" title="D" onClick={() => setDark(m => !m)}>{dark ? '🌙' : '☀️'}</button>
+          <button className="btn-ghost btn-sm" title="Toggle theme (D)" onClick={() => setTheme(dark ? 'light' : 'dark')}>
+            {themeMode === 'system' ? '🖥️' : dark ? '🌙' : '☀️'}
+          </button>
           <button className="btn-ghost btn-sm" title="Colorblind mode" onClick={() => setColorblind(m => !m)} style={{ opacity: colorblind ? 1 : 0.5 }}>👁️</button>
           <button className="btn-ghost btn-sm" title={incognito ? 'Show amounts' : 'Hide amounts'} onClick={() => setIncognito(m => !m)} style={{ opacity: incognito ? 1 : 0.5 }}>🙈</button>
           <button className="btn-primary btn-sm" onClick={() => setShowEF(true)} title="N">➕ Expense</button>
@@ -3412,12 +3438,15 @@ export default function Tracker({ session }) {
             <h3>🎨 Appearance</h3>
             <div className="settings-row">
               <div className="settings-row-label">
-                <strong>Dark Mode</strong>
-                <span>Toggle dark/light theme. Shortcut: D key.</span>
+                <strong>Theme</strong>
+                <span>Light, dark, or follow your system setting. Shortcut: D key.</span>
               </div>
-              <button className={`toggle-btn${dark ? ' on' : ''}`} onClick={() => setDark(m => !m)}>
-                {dark ? '🌙 Dark' : '☀️ Light'}
-              </button>
+              <div className="theme-seg">
+                {[['light','☀️ Light'],['system','🖥️ System'],['dark','🌙 Dark']].map(([m,label]) => (
+                  <button key={m} className={'theme-seg-btn' + (themeMode === m ? ' active' : '')}
+                    onClick={() => setTheme(m)}>{label}</button>
+                ))}
+              </div>
             </div>
             <div className="settings-row">
               <div className="settings-row-label">
