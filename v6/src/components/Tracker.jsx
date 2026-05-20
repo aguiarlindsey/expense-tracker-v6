@@ -1833,7 +1833,7 @@ export default function Tracker({ session }) {
     { id: 'act-add-exp',    group: 'Actions', icon: '➕', label: 'Add Expense',           keywords: ['new','spend','record','create'],          action: () => setShowEF(true), hint: 'N' },
     { id: 'act-add-inc',    group: 'Actions', icon: '💚', label: 'Add Income',            keywords: ['new','salary','earn','create'],           action: () => setShowIF(true), hint: 'I' },
     { id: 'act-theme',      group: 'Actions', icon: dark ? '☀️' : '🌙', label: dark ? 'Switch to Light Mode' : 'Switch to Dark Mode', keywords: ['theme','appearance','dark','light'], action: () => setTheme(dark ? 'light' : 'dark'), hint: 'D' },
-    { id: 'act-incognito',  group: 'Actions', icon: '🙈', label: incognito ? 'Show Amounts' : 'Hide Amounts', keywords: ['privacy','blur','incognito','hide'], action: () => setIncognito(m => !m) },
+    { id: 'act-incognito',  group: 'Actions', icon: '🙈', label: incognito ? 'Show Amounts' : 'Hide Amounts', keywords: ['privacy','blur','incognito','hide'], action: () => setIncognito(m => !m), hint: 'H' },
   ], [dark, incognito]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Filters — expenses ───────────────────────────────
@@ -1887,6 +1887,7 @@ export default function Tracker({ session }) {
       const n = parseInt(e.key); if (n >= 1 && n <= TABS.length) setTab(TABS[n - 1])
       if (e.key === 'n' || e.key === 'N') setShowEF(true)
       if (e.key === 'i' || e.key === 'I') setShowIF(true)
+      if (e.key === 'h' || e.key === 'H') setIncognito(m => !m)
       if (e.key === 'd' || e.key === 'D') {
         const next = !darkRef.current
         setDark(next); setThemeMode(next ? 'dark' : 'light')
