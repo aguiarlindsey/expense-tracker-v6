@@ -1333,6 +1333,7 @@ export default function Tracker({ session }) {
   const fmtINR = n => incognito ? '••••••' : _fmtINR(n)
   const [showEF, setShowEF]               = useState(false)
   const [showIF, setShowIF]               = useState(false)
+  const [showMore, setShowMore]           = useState(false)
   const [editExpTarget, setEditExpTarget] = useState(null)
   const [editIncTarget, setEditIncTarget] = useState(null)
   const [delTarget, setDelTarget]         = useState(null)
@@ -1794,6 +1795,7 @@ export default function Tracker({ session }) {
         setEditExpTarget(null); setEditIncTarget(null)
         setBulkMode(false); setSelectedIds({})
         setShowGoalForm(false); setContribGoal(null)
+        setShowMore(false)
       }
     }
     window.addEventListener('keydown', h)
@@ -3872,6 +3874,56 @@ export default function Tracker({ session }) {
           onResolve={resolveConflict}
           onDismiss={dismissConflict}
         />
+      )}
+
+      {/* ── Bottom nav — mobile only ── */}
+      <nav className="bnav" aria-label="Bottom navigation">
+        {[
+          { id: 'overview',  icon: '🏠', label: 'Home' },
+          { id: 'income',    icon: '💵', label: 'Income' },
+        ].map(t => (
+          <button key={t.id} className={'bnav-btn' + (tab === t.id ? ' active' : '')}
+            onClick={() => setTab(t.id)}>
+            <span className="bnav-icon">{t.icon}</span>
+            <span className="bnav-label">{t.label}</span>
+          </button>
+        ))}
+        <button className="bnav-fab" onClick={() => setShowEF(true)} aria-label="Add expense">＋</button>
+        <button className={'bnav-btn' + (tab === 'analytics' ? ' active' : '')}
+          onClick={() => setTab('analytics')}>
+          <span className="bnav-icon">📈</span>
+          <span className="bnav-label">Analytics</span>
+        </button>
+        <button className={'bnav-btn' + (['planning','recurring','trips','exchange','settings'].includes(tab) ? ' active' : '')}
+          onClick={() => setShowMore(true)}>
+          <span className="bnav-icon">☰</span>
+          <span className="bnav-label">More</span>
+        </button>
+      </nav>
+
+      {/* ── More bottom sheet ── */}
+      {showMore && (
+        <>
+          <div className="bsheet-overlay" onClick={() => setShowMore(false)} />
+          <div className="bsheet" role="dialog" aria-label="More navigation">
+            <div className="bsheet-handle" />
+            <div className="bsheet-grid">
+              {[
+                ['planning',  '📋', 'Planning'],
+                ['recurring', '🔄', 'Recurring'],
+                ['trips',     '✈️', 'Trips'],
+                ['exchange',  '💱', 'FX'],
+                ['settings',  '⚙️', 'Settings'],
+              ].map(([id, icon, label]) => (
+                <button key={id} className={'bsheet-btn' + (tab === id ? ' active' : '')}
+                  onClick={() => { setTab(id); setShowMore(false) }}>
+                  <span className="bsheet-icon">{icon}</span>
+                  <span className="bsheet-label">{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
       )}
     </div>
   )
