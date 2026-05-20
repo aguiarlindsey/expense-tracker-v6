@@ -568,7 +568,7 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
 .modal-header h2 { font-size: 1.1rem; margin: 0; }
 .modal-close { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: var(--text-muted); line-height: 1; }
-.modal-footer { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 1rem 1.25rem; border-top: 1px solid var(--border); }
+.modal-footer { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 1rem 1.25rem; border-top: 1px solid var(--border); position: sticky; bottom: 0; background: var(--surface); z-index: 1; }
 
 /* Form */
 .form { padding: 1.25rem; display: flex; flex-direction: column; gap: 0.875rem; }
@@ -1443,9 +1443,9 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
   .tabs::-webkit-scrollbar { display: none; }
   .tab { white-space: nowrap; flex-shrink: 0; font-size: 0.82rem; padding: 0.5rem 0.75rem; }
 
-  /* Modal: slide up from bottom on small screens */
-  .modal-overlay { padding: 0; align-items: flex-end; }
-  .modal { max-width: 100%; border-radius: var(--radius) var(--radius) 0 0; max-height: 92vh; }
+  /* Modal: slide up from bottom on small screens, sit above bottom nav */
+  .modal-overlay { padding: 0; padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)); align-items: flex-end; }
+  .modal { max-width: 100%; border-radius: var(--radius) var(--radius) 0 0; max-height: calc(92vh - 68px); }
   .modal-sm { max-width: 100%; }
 
   /* Tables: prevent overflow, allow scroll */
