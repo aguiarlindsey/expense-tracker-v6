@@ -1819,6 +1819,20 @@ export default function Tracker({ session }) {
     return c
   }, [expenses, monthStr])
 
+  const sparkDays = useMemo(() => {
+    const today = new Date()
+    const days = []
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(today)
+      d.setDate(d.getDate() - i)
+      days.push({ date: d.toISOString().split('T')[0], total: 0 })
+    }
+    const byDate = {}
+    days.forEach(d => { byDate[d.date] = d })
+    expenses.forEach(e => { if (byDate[e.date]) byDate[e.date].total += toINR(e) })
+    return days
+  }, [expenses])
+
   // ── Budget toast alerts ───────────────────────────────
   useEffect(() => {
     if (loading) return
@@ -2504,7 +2518,97 @@ export default function Tracker({ session }) {
               )
             })()}
 
+            {/* Sparkline — 30-day spend trend */}
+            {sparkDays.some(d => d.total > 0) && (() => {
+              const W = 400, H = 60, PAD = 6
+              const maxAmt = Math.max.apply(null, sparkDays.map(d => d.total).concat([1]))
+              const pts = sparkDays.map((d, i) => [
+                Math.round((i / 29) * W),
+                Math.round(H - PAD - (d.total / maxAmt) * (H - PAD * 2))
+              ])
+              const polyPts = pts.map(p => p.join(',')).join(' ')
+              const fillD = 'M' + pts[0].join(',') + ' ' + pts.slice(1).map(p => 'L' + p.join(',')).join(' ') + ' L' + W + ',' + H + ' L0,' + H + ' Z'
+              const peakIdx = sparkDays.reduce((mi, d, i) => d.total > sparkDays[mi].total ? i : mi, 0)
+              const fmtDay = iso => { const d = new Date(iso + 'T12:00:00'); return d.getDate() + ' ' + d.toLocaleString('default', { month: 'short' }) }
+              const peakAnchor = peakIdx < 3 ? 'start' : peakIdx > 26 ? 'end' : 'middle'
+              return (
+                <div className="bento-tile bento-spark">
+                  <div className="bento-label" style={{ marginBottom: 6 }}>30-Day Spend Trend</div>
+                  <svg className="spark-svg" viewBox={'0 0 ' + W + ' ' + H} preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="spark-grad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#2563eb" stopOpacity="0.2" />
+                        <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path d={fillD} fill="url(#spark-grad)" />
+                    <polyline points={polyPts} fill="none" stroke="#2563eb" strokeWidth="1.5"
+                      strokeLinejoin="round" strokeLinecap="round" />
+                    {sparkDays[peakIdx].total > 0 && (
+                      <React.Fragment>
+                        <circle cx={pts[peakIdx][0]} cy={pts[peakIdx][1]} r="3.5" fill="#7c3aed" />
+                        {!incognito && (
+                          <text x={pts[peakIdx][0]} y={Math.max(pts[peakIdx][1] - 5, 8)} textAnchor={peakAnchor}
+                            fontSize="7" fill="#a78bfa" fontFamily="sans-serif">
+                            {fmtINR(sparkDays[peakIdx].total)}
+                          </text>
+                        )}
+                      </React.Fragment>
+                    )}
+                    <circle cx={pts[29][0]} cy={pts[29][1]} r="3" fill="#2563eb" />
+                  </svg>
+                  <div className="spark-axis">
+                    <span>{fmtDay(sparkDays[0].date)}</span>
+                    <span>{fmtDay(sparkDays[9].date)}</span>
+                    <span>{fmtDay(sparkDays[19].date)}</span>
+                    <span>Today</span>
+                  </div>
+                </div>
+              )
+            })()}
+
           </div>
+
+          {/* Category tiles */}
+          {Object.keys(spentByCatMonth).length > 0 && (
+            <React.Fragment>
+              <div className="cat-sec">Spending by Category</div>
+              <div className="cat-grid">
+                {Object.entries(spentByCatMonth)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([cat, spent]) => {
+                    const catInfo = CATS[cat] || { icon: '📦', color: '#6b7280' }
+                    const catBgt  = (budgets.categories && budgets.categories[cat]) || 0
+                    const pct     = catBgt > 0 ? Math.min((spent / catBgt) * 100, 100) : 0
+                    const barColor = catBgt > 0
+                      ? (pct >= 100 ? '#ef4444' : pct >= 80 ? '#f59e0b' : catInfo.color)
+                      : catInfo.color
+                    const fillPct  = catBgt > 0 ? pct : Math.min((spent / Math.max(spentMonth, 1)) * 100, 100)
+                    const leftAmt  = catBgt > 0 ? catBgt - spent : null
+                    return (
+                      <div key={cat} className="bento-tile cat-tile">
+                        <div className="cat-top">
+                          <div className="cat-ico" style={{ background: catInfo.color + '22' }}>{catInfo.icon}</div>
+                          <div className="cat-name">{cat}</div>
+                        </div>
+                        <div className="cat-amt">{incognito ? '••••' : fmtINR(spent)}</div>
+                        <div className="cat-bar">
+                          <div className="cat-fill" style={{ background: barColor, width: fillPct + '%' }} />
+                        </div>
+                        <div className="cat-meta">
+                          <span>{catBgt > 0 ? pct.toFixed(0) + '% of budget' : ((spent / Math.max(spentMonth, 1)) * 100).toFixed(0) + '% of total'}</span>
+                          {catBgt > 0 && (
+                            <span style={{ color: leftAmt <= 0 ? '#ef4444' : leftAmt < catBgt * 0.2 ? '#f59e0b' : catInfo.color }}>
+                              {leftAmt <= 0 ? 'At limit' : incognito ? '••••' : fmtINR(leftAmt) + ' left'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+              </div>
+            </React.Fragment>
+          )}
 
           {/* Recurring reminders banner */}
           {upcomingRecurring.length > 0 && (
