@@ -1311,8 +1311,17 @@ export default function Tracker({ session }) {
   // ── UI state ─────────────────────────────────────────
   const [tab, setTab]                     = useState(() => {
     const p = new URLSearchParams(window.location.search).get('tab')
-    const valid = ['overview','income','trends','budgets','goals','insights','recurring','exchange','settings']
-    return valid.includes(p) ? p : 'overview'
+    const remap = { trends: 'analytics', insights: 'analytics', budgets: 'planning', goals: 'planning' }
+    const valid = ['overview','income','analytics','planning','recurring','trips','exchange','settings']
+    return valid.includes(p) ? p : remap[p] || 'overview'
+  })
+  const [analyticsTab, setAnalyticsTab]   = useState(() => {
+    const p = new URLSearchParams(window.location.search).get('tab')
+    return p === 'trends' ? 'trends' : 'insights'
+  })
+  const [planningTab, setPlanningTab]     = useState(() => {
+    const p = new URLSearchParams(window.location.search).get('tab')
+    return p === 'goals' ? 'goals' : 'budgets'
   })
   const [dark, setDark]                   = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s !== null ? s === '1' : window.matchMedia('(prefers-color-scheme: dark)').matches })
   const [themeMode, setThemeMode]         = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s === null ? 'system' : s === '1' ? 'dark' : 'light' })
@@ -1769,7 +1778,7 @@ export default function Tracker({ session }) {
 
   // ── Keyboard shortcuts ───────────────────────────────
   useEffect(() => {
-    const TABS = ['overview', 'income', 'trends', 'budgets', 'goals', 'insights', 'recurring', 'trips', 'exchange', 'settings']
+    const TABS = ['overview', 'income', 'analytics', 'planning', 'recurring', 'trips', 'exchange', 'settings']
     const h = e => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
       const n = parseInt(e.key); if (n >= 1 && n <= TABS.length) setTab(TABS[n - 1])
@@ -2332,10 +2341,8 @@ export default function Tracker({ session }) {
   const TABS = [
     { id: 'overview',   label: '📊 Overview' },
     { id: 'income',     label: '💵 Income' },
-    { id: 'trends',     label: '📈 Trends' },
-    { id: 'budgets',    label: '💰 Budgets' },
-    { id: 'goals',      label: '🎯 Goals' },
-    { id: 'insights',   label: '💡 Insights' },
+    { id: 'analytics',  label: '📈 Analytics' },
+    { id: 'planning',   label: '📋 Planning' },
     { id: 'recurring',  label: '🔄 Recur' },
     { id: 'trips',      label: '✈️ Trips' },
     { id: 'exchange',   label: '💱 FX' },
@@ -2508,7 +2515,7 @@ export default function Tracker({ session }) {
                 <>
                   <div className="bento-label">Monthly Budget</div>
                   <div className="bento-amount" style={{ fontSize: '1rem', color: 'var(--text-muted)', marginTop: 4 }}>Not set</div>
-                  <div className="bento-sub" style={{ cursor: 'pointer', color: 'var(--primary)' }} onClick={() => setTab('budgets')}>Set a budget →</div>
+                  <div className="bento-sub" style={{ cursor: 'pointer', color: 'var(--primary)' }} onClick={() => { setTab('planning'); setPlanningTab('budgets') }}>Set a budget →</div>
                 </>
               )}
             </div>
@@ -2784,8 +2791,22 @@ export default function Tracker({ session }) {
         </main>
       )}
 
+      {/* ══════════ ANALYTICS sub-nav ══════════ */}
+      {tab === 'analytics' && (
+        <div className="sub-nav-wrap">
+          <div className="sub-nav" role="tablist">
+            <button role="tab" aria-selected={analyticsTab === 'insights'}
+              className={'sub-nav-btn' + (analyticsTab === 'insights' ? ' active' : '')}
+              onClick={() => setAnalyticsTab('insights')}>💡 Insights</button>
+            <button role="tab" aria-selected={analyticsTab === 'trends'}
+              className={'sub-nav-btn' + (analyticsTab === 'trends' ? ' active' : '')}
+              onClick={() => setAnalyticsTab('trends')}>📈 Trends</button>
+          </div>
+        </div>
+      )}
+
       {/* ══════════ TRENDS ══════════ */}
-      {tab === 'trends' && (
+      {tab === 'analytics' && analyticsTab === 'trends' && (
         <main>
           <div className="chart-row">
             <div className="chart-card" style={{ gridColumn: '1 / -1' }}>
@@ -2869,8 +2890,22 @@ export default function Tracker({ session }) {
         </main>
       )}
 
+      {/* ══════════ PLANNING sub-nav ══════════ */}
+      {tab === 'planning' && (
+        <div className="sub-nav-wrap">
+          <div className="sub-nav" role="tablist">
+            <button role="tab" aria-selected={planningTab === 'budgets'}
+              className={'sub-nav-btn' + (planningTab === 'budgets' ? ' active' : '')}
+              onClick={() => setPlanningTab('budgets')}>💰 Budgets</button>
+            <button role="tab" aria-selected={planningTab === 'goals'}
+              className={'sub-nav-btn' + (planningTab === 'goals' ? ' active' : '')}
+              onClick={() => setPlanningTab('goals')}>🎯 Goals</button>
+          </div>
+        </div>
+      )}
+
       {/* ══════════ BUDGETS ══════════ */}
-      {tab === 'budgets' && (
+      {tab === 'planning' && planningTab === 'budgets' && (
         <main>
           <div className="summary-grid">
             {[
@@ -2928,7 +2963,7 @@ export default function Tracker({ session }) {
       )}
 
       {/* ══════════ GOALS ══════════ */}
-      {tab === 'goals' && (() => {
+      {tab === 'planning' && planningTab === 'goals' && (() => {
         const totalTarget      = goalsWithContribs.reduce((s, g) => s + g.target, 0)
         const totalContributed = goalsWithContribs.reduce((s, g) => s + g.contributions.reduce((a, c) => a + c.amount, 0), 0)
         const overallPct       = totalTarget > 0 ? Math.min((totalContributed / totalTarget) * 100, 100) : 0
@@ -3001,7 +3036,7 @@ export default function Tracker({ session }) {
       })()}
 
       {/* ══════════ INSIGHTS ══════════ */}
-      {tab === 'insights' && (
+      {tab === 'analytics' && analyticsTab === 'insights' && (
         <main>
           {/* Anomaly Detection — always visible at top */}
           {AnomalyPanel(expenses, anomalyHistory, fmtINR)}
