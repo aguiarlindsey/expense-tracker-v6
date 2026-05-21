@@ -8,15 +8,15 @@
 ## Overall Progress
 
 ```
-████████████████████░░░░░░░░░░░░  59%   19 / 32 phases complete
+███████████████████████░░░░░░░░░  66%   21 / 32 phases complete
 ```
 
 | | Count | Hours |
 |---|---|---|
-| ✅ Complete | 19 phases | ~56h |
+| ✅ Complete | 21 phases | ~69h |
 | 🔨 In Progress | 0 phases | — |
-| 📋 Planned | 13 phases | ~84h est. |
-| **Total** | **32 phases** | **~153h · ~40 days** |
+| 📋 Planned | 11 phases | ~71h est. |
+| **Total** | **32 phases** | **~155h · ~40 days** |
 
 ---
 
@@ -28,7 +28,7 @@
 | [2 — Visual Redesign](#epic-2--visual-redesign) | Glass UI, Bento Grid | `██████████` 100% | 5/5 | ~14h |
 | [3 — Navigation & UX](#epic-3--navigation--ux) | Tabs, ⌘K, drawers | `██████████` 100% | 5/5 | ~25h |
 | [4 — Onboarding](#epic-4--onboarding) | First-run wizard | `██████████` 100% | 3/3 | ~11h |
-| [5 — Analytics Tab](#epic-5--analytics-tab) | Insights + Trends merged | `███░░░░░░░` 33% | 1/3 | ~18h |
+| [5 — Analytics Tab](#epic-5--analytics-tab) | Insights + Trends merged | `██████████` 100% | 3/3 | ~18h |
 | [6 — Planning Tab](#epic-6--planning-tab) | Budgets + Goals merged | `░░░░░░░░░░` 0% | 0/3 | ~18h |
 | [7 — New Features](#epic-7--new-features) | Templates, forecast, PDF | `░░░░░░░░░░` 0% | 0/8 | ~40h |
 | [8 — Launch](#epic-8--launch--polish) | Mobile polish, docs | `░░░░░░░░░░` 0% | 0/4 | ~9h |
@@ -107,14 +107,14 @@
 > Insights and Trends unified under one intelligent tab.
 
 ```
-███░░░░░░░  33%   1 / 3 phases
+██████████  100%   3 / 3 phases
 ```
 
 | Status | Phase | Description | Complexity | Est. |
 |--------|-------|-------------|-----------|------|
 | ✅ | **5.1 — Analytics Tab Shell** | Analytics tab · pill sub-nav (Insights \| Trends) · smooth switching — shipped as part of Phase 3.1 | Medium | 3–4h |
-| 📋 | **5.2 — Financial Health Score** | 0–100 score hero · sub-scores (savings rate, budget use, consistency, goals) · animated ring · prominent on Analytics | High | 6–8h |
-| 📋 | **5.3 — Enhanced Charts** | 6-month bar chart polish · category trend lines · MoM table update · merchant analytics card · payment method split | Medium | 5–6h |
+| ✅ | **5.2 — Financial Health Score** | 0–100 animated SVG ring · 4 sub-scores (savings rate, budget, consistency, goals) · bottom tip · responsive layout | High | 6–8h |
+| ✅ | **5.3 — Enhanced Charts** | Grouped bar chart (exp+inc+budget line) · category trends Jan 2026→now · merchant top-10 table · MoM Rate column | Medium | 5–6h |
 
 ---
 
@@ -211,4 +211,4 @@
 
 ---
 
-*Last updated: 22-05-2026 · Session 42 · v7.22.1 shipped*
+*Last updated: 22-05-2026 · Session 42 · v7.24.0 shipped*
