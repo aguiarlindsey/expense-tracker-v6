@@ -1295,8 +1295,17 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 .goal-create-btn:hover { border-color: var(--primary); color: var(--primary); }
 
 /* ─── Grouped Bar Chart ───────────────────────────────── */
-.grouped-bar-svg { width: 100%; height: auto; display: block; min-width: 320px; }
-.gbc-wrap { display: flex; flex-direction: column; }
+.grouped-bar-svg { width: 100%; height: auto; display: block; }
+.gbc-wrap { display: flex; gap: 6px; align-items: stretch; }
+.gbc-scale {
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding: 4px 0 2px; flex-shrink: 0;
+}
+.gbc-scale-val {
+  font-size: 0.68rem; color: var(--text-faint);
+  white-space: nowrap; text-align: right; line-height: 1;
+}
+.gbc-chart-col { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .gbc-months { display: flex; padding: 4px 0 2px; }
 .gbc-month-label {
   flex: 1; text-align: center;
