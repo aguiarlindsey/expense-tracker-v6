@@ -12,9 +12,16 @@ import ReceiptScanner from './ReceiptScanner'
 
 // ─── Helpers ─────────────────────────────────────────────
 
+// South-Asian currencies use the lakh/crore grouping (1,00,000); everything else uses standard (100,000)
+const _SA = new Set(['INR','NPR','LKR','BDT','PKR'])
+function _localeFor(code) { return _SA.has(code) ? 'en-IN' : 'en-US' }
+// Mutable — updated by Tracker when baseCurrency changes so sub-components inherit the right locale
+let _appCurrency = 'INR'
+
 function _fmtINR(n) {
-  if (isNaN(n) || n == null) return '₹0'
-  return '₹' + parseFloat(n).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+  if (isNaN(n) || n == null) n = 0
+  const c = CM[_appCurrency] || CM['INR']
+  return c.symbol + parseFloat(n).toLocaleString(_localeFor(_appCurrency), { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
 // Module-level alias — sub-components use this; Tracker shadows it with incognito-aware version
 const fmtINR = _fmtINR
@@ -1383,7 +1390,7 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
             {item.fuelRate ? `⛽ ₹${Number(item.fuelRate).toFixed(2)}/L` : '⛽'}
             {item.fuelQuantity ? ` · ${Number(item.fuelQuantity).toFixed(3)} L` : ''}
             {item.fuelType    ? ` · ${item.fuelType}` : ''}
-            {item.odoReading  ? ` · ODO ${Number(item.odoReading).toLocaleString()} km` : ''}
+            {item.odoReading  ? ` · ODO ${Number(item.odoReading).toLocaleString(_localeFor(_appCurrency))} km` : ''}
             {item.tripA ? ` · A ${Number(item.tripA).toFixed(1)} km` : ''}
             {item.tripB ? ` · B ${Number(item.tripB).toFixed(1)} km` : ''}
             {(() => {
@@ -1397,8 +1404,8 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
         )}
         {item.subcategory === 'Vehicle Maintenance' && item.vehicleCurrentKm && (
           <div className="item-notes">
-            🔧 {Number(item.vehicleCurrentKm).toLocaleString()} km at service
-            {item.vehicleNextServiceKm ? ` · Next at ${Number(item.vehicleNextServiceKm).toLocaleString()} km` : ''}
+            🔧 {Number(item.vehicleCurrentKm).toLocaleString(_localeFor(_appCurrency))} km at service
+            {item.vehicleNextServiceKm ? ` · Next at ${Number(item.vehicleNextServiceKm).toLocaleString(_localeFor(_appCurrency))} km` : ''}
             {item.nextDueDate ? ` · Due ${fmtDate(item.nextDueDate)}` : ''}
           </div>
         )}
@@ -1830,7 +1837,9 @@ export default function Tracker({ session }) {
   const [baseCurrency, setBaseCurrency] = useState(() => {
     const stored = localStorage.getItem('et_v6_base') || 'INR'
     // Validate against known list to prevent XSS via tampered localStorage
-    return CURRENCIES.some(c => c.code === stored) ? stored : 'INR'
+    const valid = CURRENCIES.some(c => c.code === stored) ? stored : 'INR'
+    _appCurrency = valid  // sync module-level on init
+    return valid
   })
   const [rateData,     setRateData]     = useState(null)
   const [rateFetching, setRateFetching] = useState(false)
@@ -1855,7 +1864,7 @@ export default function Tracker({ session }) {
       .catch(() => {})
   }, [])
 
-  useEffect(() => { localStorage.setItem('et_v6_base', baseCurrency) }, [baseCurrency])
+  useEffect(() => { localStorage.setItem('et_v6_base', baseCurrency); _appCurrency = baseCurrency }, [baseCurrency])
   useEffect(() => {
     const RATE_KEY = 'et_v6_rates2', TTL = 6 * 3600 * 1000
     const load = () => { try { return JSON.parse(localStorage.getItem(RATE_KEY)) } catch { return null } }
@@ -3672,7 +3681,7 @@ export default function Tracker({ session }) {
                 const isExpanded = expandedTripId === trip.id
                 const cur        = CM[trip.currency] || { flag: '🌍', symbol: trip.currency, code: trip.currency }
                 // YYYY-MM-DD string comparison is safe — lexicographic order matches chronological order
-                const fmtAmt     = n => incognito ? '••••' : (cur.symbol + parseFloat(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+                const fmtAmt     = n => incognito ? '••••' : (cur.symbol + parseFloat(n).toLocaleString(_localeFor(cur.code || 'INR'), { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
                 const statusCl   = trip.status === 'active' ? 'trip-badge-active' : trip.status === 'upcoming' ? 'trip-badge-upcoming' : 'trip-badge-done'
                 const statusTx   = trip.status === 'active' ? '● Active' : trip.status === 'upcoming' ? '◷ Upcoming' : '✓ Completed'
                 const nights     = Math.round((new Date(trip.endDate + 'T12:00:00') - new Date(trip.startDate + 'T12:00:00')) / 864e5) + 1
@@ -3825,10 +3834,10 @@ export default function Tracker({ session }) {
                 {rateData?.rates?.[fxConvFrom] ? (
                   <>
                     <div className="fx-conv-result">
-                      {(CM[baseCurrency] || CM['INR']).symbol} {(parseFloat(fxConvAmount || 0) * rateData.rates[fxConvFrom]).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {(CM[baseCurrency] || CM['INR']).symbol} {(parseFloat(fxConvAmount || 0) * rateData.rates[fxConvFrom]).toLocaleString(_localeFor(baseCurrency), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                     <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 6 }}>
-                      1 {fxConvFrom} = {(CM[baseCurrency] || CM['INR']).symbol}{rateData.rates[fxConvFrom].toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                      1 {fxConvFrom} = {(CM[baseCurrency] || CM['INR']).symbol}{rateData.rates[fxConvFrom].toLocaleString(_localeFor(baseCurrency), { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                       &nbsp;·&nbsp;
                       1 {baseCurrency} = {(1 / rateData.rates[fxConvFrom]).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 5 })} {fxConvFrom}
                     </div>
@@ -3884,7 +3893,7 @@ export default function Tracker({ session }) {
                             <div className="fx-code-wrap"><span className="fx-flag-ico">{c.flag}</span><span className="fx-code-lbl">{c.code}</span></div>
                             <div className="fx-cur-name">{c.name}</div>
                             <div style={{ textAlign: 'right', fontWeight: 'var(--fw-semibold)', fontSize: 'var(--text-sm)' }}>
-                              {rate ? `${(CM[baseCurrency] || CM['INR']).symbol}${rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}` : ''}
+                              {rate ? `${(CM[baseCurrency] || CM['INR']).symbol}${rate.toLocaleString(_localeFor(baseCurrency), { minimumFractionDigits: 2, maximumFractionDigits: 4 })}` : ''}
                             </div>
                             <div style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>
                               {rate ? fmtInv : ''}

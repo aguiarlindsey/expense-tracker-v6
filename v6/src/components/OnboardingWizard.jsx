@@ -3,6 +3,9 @@ import { supabase } from '../utils/supabase'
 import { CURRENCIES } from '../utils/constants'
 import { useNotifications } from '../hooks/useNotifications'
 
+const _SA = new Set(['INR','NPR','LKR','BDT','PKR'])
+function _localeFor(code) { return _SA.has(code) ? 'en-IN' : 'en-US' }
+
 const STEPS = 5  // 0=welcome, 1=name, 2=currency, 3=budget, 4=notifications, 5=done
 
 export default function OnboardingWizard({ session, onComplete }) {
@@ -209,7 +212,7 @@ export default function OnboardingWizard({ session, onComplete }) {
                 <span className="onb-summary-label">Monthly budget</span>
                 <span className="onb-summary-value">
                   {parseFloat(form.monthlyBudget) > 0
-                    ? `${currencyObj.symbol}${parseFloat(form.monthlyBudget).toLocaleString()}`
+                    ? `${currencyObj.symbol}${parseFloat(form.monthlyBudget).toLocaleString(_localeFor(form.baseCurrency))}`
                     : <span className="onb-summary-na">Not set</span>}
                 </span>
               </div>
