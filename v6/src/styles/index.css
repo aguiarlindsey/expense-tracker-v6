@@ -581,6 +581,20 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 .btn-ghost:hover { border-color: var(--primary); color: var(--primary); }
 .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.85rem; }
 
+/* Sheet drag handle — mobile only */
+.sheet-handle-wrap { display: none; }
+@media (max-width: 768px) {
+  .sheet-handle-wrap {
+    display: flex; align-items: center; justify-content: center;
+    padding: 10px 0 6px; cursor: grab; touch-action: none;
+    -webkit-user-select: none; user-select: none;
+  }
+  .sheet-handle-pill {
+    width: 36px; height: 4px;
+    background: var(--border); border-radius: var(--radius-full);
+  }
+}
+
 /* Modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 1rem; }
 .modal { background: var(--surface); border-radius: var(--radius); box-shadow: 0 20px 60px rgba(0,0,0,0.2); width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }

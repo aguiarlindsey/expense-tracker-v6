@@ -456,6 +456,37 @@ const BudgetBar = memo(function BudgetBar({ icon, label, spent, budget, incognit
   )
 })
 
+// ─── Bottom-sheet drag-to-dismiss hook ────────────────────
+
+function useBottomSheet(onClose) {
+  const startY      = useRef(null)
+  const deltaRef    = useRef(0)
+  const [dragY, setDragY] = useState(0)
+
+  const onTouchStart = (e) => {
+    startY.current = e.touches[0].clientY
+    deltaRef.current = 0
+  }
+  const onTouchMove = (e) => {
+    if (startY.current === null) return
+    const d = Math.max(0, e.touches[0].clientY - startY.current)
+    deltaRef.current = d
+    setDragY(d)
+  }
+  const onTouchEnd = () => {
+    const d = deltaRef.current
+    startY.current = null; deltaRef.current = 0
+    setDragY(0)
+    if (d > 100) onClose()
+  }
+
+  const sheetStyle = dragY > 0
+    ? { transform: `translateY(${dragY}px)`, transition: 'none', willChange: 'transform' }
+    : {}
+
+  return { sheetStyle, onTouchStart, onTouchMove, onTouchEnd }
+}
+
 // ─── Expense Form ─────────────────────────────────────────
 
 function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
@@ -482,6 +513,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
   const [showScanner, setShowScanner] = useState(false)
   const [showTax, setShowTax] = useState(!!(initialData?.taxAmount > 0))
   const [formError, setFormError] = useState('')
+  const { sheetStyle, onTouchStart, onTouchMove, onTouchEnd } = useBottomSheet(onClose)
   const s = (k, v) => setForm(p => ({ ...p, [k]: v }))
 
   const applyOcr = (parsed) => {
@@ -611,7 +643,11 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
   return (
     <>
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
+      <div className="modal" style={sheetStyle}>
+        <div className="sheet-handle-wrap"
+          onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+          <div className="sheet-handle-pill" />
+        </div>
         <div className="modal-header">
           <h2>{initialData ? '✏️ Edit Expense' : '➕ Add Expense'}</h2>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -944,6 +980,7 @@ function IncomeForm({ onSubmit, onClose, initialData, rateData }) {
     isRecurring: false, recurringPeriod: 'monthly',
   })
   const [rateFetching, setRateFetching] = useState(false)
+  const { sheetStyle: incSheetStyle, onTouchStart: incTS, onTouchMove: incTM, onTouchEnd: incTE } = useBottomSheet(onClose)
   const s = (k, v) => setForm(p => ({ ...p, [k]: v }))
 
   // ── Historical rate sync ───────────────────────────────
@@ -1000,7 +1037,11 @@ function IncomeForm({ onSubmit, onClose, initialData, rateData }) {
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
+      <div className="modal" style={incSheetStyle}>
+        <div className="sheet-handle-wrap"
+          onTouchStart={incTS} onTouchMove={incTM} onTouchEnd={incTE}>
+          <div className="sheet-handle-pill" />
+        </div>
         <div className="modal-header">
           <h2>{initialData ? '✏️ Edit Income' : '💵 Add Income'}</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
