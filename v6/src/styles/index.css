@@ -248,7 +248,7 @@ body {
 .glass-shell {
   position: sticky;
   top: 59px;
-  z-index: 40;
+  z-index: 60;
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);

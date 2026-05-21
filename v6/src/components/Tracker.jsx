@@ -2748,7 +2748,7 @@ export default function Tracker({ session }) {
             pickerMonths.sort((a, b) => b.localeCompare(a))
 
             return (
-              <div className="month-strip" style={{ position: 'relative' }}>
+              <div className="month-strip" style={{ position: 'relative', zIndex: showMonthPicker ? 200 : undefined }}>
                 <div className="strip-top">
                   <button
                     className="strip-month-btn"
