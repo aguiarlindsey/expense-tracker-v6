@@ -1618,6 +1618,7 @@ export default function Tracker({ session }) {
   const [v5Report,      setV5Report]      = useState(null)
   const [v5Importing,   setV5Importing]   = useState(false)
   const [anomalyHistory, setAnomalyHistory] = useState([])
+  const [showMonthPicker, setShowMonthPicker] = useState(false)
   const checkedAnomalyIds = useRef(new Set(
     JSON.parse(localStorage.getItem('et_v6_anomaly_checked') || '[]')
   ))
@@ -2084,11 +2085,19 @@ export default function Tracker({ session }) {
         setBulkMode(false); setSelectedIds({})
         setShowGoalForm(false); setContribGoal(null)
         setShowMore(false); setShowCmd(false)
+        setShowMonthPicker(false)
       }
     }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
   }, [])
+
+  useEffect(() => {
+    if (!showMonthPicker) return
+    const h = (e) => { if (!e.target.closest('.month-strip')) setShowMonthPicker(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [showMonthPicker])
 
   // ── Filtered lists ───────────────────────────────────
   const filteredExp = useMemo(() => expenses.filter(e => {
@@ -2129,7 +2138,7 @@ export default function Tracker({ session }) {
   const allMonthlyInc = Object.fromEntries(viewMonthlyInc.map(r => [r.month, parseFloat(r.total)]))
 
   const todayStr   = new Date().toISOString().split('T')[0]
-  const monthStr   = todayStr.substring(0, 7)
+  const [monthStr, setMonthStr] = useState(() => todayStr.substring(0, 7))
   const weekStart  = (() => { const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-d.getDay()); return d.toISOString().split('T')[0] })()
 
   const spentToday = useMemo(() => expenses.filter(e => e.date === todayStr).reduce((s, e) => s + toINR(e), 0), [expenses, todayStr])
@@ -2705,41 +2714,99 @@ export default function Tracker({ session }) {
         <main>
           {/* ── Month Strip ── */}
           {(() => {
-            const d        = monthForecast
-            const pct      = budgets.monthly > 0 ? Math.min(spentMonth / budgets.monthly * 100, 100) : 0
-            const barColor = spentMonth > budgets.monthly ? 'var(--color-exp)' : pct > 80 ? '#f59e0b' : 'var(--color-inc)'
-            const daysLeft = Math.max(0, d.daysInMonth - d.dayOfMonth)
-            const remaining    = budgets.monthly > 0 ? budgets.monthly - spentMonth : null
-            const dailyRemain  = remaining !== null && daysLeft > 0 ? remaining / daysLeft : null
-            const [yr, mo]     = monthStr.split('-')
-            const monthLabel   = new Date(parseInt(yr), parseInt(mo) - 1, 1).toLocaleString('default', { month: 'long', year: 'numeric' })
+            const d           = monthForecast
+            const hasBudget   = budgets.monthly > 0
+            const pct         = hasBudget ? Math.min(spentMonth / budgets.monthly * 100, 100) : 0
+            const barColor    = spentMonth > budgets.monthly ? 'var(--color-exp)' : pct > 80 ? '#f59e0b' : 'var(--color-inc)'
+            const currentMonth = todayStr.substring(0, 7)
+            const daysLeft    = monthStr === currentMonth
+              ? Math.max(0, d.daysInMonth - d.dayOfMonth)
+              : 0
+            const remaining   = hasBudget ? budgets.monthly - spentMonth : null
+            const dailyRemain = remaining !== null && daysLeft > 0 ? remaining / daysLeft : null
+            const daysPassed  = monthStr === currentMonth ? d.dayOfMonth : (() => {
+              const [yr, mo] = monthStr.split('-').map(Number)
+              return new Date(yr, mo, 0).getDate()
+            })()
+            const dailyAvg    = daysPassed > 0 ? spentMonth / daysPassed : null
+            const [yr, mo]    = monthStr.split('-')
+            const monthLabel  = new Date(parseInt(yr), parseInt(mo) - 1, 1).toLocaleString('default', { month: 'long', year: 'numeric' })
+
+            // Build selectable month list: union of months with data + last 12 months
+            const monthsWithData = new Set(expenses.map(e => (e.date || '').substring(0, 7)).filter(Boolean))
+            const pickerMonths = []
+            for (let i = 0; i < 12; i++) {
+              const d2 = new Date()
+              d2.setDate(1)
+              d2.setMonth(d2.getMonth() - i)
+              pickerMonths.push(d2.toISOString().substring(0, 7))
+            }
+            expenses.forEach(e => {
+              const m = (e.date || '').substring(0, 7)
+              if (m && !pickerMonths.includes(m)) pickerMonths.push(m)
+            })
+            pickerMonths.sort((a, b) => b.localeCompare(a))
+
             return (
-              <div className="month-strip">
+              <div className="month-strip" style={{ position: 'relative' }}>
                 <div className="strip-top">
-                  <span className="strip-month">{monthLabel} ▾</span>
-                  {budgets.monthly > 0 && (
+                  <button
+                    className="strip-month-btn"
+                    onClick={() => setShowMonthPicker(v => !v)}
+                    aria-haspopup="listbox"
+                    aria-expanded={showMonthPicker}
+                  >
+                    {monthLabel} <span className="strip-chevron" style={{ display: 'inline-block', transition: 'transform 0.15s', transform: showMonthPicker ? 'rotate(180deg)' : 'none' }}>▾</span>
+                  </button>
+                  {hasBudget && (
                     <span className="strip-pct" style={{ color: pct >= 100 ? 'var(--color-exp)' : pct > 80 ? '#f59e0b' : 'var(--color-inc)' }}>
                       {pct.toFixed(0)}%
                     </span>
                   )}
                 </div>
-                {budgets.monthly > 0 && (
+                {showMonthPicker && (
+                  <div className="strip-month-dropdown" role="listbox">
+                    {pickerMonths.map(m => {
+                      const [my, mm] = m.split('-')
+                      const label = new Date(parseInt(my), parseInt(mm) - 1, 1).toLocaleString('default', { month: 'long', year: 'numeric' })
+                      const hasData = monthsWithData.has(m)
+                      return (
+                        <button
+                          key={m}
+                          role="option"
+                          aria-selected={m === monthStr}
+                          className={'strip-month-option' + (m === monthStr ? ' active' : '') + (m === currentMonth ? ' current' : '')}
+                          onClick={() => { setMonthStr(m); setShowMonthPicker(false) }}
+                        >
+                          <span>{label}</span>
+                          {m === currentMonth && <span className="strip-month-tag">Current</span>}
+                          {!hasData && m !== currentMonth && <span className="strip-month-tag muted">No data</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+                {hasBudget && (
                   <div className="strip-track">
                     <div className="strip-fill" style={{ width: `${pct}%`, background: barColor }} />
                   </div>
                 )}
                 <div className="strip-meta">
                   <span>
-                    {fmtINR(spentMonth)}
-                    {budgets.monthly > 0 && <span className="strip-muted"> of {fmtINR(budgets.monthly)}</span>}
+                    {incognito ? '••••••' : fmtINR(spentMonth)}
+                    {hasBudget && <span className="strip-muted"> of {incognito ? '••••' : fmtINR(budgets.monthly)}</span>}
                   </span>
-                  {budgets.monthly > 0 && <>
+                  {monthStr === currentMonth && <>
                     <span className="strip-dot">·</span>
                     <span><strong>{daysLeft}</strong> days left</span>
-                    {dailyRemain !== null && <>
-                      <span className="strip-dot">·</span>
-                      <span><strong>{fmtINR(Math.round(dailyRemain))}/day</strong> remaining</span>
-                    </>}
+                  </>}
+                  {hasBudget && dailyRemain !== null && monthStr === currentMonth && <>
+                    <span className="strip-dot">·</span>
+                    <span><strong>{incognito ? '•••' : fmtINR(Math.round(dailyRemain))}/day</strong> remaining</span>
+                  </>}
+                  {!hasBudget && dailyAvg !== null && <>
+                    <span className="strip-dot">·</span>
+                    <span><strong>{incognito ? '•••' : fmtINR(Math.round(dailyAvg))}/day</strong> avg</span>
                   </>}
                 </div>
               </div>
