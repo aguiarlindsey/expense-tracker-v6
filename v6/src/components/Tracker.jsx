@@ -2721,6 +2721,28 @@ export default function Tracker({ session }) {
       {/* ══════════ OVERVIEW ══════════ */}
       {tab === 'overview' && (
         <main>
+          {expenses.length === 0 && (
+            <div className="empty-overview">
+              <div className="empty-overview-icon">💸</div>
+              <h2>Welcome to Expense Tracker</h2>
+              <p className="empty-overview-sub">
+                {session?.user?.user_metadata?.display_name
+                  ? `Hi ${session.user.user_metadata.display_name}! `
+                  : ''}
+                Add your first expense to get started. Your dashboard will fill in as you track.
+              </p>
+              <div className="empty-overview-features">
+                <div className="empty-overview-feat">📊 Spending overview</div>
+                <div className="empty-overview-feat">💰 Budget tracking</div>
+                <div className="empty-overview-feat">📈 Trends & insights</div>
+                <div className="empty-overview-feat">🎯 Savings goals</div>
+              </div>
+              <div className="empty-overview-actions">
+                <button className="btn-primary" onClick={() => setShowEF(true)}>➕ Add Expense</button>
+                <button className="btn-income"  onClick={() => setShowIF(true)}>💵 Add Income</button>
+              </div>
+            </div>
+          )}
           {/* ── Month Strip ── */}
           {(() => {
             const d           = monthForecast
@@ -3164,9 +3186,19 @@ export default function Tracker({ session }) {
 
           {grouped.length === 0 ? (
             expenses.length === 0 ? (
-              <div className="empty-state"><div className="empty-icon">💸</div><h3>No expenses yet</h3><p>Press <kbd>N</kbd> to add your first expense</p></div>
+              <div className="empty-state">
+                <div className="empty-icon">💸</div>
+                <h3>No expenses yet</h3>
+                <p>Start tracking where your money goes. Every entry helps build your financial picture.</p>
+                <div className="empty-actions">
+                  <button className="btn-primary" onClick={() => setShowEF(true)}>➕ Add Expense</button>
+                </div>
+              </div>
             ) : (
-              <div className="empty-state"><div className="empty-icon">🔍</div><p>No expenses match filters.</p><button className="btn-primary btn-sm" onClick={clearExpFilters}>Clear filters</button></div>
+              <div className="empty-state-sm">
+                <p>🔍 No expenses match your filters.</p>
+                <button className="btn-secondary btn-sm" onClick={clearExpFilters}>Clear filters</button>
+              </div>
             )
           ) : grouped.map(([date, items]) => (
             <div key={date} className="date-group">
@@ -3224,9 +3256,19 @@ export default function Tracker({ session }) {
 
           {groupedInc.length === 0 ? (
             income.length === 0 ? (
-              <div className="empty-state"><div className="empty-icon">💵</div><h3>No income yet</h3><p>Press <kbd>I</kbd> to add income</p></div>
+              <div className="empty-state">
+                <div className="empty-icon">💵</div>
+                <h3>No income yet</h3>
+                <p>Log your salary, freelance, or any other earnings to track your net savings rate.</p>
+                <div className="empty-actions">
+                  <button className="btn-income" onClick={() => setShowIF(true)}>💵 Add Income</button>
+                </div>
+              </div>
             ) : (
-              <div className="empty-state"><div className="empty-icon">🔍</div><p>No income matches filters.</p><button className="btn-primary btn-sm" onClick={clearIncFilters}>Clear filters</button></div>
+              <div className="empty-state-sm">
+                <p>🔍 No income matches your filters.</p>
+                <button className="btn-secondary btn-sm" onClick={clearIncFilters}>Clear filters</button>
+              </div>
             )
           ) : groupedInc.map(([date, items]) => (
             <div key={date} className="date-group">
@@ -3480,7 +3522,14 @@ export default function Tracker({ session }) {
               <button className="goal-create-btn" onClick={() => setShowGoalForm(true)}>＋ New Goal</button>
             </div>
             {goalsWithContribs.length === 0 && (
-              <div className="empty-state"><div className="empty-icon">🎯</div><h3>No goals yet</h3><p>Set a savings goal and track progress. Toasts fire at 25%, 50%, 75%, 100%!</p></div>
+              <div className="empty-state">
+                <div className="empty-icon">🎯</div>
+                <h3>No goals yet</h3>
+                <p>Set a target — holiday fund, emergency buffer, new gadget. Progress toasts fire at 25%, 50%, 75%, and 100%.</p>
+                <div className="empty-actions">
+                  <button className="btn-primary" onClick={() => setShowGoalForm(true)}>+ New Goal</button>
+                </div>
+              </div>
             )}
           </main>
         )
@@ -3501,7 +3550,14 @@ export default function Tracker({ session }) {
           )}
 
           {expenses.length === 0 ? (
-            <div className="empty-state"><div className="empty-icon">💡</div><h3>No data yet</h3><p>Add some expenses to see insights.</p></div>
+            <div className="empty-state">
+              <div className="empty-icon">💡</div>
+              <h3>No data yet</h3>
+              <p>Add a few expenses and insights will appear here — anomalies, top categories, spending patterns, and more.</p>
+              <div className="empty-actions">
+                <button className="btn-primary" onClick={() => setShowEF(true)}>➕ Add Expense</button>
+              </div>
+            </div>
           ) : (
             <>
               <div className="insights-grid">
@@ -4248,8 +4304,12 @@ export default function Tracker({ session }) {
             {recurExp.length === 0 && recurInc.length === 0 && (
               <div className="empty-state">
                 <div className="empty-icon">🔄</div>
-                <div className="empty-title">No recurring items yet</div>
-                <div className="empty-text">Mark an expense or income entry as recurring when adding it.</div>
+                <h3>No recurring items yet</h3>
+                <p>Tick "Recurring" when adding an expense or income — rent, salary, subscriptions. They'll auto-generate each period.</p>
+                <div className="empty-actions">
+                  <button className="btn-primary btn-sm" onClick={() => setShowEF(true)}>➕ Add Expense</button>
+                  <button className="btn-income btn-sm"  onClick={() => setShowIF(true)}>💵 Add Income</button>
+                </div>
               </div>
             )}
             {recurExp.length > 0 && (
