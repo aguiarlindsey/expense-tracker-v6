@@ -450,14 +450,18 @@ function extractFuelData(text) {
     if (!isNaN(v) && v > 0 && v < 500) fuelRate = round2(v);
   }
 
-  // Quantity: handles "19.401", "19 363", "19 36:3" (OCR noise stripped)
-  // Capture digits + separator + digits; trailing OCR junk (:3, etc.) is outside the group
-  const qtyRe = /(?:sale\s*quant(?:ity)?|qty|quantity|volume|litres?\s*filled?|liter(?:s)?)[^\d]*(\d+[\s.,]\d+)/i;
+  // Quantity: handles "19.401", "19 363", "369" (OCR dropped decimal → 3.69)
+  // Also accepts plain integers; /100 correction applied when value > 100 and no separator
+  const qtyRe = /(?:sale\s*quant(?:ity)?|qty|quantity|volume|litres?\s*filled?|liter(?:s)?)[^\d]*(\d+[\s.,]\d+|\d+)/i;
   const qtyM  = text.match(qtyRe);
   let fuelQuantity = null;
   if (qtyM) {
-    const v = parseFloat(normaliseDecimal(qtyM[1], 3));
-    if (!isNaN(v) && v > 0 && v < 1000) fuelQuantity = round2(v);
+    const raw = qtyM[1];
+    let v = parseFloat(normaliseDecimal(raw, 3));
+    // Plain integer with no decimal separator: OCR likely dropped the decimal point
+    // e.g. "369" → 3.69, "3690" → 36.90, "5000" → 50.00
+    if (!isNaN(v) && v > 100 && !raw.match(/[\s.,]/)) v = round2(v / 100);
+    if (!isNaN(v) && v > 0 && v < 200) fuelQuantity = round2(v);
   }
 
   // Fuel type: "Product Name Petrol" / "Product Diesel" / "MOP Petrol"
@@ -524,7 +528,16 @@ export function parseReceipt(rawText) {
   const date                        = extractDate(rawText);
   const diningApp                   = category === 'Food' ? extractDiningApp(rawText) : '';
   const { taxBreakdown, taxAmount } = extractTaxes(rawText);
-  const { fuelRate, fuelQuantity, fuelType } = extractFuelData(rawText);
+  const { fuelRate, fuelType, fuelQuantity: fuelQtyRaw } = extractFuelData(rawText);
+  // Math override: amount ÷ rate is the most reliable source for quantity on fuel receipts
+  // Corrects cases where OCR drops the decimal entirely (e.g. reads "359" instead of "3.59")
+  let fuelQuantity = fuelQtyRaw;
+  if (fuelRate && fuelRate > 0 && amount > 0) {
+    const mathQty = round2(amount / fuelRate);
+    if (mathQty > 0 && mathQty < 200 && (!fuelQuantity || Math.abs(mathQty - fuelQuantity) > 0.3)) {
+      fuelQuantity = mathQty;
+    }
+  }
   const isVehicleService            = category === 'Transport' && subcategory === 'Vehicle Maintenance';
   const vehicleData                 = isVehicleService ? extractVehicleServiceData(rawText) : {};
 
