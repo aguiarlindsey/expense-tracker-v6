@@ -2703,6 +2703,49 @@ export default function Tracker({ session }) {
       {/* ══════════ OVERVIEW ══════════ */}
       {tab === 'overview' && (
         <main>
+          {/* ── Month Strip ── */}
+          {(() => {
+            const d        = monthForecast
+            const pct      = budgets.monthly > 0 ? Math.min(spentMonth / budgets.monthly * 100, 100) : 0
+            const barColor = spentMonth > budgets.monthly ? 'var(--color-exp)' : pct > 80 ? '#f59e0b' : 'var(--color-inc)'
+            const daysLeft = Math.max(0, d.daysInMonth - d.dayOfMonth)
+            const remaining    = budgets.monthly > 0 ? budgets.monthly - spentMonth : null
+            const dailyRemain  = remaining !== null && daysLeft > 0 ? remaining / daysLeft : null
+            const [yr, mo]     = monthStr.split('-')
+            const monthLabel   = new Date(parseInt(yr), parseInt(mo) - 1, 1).toLocaleString('default', { month: 'long', year: 'numeric' })
+            return (
+              <div className="month-strip">
+                <div className="strip-top">
+                  <span className="strip-month">{monthLabel} ▾</span>
+                  {budgets.monthly > 0 && (
+                    <span className="strip-pct" style={{ color: pct >= 100 ? 'var(--color-exp)' : pct > 80 ? '#f59e0b' : 'var(--color-inc)' }}>
+                      {pct.toFixed(0)}%
+                    </span>
+                  )}
+                </div>
+                {budgets.monthly > 0 && (
+                  <div className="strip-track">
+                    <div className="strip-fill" style={{ width: `${pct}%`, background: barColor }} />
+                  </div>
+                )}
+                <div className="strip-meta">
+                  <span>
+                    {fmtINR(spentMonth)}
+                    {budgets.monthly > 0 && <span className="strip-muted"> of {fmtINR(budgets.monthly)}</span>}
+                  </span>
+                  {budgets.monthly > 0 && <>
+                    <span className="strip-dot">·</span>
+                    <span><strong>{daysLeft}</strong> days left</span>
+                    {dailyRemain !== null && <>
+                      <span className="strip-dot">·</span>
+                      <span><strong>{fmtINR(Math.round(dailyRemain))}/day</strong> remaining</span>
+                    </>}
+                  </>}
+                </div>
+              </div>
+            )
+          })()}
+
           {/* ── Bento Grid ── */}
           <div className="bento-grid">
 
