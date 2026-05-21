@@ -308,6 +308,61 @@ function BarChart({ data, incognito = false }) {
   )
 }
 
+// ─── Grouped Bar Chart (exp + income per month) ───────────
+
+function GroupedBarChart({ data, budget = 0, incognito = false }) {
+  if (!data || data.length < 2) return <div className="chart-empty">Not enough data</div>
+  const fmt = n => incognito ? '••••' : _fmtINR(n)
+  const slice = data.slice(-6)
+  const maxVal = Math.max(...slice.flatMap(d => [d.exp, d.inc]), budget, 1)
+  const W = 560, H = 160, PAD_L = 12, PAD_B = 28, PAD_T = 12
+  const chartW = W - PAD_L, chartH = H - PAD_B - PAD_T
+  const groupW = chartW / slice.length
+  const barW = Math.min(groupW * 0.32, 22)
+  const gap  = barW * 0.35
+  const yScale = v => PAD_T + chartH * (1 - v / maxVal)
+  const GRID = 4
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="grouped-bar-svg">
+      {/* Grid lines */}
+      {Array.from({ length: GRID + 1 }, (_, i) => {
+        const y = PAD_T + (chartH / GRID) * i
+        const v = maxVal * (1 - i / GRID)
+        return (
+          <g key={i}>
+            <line x1={PAD_L} x2={W} y1={y} y2={y} stroke="var(--border)" strokeWidth="0.5" />
+            {i < GRID && <text x={PAD_L} y={y - 3} fontSize="8" fill="var(--text-faint)">{incognito ? '••' : _fmtINR(v)}</text>}
+          </g>
+        )
+      })}
+      {/* Budget line */}
+      {budget > 0 && (() => {
+        const by = yScale(budget)
+        return <line x1={PAD_L} x2={W} y1={by} y2={by} stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4 3" />
+      })()}
+      {/* Bars */}
+      {slice.map((d, i) => {
+        const cx = PAD_L + groupW * i + groupW / 2
+        const expX = cx - gap / 2 - barW
+        const incX = cx + gap / 2
+        const expY = yScale(d.exp), incY = yScale(d.inc)
+        const expH = Math.max(H - PAD_B - expY, 1), incH = Math.max(H - PAD_B - incY, 1)
+        return (
+          <g key={i}>
+            <rect x={expX} y={expY} width={barW} height={expH} fill="var(--color-exp)" rx="2" opacity="0.85">
+              <title>{d.label}: {fmt(d.exp)} spent</title>
+            </rect>
+            {d.inc > 0 && <rect x={incX} y={incY} width={barW} height={incH} fill="var(--color-inc)" rx="2" opacity="0.85">
+              <title>{d.label}: {fmt(d.inc)} income</title>
+            </rect>}
+            <text x={cx} y={H - PAD_B + 10} fontSize="9" fill="var(--text-muted)" textAnchor="middle">{d.label}</text>
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
+
 // ─── Heatmap ──────────────────────────────────────────────
 
 function HeatmapCalendar({ expenses, income }) {
@@ -2349,6 +2404,47 @@ export default function Tracker({ session }) {
   const monthlyIncData = viewMonthlyInc.slice(-12).map(r => ({ label: r.month.substring(5), fullLabel: r.month, value: parseFloat(r.total) }))
   const yearlyData     = viewYearlyExp.map(r => ({ label: r.year, value: parseFloat(r.total) }))
 
+  // Grouped bar data — last 6 months exp + inc merged
+  const groupedMonthlyData = useMemo(() => {
+    const incMap = Object.fromEntries(viewMonthlyInc.map(r => [r.month, parseFloat(r.total)]))
+    return viewMonthlyExp.slice(-6).map(r => ({
+      label: r.month.substring(5),
+      fullLabel: r.month,
+      exp: parseFloat(r.total),
+      inc: incMap[r.month] || 0,
+    }))
+  }, [viewMonthlyExp, viewMonthlyInc])
+
+  // Category trends — top 5 categories × last 6 months
+  const catTrend6 = useMemo(() => {
+    const months6 = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(todayStr + 'T12:00:00'); d.setDate(1); d.setMonth(d.getMonth() - (5 - i))
+      return d.toISOString().substring(0, 7)
+    })
+    const totals = {}
+    expenses.forEach(e => { const c = e.category || 'Other'; totals[c] = (totals[c] || 0) + toINR(e) })
+    const top5 = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([c]) => c)
+    return top5.map(cat => {
+      const vals = months6.map(m => expenses.filter(e => (e.date || '').startsWith(m) && e.category === cat).reduce((s, e) => s + toINR(e), 0))
+      const maxV = Math.max(...vals, 1)
+      return { cat, icon: CATS[cat]?.icon || '📦', color: CATS[cat]?.color || '#667eea', vals, months: months6.map(m => m.substring(5)), maxV }
+    })
+  }, [expenses, todayStr])
+
+  // Merchant analytics — top 10 by total spend
+  const merchantData = useMemo(() => {
+    const map = {}
+    expenses.forEach(e => {
+      const key = (e.description || e.desc || '').trim()
+      if (!key) return
+      if (!map[key]) map[key] = { name: key, total: 0, count: 0, last: '' }
+      map[key].total += toINR(e)
+      map[key].count++
+      if (!map[key].last || e.date > map[key].last) map[key].last = e.date
+    })
+    return Object.values(map).sort((a, b) => b.total - a.total).slice(0, 10)
+  }, [expenses])
+
   const expTypeData = useMemo(() => {
     const t = {}
     filteredExp.forEach(e => { const k = e.expenseType || 'variable'; t[k] = (t[k] || 0) + toINR(e) })
@@ -3449,12 +3545,82 @@ export default function Tracker({ session }) {
       {/* ══════════ TRENDS ══════════ */}
       {tab === 'analytics' && analyticsTab === 'trends' && (
         <main>
-          <div className="chart-row">
-            <div className="chart-card" style={{ gridColumn: '1 / -1' }}>
-              <div className="chart-title">📅 Monthly Spending Trend (last 12 months)</div>
-              <LineChart data={monthlyExpData} incognito={incognito} />
+          {/* ── Grouped Monthly Bar Chart ── */}
+          <div className="chart-card" style={{ marginBottom: '1rem' }}>
+            <div className="chart-title-row">
+              <span className="chart-title">📅 Last 6 Months — Expenses vs Income</span>
+              <div className="chart-legend">
+                <span className="chart-legend-dot" style={{ background: 'var(--color-exp)' }} />Expenses
+                <span className="chart-legend-dot" style={{ background: 'var(--color-inc)', marginLeft: '0.75rem' }} />Income
+                {budgets.monthly > 0 && <><span className="chart-legend-dash" />Budget</>}
+              </div>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <GroupedBarChart data={groupedMonthlyData} budget={budgets.monthly} incognito={incognito} />
             </div>
           </div>
+
+          {/* ── Category Trends ── */}
+          {catTrend6.length > 0 && (
+            <div className="chart-card" style={{ marginBottom: '1rem' }}>
+              <div className="chart-title">📊 Category Trends — Last 6 Months</div>
+              <div className="cat-trend-grid">
+                {catTrend6.map(({ cat, icon, color, vals, months, maxV }) => (
+                  <div key={cat} className="cat-trend-row">
+                    <div className="cat-trend-label">
+                      <span>{icon}</span>
+                      <span className="cat-trend-name">{cat}</span>
+                      <span className="cat-trend-total">{incognito ? '••••' : fmtINR(vals.reduce((s, v) => s + v, 0))}</span>
+                    </div>
+                    <div className="cat-trend-bars">
+                      {vals.map((v, i) => (
+                        <div key={i} className="cat-trend-bar-wrap" title={`${months[i]}: ${incognito ? '••••' : fmtINR(v)}`}>
+                          <div className="cat-trend-bar-fill" style={{ height: `${maxV > 0 ? (v / maxV) * 100 : 0}%`, background: color }} />
+                          <div className="cat-trend-bar-month">{months[i].split('-')[1]}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Merchant Analytics ── */}
+          {merchantData.length > 0 && (
+            <div className="chart-card" style={{ marginBottom: '1rem' }}>
+              <div className="chart-title">🏪 Top Merchants by Spend</div>
+              <div className="merchant-table-wrap">
+                <table className="merchant-table">
+                  <thead><tr><th>#</th><th>Merchant</th><th>Txns</th><th>Avg</th><th>Total</th></tr></thead>
+                  <tbody>
+                    {merchantData.map((m, i) => {
+                      const pct = allExpINR > 0 ? (m.total / allExpINR * 100).toFixed(1) : 0
+                      const barW = merchantData[0].total > 0 ? (m.total / merchantData[0].total * 100) : 0
+                      return (
+                        <tr key={i}>
+                          <td className="merchant-rank">{i + 1}</td>
+                          <td className="merchant-name">
+                            <div>{m.name}</div>
+                            <div className="merchant-bar-track">
+                              <div className="merchant-bar-fill" style={{ width: `${barW}%` }} />
+                            </div>
+                          </td>
+                          <td className="merchant-cnt">{m.count}</td>
+                          <td className="merchant-avg">{incognito ? '••••' : fmtINR(Math.round(m.total / m.count))}</td>
+                          <td className="merchant-total">
+                            <span>{incognito ? '••••••' : fmtINR(m.total)}</span>
+                            <span className="merchant-pct">{pct}%</span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {catData.length > 0 && (
             <div className="chart-card" style={{ marginBottom: '1rem' }}>
               <div className="chart-title">Category Bars</div>
@@ -3468,11 +3634,12 @@ export default function Tracker({ session }) {
           <div className="chart-card" style={{ marginBottom: '1rem', overflowX: 'auto' }}>
             <div className="chart-title">Month-by-Month Comparison</div>
             <table className="comp-table">
-              <thead><tr><th>Month</th><th>Expenses</th><th>vs Prev</th><th>Income</th><th>Saved</th><th>Txns</th></tr></thead>
+              <thead><tr><th>Month</th><th>Expenses</th><th>MoM</th><th>Income</th><th>Saved</th><th>Rate</th><th>Txns</th></tr></thead>
               <tbody>{allMonthlyExp.slice().reverse().map(({ fullLabel, value }, i, arr) => {
                 const prevVal = arr[i + 1]?.value
                 const inc = allMonthlyInc[fullLabel] || 0
                 const saved = inc - value
+                const rate = inc > 0 ? ((saved / inc) * 100).toFixed(0) : null
                 const cnt = expenses.filter(e => e.date?.startsWith(fullLabel)).length
                 const isNow = fullLabel === monthStr
                 let delta = null
@@ -3483,10 +3650,13 @@ export default function Tracker({ session }) {
                 return (
                   <tr key={fullLabel} className={isNow ? 'row-now' : ''}>
                     <td style={{ fontWeight: isNow ? 700 : 400 }}>{fullLabel}{isNow && <span className="badge-now">now</span>}</td>
-                    <td style={{ color: 'var(--color-exp)', fontWeight: 600 }}>{fmtINR(value)}</td>
+                    <td style={{ color: 'var(--color-exp)', fontWeight: 600 }}>{incognito ? '••••' : fmtINR(value)}</td>
                     <td>{delta || <span className="delta-flat">—</span>}</td>
-                    <td style={{ color: 'var(--color-inc)', fontWeight: 600 }}>{inc ? fmtINR(inc) : '—'}</td>
-                    <td style={{ color: saved >= 0 ? 'var(--color-inc)' : 'var(--color-exp)', fontWeight: 600 }}>{inc ? (saved >= 0 ? '+' : '') + fmtINR(saved) : '—'}</td>
+                    <td style={{ color: 'var(--color-inc)', fontWeight: 600 }}>{inc ? (incognito ? '••••' : fmtINR(inc)) : '—'}</td>
+                    <td style={{ color: saved >= 0 ? 'var(--color-inc)' : 'var(--color-exp)', fontWeight: 600 }}>{inc ? (incognito ? '••••' : (saved >= 0 ? '+' : '') + fmtINR(saved)) : '—'}</td>
+                    <td style={{ color: rate !== null ? (parseInt(rate) >= 20 ? 'var(--color-inc)' : parseInt(rate) >= 0 ? '#f59e0b' : 'var(--color-exp)') : 'var(--text-faint)', fontWeight: 600 }}>
+                      {rate !== null ? `${rate}%` : '—'}
+                    </td>
                     <td style={{ color: 'var(--text-muted)' }}>{cnt}</td>
                   </tr>
                 )
