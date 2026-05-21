@@ -3565,23 +3565,44 @@ export default function Tracker({ session }) {
             <div className="chart-card" style={{ marginBottom: '1rem' }}>
               <div className="chart-title">📊 Category Trends — Last 6 Months</div>
               <div className="cat-trend-grid">
-                {catTrend6.map(({ cat, icon, color, vals, months, maxV }) => (
-                  <div key={cat} className="cat-trend-row">
-                    <div className="cat-trend-label">
-                      <span>{icon}</span>
-                      <span className="cat-trend-name">{cat}</span>
-                      <span className="cat-trend-total">{incognito ? '••••' : fmtINR(vals.reduce((s, v) => s + v, 0))}</span>
+                {catTrend6.map(({ cat, icon, color, vals, months, maxV }) => {
+                  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+                  const compact = n => {
+                    if (n === 0) return ''
+                    if (n >= 1e7) return (n/1e7).toFixed(1).replace(/\.0$/,'')+'Cr'
+                    if (n >= 1e5) return (n/1e5).toFixed(1).replace(/\.0$/,'')+'L'
+                    if (n >= 1e3) return (n/1e3).toFixed(1).replace(/\.0$/,'')+'K'
+                    return Math.round(n).toString()
+                  }
+                  return (
+                    <div key={cat} className="cat-trend-row">
+                      <div className="cat-trend-label">
+                        <span>{icon}</span>
+                        <span className="cat-trend-name">{cat}</span>
+                        <span className="cat-trend-total">{incognito ? '••••' : fmtINR(vals.reduce((s, v) => s + v, 0))}</span>
+                      </div>
+                      <div className="cat-trend-bars">
+                        {vals.map((v, i) => {
+                          const mo = months[i] // 'YYYY-MM'
+                          const moName = MON[parseInt(mo.split('-')[1]) - 1]
+                          const isMax = v === maxV && v > 0
+                          const pct = maxV > 0 ? (v / maxV) * 100 : 0
+                          return (
+                            <div key={i} className="cat-trend-bar-wrap" title={`${moName} ${mo.split('-')[0]}: ${fmtINR(v)}`}>
+                              <div className="cat-trend-bar-amt" style={{ color: isMax ? color : 'var(--text-faint)' }}>
+                                {incognito ? (v > 0 ? '•' : '') : compact(v)}
+                              </div>
+                              <div className="cat-trend-bar-track">
+                                <div className="cat-trend-bar-fill" style={{ height: `${pct}%`, background: color, opacity: isMax ? 1 : 0.55 }} />
+                              </div>
+                              <div className="cat-trend-bar-month">{moName}</div>
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
-                    <div className="cat-trend-bars">
-                      {vals.map((v, i) => (
-                        <div key={i} className="cat-trend-bar-wrap" title={`${months[i]}: ${incognito ? '••••' : fmtINR(v)}`}>
-                          <div className="cat-trend-bar-fill" style={{ height: `${maxV > 0 ? (v / maxV) * 100 : 0}%`, background: color }} />
-                          <div className="cat-trend-bar-month">{months[i].split('-')[1]}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
