@@ -85,6 +85,39 @@ body {
   padding: 1rem;
 }
 
+/* ─── Onboarding Wizard ───────────────────────────────── */
+.onb-shell {
+  min-height: 100vh; display: flex; align-items: center;
+  justify-content: center; padding: 1rem;
+  background: var(--bg);
+}
+.onb-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-xl); padding: 2.5rem 2rem;
+  max-width: 420px; width: 100%; text-align: center;
+  box-shadow: var(--shadow-lg);
+}
+.onb-logo { font-size: 3rem; margin-bottom: 1rem; }
+.onb-title { font-size: 1.6rem; font-weight: var(--fw-black); margin-bottom: 0.5rem; color: var(--text); }
+.onb-sub { font-size: var(--text-sm); color: var(--text-muted); margin-bottom: 2rem; line-height: 1.5; }
+.onb-btn-primary {
+  display: block; width: 100%; padding: 0.75rem 1rem;
+  background: var(--primary); color: #fff; border: none;
+  border-radius: var(--radius); font-size: var(--text-base);
+  font-weight: var(--fw-semibold); cursor: pointer;
+  transition: background 0.15s; margin-bottom: 0.75rem;
+  font-family: var(--font-sans);
+}
+.onb-btn-primary:hover { background: var(--primary-hover); }
+.onb-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.onb-btn-skip {
+  display: block; width: 100%; padding: 0.5rem;
+  background: none; border: none; color: var(--text-faint);
+  font-size: var(--text-sm); cursor: pointer; font-family: var(--font-sans);
+}
+.onb-btn-skip:hover { color: var(--text-muted); }
+.onb-btn-skip:disabled { opacity: 0.4; cursor: not-allowed; }
+
 .auth-card {
   background: var(--surface);
   border: 1px solid var(--border);

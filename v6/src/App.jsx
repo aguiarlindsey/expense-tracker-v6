@@ -5,6 +5,7 @@ import { useSupabaseHeartbeat } from './hooks/useSupabaseHeartbeat'
 import Auth from './components/Auth'
 import Tracker from './components/Tracker'
 import LockScreen from './components/LockScreen'
+import OnboardingWizard from './components/OnboardingWizard'
 
 const ENROLLED_KEY = 'et_v6_biometric_enrolled'
 const USER_ID_KEY  = 'et_v6_user_id'
@@ -17,6 +18,8 @@ export default function App() {
   const [biometricLocked, setBiometricLocked] = useState(
     () => localStorage.getItem(ENROLLED_KEY) === 'true'
   )
+  // Local flag so UI switches to Tracker immediately after wizard — no session refresh wait
+  const [completedOnboarding, setCompletedOnboarding] = useState(false)
   // Prevents Tracker flashing during the sign-out that enforces the lock
   const [signingOut, setSigningOut] = useState(false)
 
@@ -49,6 +52,11 @@ export default function App() {
   }
 
   if (!session) return <Auth />
+
+  const isOnboarded = completedOnboarding || session.user.user_metadata?.onboarded === true
+  if (!isOnboarded) {
+    return <OnboardingWizard session={session} onComplete={() => setCompletedOnboarding(true)} />
+  }
 
   return (
     <div className="app-shell">
