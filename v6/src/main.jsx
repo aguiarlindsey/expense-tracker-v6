@@ -1,22 +1,43 @@
-import { StrictMode, Component } from 'react'
+import { StrictMode, Component, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import './styles/index.css'
 import App from './App.jsx'
 
+// Exposed so Settings can call it without prop-drilling
+export async function forceAppUpdate() {
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations()
+      await Promise.all(regs.map(r => r.unregister()))
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys()
+      await Promise.all(keys.map(k => caches.delete(k)))
+    }
+  } catch (_) {}
+  window.location.reload()
+}
+
 function PWAUpdateBanner() {
   const { needRefresh: [needRefresh, setNeedRefresh], updateSW } = useRegisterSW({
     onRegisteredSW(_url, r) {
       if (!r) return
-      // Check every 30s while the app is open
+      // Immediate check on mount — catches the case where a new SW is already waiting
+      r.update()
       setInterval(() => r.update(), 30 * 1000)
-      // Check immediately whenever the user brings the app back into view
-      // (covers: opening from home screen, switching tabs, waking device)
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') r.update()
       })
     },
   })
+
+  // Also listen for the SW controller change — fires when the new SW takes over
+  useEffect(() => {
+    const handler = () => setNeedRefresh(true)
+    navigator.serviceWorker?.addEventListener('controllerchange', handler)
+    return () => navigator.serviceWorker?.removeEventListener('controllerchange', handler)
+  }, [setNeedRefresh])
 
   if (!needRefresh) return null
 
@@ -33,24 +54,17 @@ function PWAUpdateBanner() {
     }}>
       <span style={{ fontWeight: 600 }}>🔄 New version available</span>
       <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
-        <button
-          onClick={() => updateSW(true)}
-          style={{
-            background: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.4)',
-            color: '#fff', borderRadius: '6px', padding: '0.25rem 0.8rem',
-            fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
-          }}>
+        <button onClick={() => updateSW(true)} style={{
+          background: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.4)',
+          color: '#fff', borderRadius: '6px', padding: '0.25rem 0.8rem',
+          fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
+        }}>
           Reload now
         </button>
-        <button
-          onClick={() => setNeedRefresh(false)}
-          style={{
-            background: 'none', border: 'none', color: 'rgba(255,255,255,0.65)',
-            fontSize: '1.1rem', cursor: 'pointer', padding: '0 0.2rem', lineHeight: 1,
-          }}
-          aria-label="Dismiss">
-          ✕
-        </button>
+        <button onClick={() => setNeedRefresh(false)} style={{
+          background: 'none', border: 'none', color: 'rgba(255,255,255,0.65)',
+          fontSize: '1.1rem', cursor: 'pointer', padding: '0 0.2rem', lineHeight: 1,
+        }} aria-label="Dismiss">✕</button>
       </div>
     </div>
   )

@@ -3621,6 +3621,30 @@ export default function Tracker({ session }) {
           {/* Security */}
           <BiometricSettings session={session} />
 
+          {/* App Update */}
+          <div className="settings-section">
+            <h3>🔄 App Update</h3>
+            <div className="settings-row">
+              <div className="settings-row-label">
+                <strong>Force Update</strong>
+                <span>Clears the app cache and reloads to get the latest version. Use this if the update banner doesn't appear.</span>
+              </div>
+              <button className="btn-primary" onClick={async () => {
+                try {
+                  if ('serviceWorker' in navigator) {
+                    const regs = await navigator.serviceWorker.getRegistrations()
+                    await Promise.all(regs.map(r => r.unregister()))
+                  }
+                  if ('caches' in window) {
+                    const keys = await caches.keys()
+                    await Promise.all(keys.map(k => caches.delete(k)))
+                  }
+                } catch (_) {}
+                window.location.reload()
+              }}>Update Now</button>
+            </div>
+          </div>
+
           {/* Appearance */}
           <div className="settings-section">
             <h3>🎨 Appearance</h3>
