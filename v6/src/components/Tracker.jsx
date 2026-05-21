@@ -504,7 +504,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
     recurringPeriod: 'monthly', nextDueDate: '',
     splitWith: '', splitParts: 1, receiptRef: '',
     taxAmount: 0, taxBreakdown: {},
-    fuelRate: '', fuelQuantity: '', fuelType: '', odoReading: '', tripA: '', tripB: '',
+    fuelRate: '', fuelQuantity: '', fuelType: '', odoReading: '', tripA: '', tripB: '', tripSelected: '',
     vehicleCurrentKm: '', vehicleNextServiceKm: '',
     useCatAlloc: false, categoryAllocations: {},
   })
@@ -631,9 +631,10 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
       categoryAllocations: catAlloc,
       vehicleCurrentKm:    form.vehicleCurrentKm    ? parseInt(form.vehicleCurrentKm, 10)    || null : null,
       vehicleNextServiceKm: form.vehicleNextServiceKm ? parseInt(form.vehicleNextServiceKm, 10) || null : null,
-      odoReading: form.odoReading ? parseFloat(form.odoReading) || null : null,
-      tripA:      form.tripA    ? parseFloat(form.tripA)    || null : null,
-      tripB:      form.tripB    ? parseFloat(form.tripB)    || null : null,
+      odoReading:   form.odoReading ? parseFloat(form.odoReading) || null : null,
+      tripA:        form.tripA    ? parseFloat(form.tripA)    || null : null,
+      tripB:        form.tripB    ? parseFloat(form.tripB)    || null : null,
+      tripSelected: form.tripSelected || null,
     })
     onClose()
   }
@@ -753,26 +754,52 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
                     value={form.odoReading || ''}
                     onChange={e => s('odoReading', e.target.value)} />
                 </div>
-                <div className="form-group">
-                  <label>Trip A (km)</label>
-                  <input type="number" min="0" step="0.1" placeholder="e.g. 320.5"
-                    value={form.tripA || ''}
-                    onChange={e => s('tripA', e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label>Trip B (km)</label>
-                  <input type="number" min="0" step="0.1" placeholder="e.g. 1240.2"
-                    value={form.tripB || ''}
-                    onChange={e => s('tripB', e.target.value)} />
-                </div>
+                {['A','B'].map(t => {
+                  const key  = t === 'A' ? 'tripA' : 'tripB'
+                  const sel  = form.tripSelected === t
+                  const other = t === 'A' ? 'B' : 'A'
+                  const hasVal = !!form[key]
+                  return (
+                    <div key={t} className="form-group"
+                      onClick={() => { if (hasVal) s('tripSelected', t) }}
+                      style={{
+                        cursor: hasVal ? 'pointer' : 'default',
+                        outline: sel ? '2px solid var(--primary)' : '2px solid transparent',
+                        outlineOffset: 2,
+                        borderRadius: 8,
+                        transition: 'outline 0.15s',
+                      }}>
+                      <label style={{
+                        color: sel ? 'var(--primary)' : undefined,
+                        cursor: hasVal ? 'pointer' : 'default',
+                        display: 'flex', alignItems: 'center', gap: 4,
+                      }}>
+                        Trip {t} (km)
+                        {sel && <span style={{ fontSize: '0.65rem', background: 'var(--primary)', color: '#fff', borderRadius: 99, padding: '1px 6px', fontWeight: 700 }}>efficiency</span>}
+                      </label>
+                      <input type="number" min="0" step="0.1"
+                        placeholder={t === 'A' ? 'e.g. 320.5' : 'e.g. 1240.2'}
+                        value={form[key] || ''}
+                        onClick={e => e.stopPropagation()}
+                        onChange={e => {
+                          s(key, e.target.value)
+                          // Auto-select this trip if nothing selected yet, or other trip is empty
+                          if (!form.tripSelected || !form[t === 'A' ? 'tripB' : 'tripA'])
+                            s('tripSelected', e.target.value ? t : form.tripSelected === t ? other : form.tripSelected)
+                        }} />
+                    </div>
+                  )
+                })}
                 {(() => {
-                  const trip = parseFloat(form.tripA || form.tripB)
-                  const qty  = parseFloat(form.fuelQuantity)
+                  const selKey = form.tripSelected === 'B' ? 'tripB' : 'tripA'
+                  const trip   = parseFloat(form[selKey] || form.tripA || form.tripB)
+                  const qty    = parseFloat(form.fuelQuantity)
+                  const label  = form.tripSelected || (form.tripA ? 'A' : 'B')
                   if (!trip || !qty || qty <= 0) return null
                   return (
-                    <div className="form-group" style={{ justifyContent: 'flex-end' }}>
-                      <label>Efficiency ({form.tripA ? 'Trip A' : 'Trip B'})</label>
-                      <div style={{ padding: '0.5rem 0.75rem', background: 'var(--surface-alt)', border: '1px solid var(--border)', borderRadius: 8, fontSize: '0.9rem', fontWeight: 600, color: 'var(--primary)' }}>
+                    <div className="form-group">
+                      <label>km/L (Trip {label})</label>
+                      <div style={{ padding: '0.5rem 0.75rem', background: 'var(--surface-alt)', border: '2px solid var(--primary)', borderRadius: 8, fontSize: '0.9rem', fontWeight: 700, color: 'var(--primary)' }}>
                         {(trip / qty).toFixed(2)} km/L
                       </div>
                     </div>
@@ -1357,10 +1384,15 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
             {item.fuelQuantity ? ` · ${Number(item.fuelQuantity).toFixed(3)} L` : ''}
             {item.fuelType    ? ` · ${item.fuelType}` : ''}
             {item.odoReading  ? ` · ODO ${Number(item.odoReading).toLocaleString()} km` : ''}
-            {item.tripA       ? ` · A ${Number(item.tripA).toFixed(1)} km` : ''}
-            {item.tripB       ? ` · B ${Number(item.tripB).toFixed(1)} km` : ''}
-            {(item.tripA || item.tripB) && item.fuelQuantity
-              ? ` · ${(Number(item.tripA || item.tripB) / Number(item.fuelQuantity)).toFixed(2)} km/L` : ''}
+            {item.tripA ? ` · A ${Number(item.tripA).toFixed(1)} km` : ''}
+            {item.tripB ? ` · B ${Number(item.tripB).toFixed(1)} km` : ''}
+            {(() => {
+              const trip = item.tripSelected === 'B' ? item.tripB
+                         : item.tripSelected === 'A' ? item.tripA
+                         : (item.tripA || item.tripB)
+              if (!trip || !item.fuelQuantity) return ''
+              return ` · ${(Number(trip) / Number(item.fuelQuantity)).toFixed(2)} km/L`
+            })()}
           </div>
         )}
         {item.subcategory === 'Vehicle Maintenance' && item.vehicleCurrentKm && (
