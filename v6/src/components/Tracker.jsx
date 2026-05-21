@@ -436,6 +436,72 @@ function HeatmapCalendar({ expenses, income }) {
   )
 }
 
+// ─── Financial Health Score Card ─────────────────────────
+
+const RING_R = 54, RING_C = 2 * Math.PI * RING_R  // 339.29
+
+function HealthScoreCard({ score, breakdown, incognito }) {
+  const [anim, setAnim] = useState(0)
+  useEffect(() => { const t = setTimeout(() => setAnim(score), 80); return () => clearTimeout(t) }, [score])
+
+  const color = score >= 80 ? '#10b981' : score >= 60 ? '#f59e0b' : score >= 40 ? '#f97316' : '#ef4444'
+  const label = score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Fair' : 'Needs Work'
+  const offset = RING_C * (1 - anim / 100)
+
+  return (
+    <div className="hs-card">
+      <div className="hs-header">Financial Health Score</div>
+      <div className="hs-body">
+        {/* Ring */}
+        <div className="hs-ring-wrap">
+          <svg width="128" height="128" viewBox="0 0 128 128">
+            <circle cx="64" cy="64" r={RING_R} fill="none" stroke="var(--border)" strokeWidth="10" />
+            <circle
+              cx="64" cy="64" r={RING_R} fill="none"
+              stroke={color} strokeWidth="10"
+              strokeLinecap="round"
+              strokeDasharray={RING_C}
+              strokeDashoffset={offset}
+              style={{ transform: 'rotate(-90deg)', transformOrigin: '64px 64px', transition: 'stroke-dashoffset 1.1s ease' }}
+            />
+          </svg>
+          <div className="hs-ring-center">
+            <div className="hs-score" style={{ color }}>{incognito ? '—' : score}</div>
+            <div className="hs-label" style={{ color }}>{label}</div>
+          </div>
+        </div>
+
+        {/* Sub-scores */}
+        <div className="hs-subs">
+          {breakdown.map(s => (
+            <div key={s.key} className="hs-sub">
+              <div className="hs-sub-top">
+                <span className="hs-sub-icon">{s.icon}</span>
+                <span className="hs-sub-name">{s.name}</span>
+                <span className="hs-sub-pts" style={{ color: s.pts >= 20 ? '#10b981' : s.pts >= 12 ? '#f59e0b' : '#ef4444' }}>
+                  {s.pts}<span className="hs-sub-max">/25</span>
+                </span>
+              </div>
+              <div className="hs-sub-bar">
+                <div className="hs-sub-fill" style={{ width: `${(s.pts / 25) * 100}%`, background: s.pts >= 20 ? '#10b981' : s.pts >= 12 ? '#f59e0b' : '#ef4444' }} />
+              </div>
+              <div className="hs-sub-note">{s.note}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom insight */}
+      {breakdown.length > 0 && (() => {
+        const weakest = [...breakdown].sort((a, b) => a.pts - b.pts)[0]
+        return weakest.pts < 18
+          ? <div className="hs-tip">💡 <strong>Quick win:</strong> {weakest.tip}</div>
+          : <div className="hs-tip">✅ <strong>Looking great!</strong> {weakest.tip}</div>
+      })()}
+    </div>
+  )
+}
+
 // ─── Budget Bar ───────────────────────────────────────────
 
 const BudgetBar = memo(function BudgetBar({ icon, label, spent, budget, incognito = false }) {
@@ -2539,6 +2605,88 @@ export default function Tracker({ session }) {
     contributions: contributions.filter(c => c.goalId === g.id)
   })), [goals, contributions])
 
+  // ── Financial Health Score ────────────────────────────
+  const healthScore = useMemo(() => {
+    // 1. Savings Rate — last 3 months avg
+    const last3 = [0, 1, 2].map(i => {
+      const d = new Date(todayStr + 'T12:00:00'); d.setDate(1); d.setMonth(d.getMonth() - i)
+      return d.toISOString().substring(0, 7)
+    })
+    const mExp = last3.map(m => expenses.filter(e => (e.date || '').startsWith(m)).reduce((s, e) => s + toINR(e), 0))
+    const mInc = last3.map(m => income.filter(i  => (i.date || '').startsWith(m)).reduce((s, i) => s + toINR(i), 0))
+    const avgInc = mInc.reduce((s, v) => s + v, 0) / 3
+    const avgExp = mExp.reduce((s, v) => s + v, 0) / 3
+    const savingsRate = avgInc > 0 ? (avgInc - avgExp) / avgInc * 100 : null
+    let savingsPts = 12
+    let savingsNote = 'No income data yet'
+    let savingsTip  = 'Log your income to track savings rate'
+    if (savingsRate !== null) {
+      if (savingsRate >= 20) { savingsPts = 25; savingsNote = `${savingsRate.toFixed(0)}% savings rate — excellent`; savingsTip = 'Keep maintaining this savings discipline' }
+      else if (savingsRate >= 10) { savingsPts = 18; savingsNote = `${savingsRate.toFixed(0)}% savings rate — good`; savingsTip = 'Aim for 20%+ savings rate to hit top score' }
+      else if (savingsRate >= 5)  { savingsPts = 12; savingsNote = `${savingsRate.toFixed(0)}% savings rate — fair`; savingsTip = 'Try reducing one recurring expense this month' }
+      else if (savingsRate >= 0)  { savingsPts = 6;  savingsNote = `${savingsRate.toFixed(0)}% savings rate — low`; savingsTip = 'Review your top spending categories for cuts' }
+      else { savingsPts = 0; savingsNote = 'Spending exceeds income'; savingsTip = 'Urgent: expenses are higher than income this period' }
+    }
+
+    // 2. Budget Adherence — current month
+    const pctUsed = budgets.monthly > 0 ? spentMonth / budgets.monthly * 100 : null
+    let budgetPts = 12
+    let budgetNote = 'No monthly budget set'
+    let budgetTip  = 'Set a monthly budget in Planning → Budgets'
+    if (pctUsed !== null) {
+      if (pctUsed <= 70)       { budgetPts = 25; budgetNote = `${pctUsed.toFixed(0)}% of budget used — on track`; budgetTip = 'Excellent budget discipline this month' }
+      else if (pctUsed <= 90)  { budgetPts = 18; budgetNote = `${pctUsed.toFixed(0)}% of budget used — watch it`; budgetTip = 'You have some room left — stay cautious' }
+      else if (pctUsed <= 100) { budgetPts = 10; budgetNote = `${pctUsed.toFixed(0)}% of budget used — close`; budgetTip = 'Nearly at limit — avoid non-essential spending' }
+      else { budgetPts = 0; budgetNote = `${pctUsed.toFixed(0)}% — over budget`; budgetTip = 'Review what pushed you over and adjust next month' }
+    }
+
+    // 3. Spending Consistency — last 30 days
+    const d30 = new Date(todayStr + 'T12:00:00'); d30.setDate(d30.getDate() - 30)
+    const d30Str = d30.toISOString().split('T')[0]
+    const dailyMap = {}
+    expenses.filter(e => e.date >= d30Str && e.date <= todayStr).forEach(e => {
+      dailyMap[e.date] = (dailyMap[e.date] || 0) + toINR(e)
+    })
+    const dailyVals = Object.values(dailyMap)
+    let consistencyPts = 12
+    let consistencyNote = 'Not enough data yet'
+    let consistencyTip  = 'Keep logging daily to build a consistency score'
+    if (dailyVals.length >= 7) {
+      const mean = dailyVals.reduce((s, v) => s + v, 0) / dailyVals.length
+      const stddev = Math.sqrt(dailyVals.reduce((s, v) => s + (v - mean) ** 2, 0) / dailyVals.length)
+      const cv = mean > 0 ? stddev / mean : 0
+      if (cv < 0.5)       { consistencyPts = 25; consistencyNote = 'Very consistent spending'; consistencyTip = 'Steady daily habits are the key to long-term saving' }
+      else if (cv < 1.0)  { consistencyPts = 18; consistencyNote = 'Mostly consistent'; consistencyTip = 'A few high-spend days pull the score down — watch weekends' }
+      else if (cv < 2.0)  { consistencyPts = 10; consistencyNote = 'Some irregular spikes'; consistencyTip = 'Try spreading large purchases across multiple days' }
+      else                { consistencyPts = 5;  consistencyNote = 'Highly variable spending'; consistencyTip = 'Big swings in daily spend — review your largest outlier days' }
+    }
+
+    // 4. Goals Progress — active goals with contribution in last 30 days
+    const activeGoals = goalsWithContribs.filter(g => g.contributions.reduce((s, c) => s + c.amount, 0) < g.target)
+    let goalsPts = 12
+    let goalsNote = 'No active goals'
+    let goalsTip  = 'Create a savings goal in Planning → Goals'
+    if (activeGoals.length > 0) {
+      const recent = activeGoals.filter(g => g.contributions.some(c => (c.date || '') >= d30Str))
+      const ratio = recent.length / activeGoals.length
+      goalsPts = Math.round(5 + ratio * 20)
+      if (ratio === 1)     { goalsNote = `All ${activeGoals.length} goal${activeGoals.length > 1 ? 's' : ''} progressing`; goalsTip = 'Keep contributing regularly to maintain momentum' }
+      else if (ratio > 0)  { goalsNote = `${recent.length} of ${activeGoals.length} goals active`; goalsTip = 'Add a contribution to your stalled goals this week' }
+      else                 { goalsNote = 'No recent contributions'; goalsTip = 'Log a contribution to any goal to improve this score' }
+    }
+
+    const total = savingsPts + budgetPts + consistencyPts + goalsPts
+    return {
+      score: total,
+      breakdown: [
+        { key: 'savings',     icon: '💰', name: 'Savings Rate',   pts: savingsPts,     note: savingsNote,     tip: savingsTip },
+        { key: 'budget',      icon: '📅', name: 'Budget',         pts: budgetPts,      note: budgetNote,      tip: budgetTip },
+        { key: 'consistency', icon: '📊', name: 'Consistency',    pts: consistencyPts, note: consistencyNote, tip: consistencyTip },
+        { key: 'goals',       icon: '🎯', name: 'Goals',          pts: goalsPts,       note: goalsNote,       tip: goalsTip },
+      ]
+    }
+  }, [expenses, income, budgets, spentMonth, goalsWithContribs, todayStr])
+
   // ── Grouped lists ─────────────────────────────────────
   const grouped    = useMemo(() => byDate(filteredExp), [filteredExp])
   const groupedInc = useMemo(() => byDate(filteredInc), [filteredInc])
@@ -3538,7 +3686,10 @@ export default function Tracker({ session }) {
       {/* ══════════ INSIGHTS ══════════ */}
       {tab === 'analytics' && analyticsTab === 'insights' && (
         <main>
-          {/* Anomaly Detection — always visible at top */}
+          {/* Financial Health Score */}
+          <HealthScoreCard score={healthScore.score} breakdown={healthScore.breakdown} incognito={incognito} />
+
+          {/* Anomaly Detection */}
           {AnomalyPanel(expenses, anomalyHistory, fmtINR)}
 
           {/* Spend breakdown charts */}
