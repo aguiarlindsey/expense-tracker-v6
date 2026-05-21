@@ -4082,25 +4082,27 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title">💸 Expense Tracker V7</div>
               <div className="about-meta">
-                <span className="about-badge">v7.15.1</span>
+                <span className="about-badge">v7.20.1</span>
                 <span className="about-badge">Glass UI</span>
                 <span className="about-badge">Bento Dashboard</span>
+                <span className="about-badge">⌘K Palette</span>
+                <span className="about-badge">Bottom Nav</span>
                 <span className="about-badge">122 Currencies</span>
                 <span className="about-badge">BTC · ETH Live</span>
                 <span className="about-badge">Cloud + Supabase</span>
                 <span className="about-badge">PWA</span>
               </div>
-              <div className="about-row"><span>Architecture</span><span>Vite + React + Supabase</span></div>
+              <div className="about-row"><span>Architecture</span><span>Vite + React 18 + Supabase · deployed on Vercel</span></div>
               <div className="about-row"><span>Auth</span><span>Magic-link email · WebAuthn biometric lock · Email OTP fallback</span></div>
-              <div className="about-row"><span>Database</span><span>Supabase Postgres + RLS · SQL views for aggregations</span></div>
-              <div className="about-row"><span>Deployment</span><span>Vercel CDN · auto-deploy on push · cron jobs (reminders + maintenance)</span></div>
-              <div className="about-row"><span>Offline</span><span>Dependency-ordered retry queue (topo sort) · auto-sync on reconnect</span></div>
+              <div className="about-row"><span>Database</span><span>Supabase Postgres + RLS · SQL views for aggregations · dependency-ordered offline sync</span></div>
               <div className="about-row"><span>Security</span><span>Server-enforced biometric lock · alphanumeric OTP · rate limiting · RLS on all tables · HTTP security headers</span></div>
-              <div className="about-row"><span>UI</span><span>Glassmorphism shell · Bento grid dashboard · 30-day sparkline · category tiles · shimmer header · system/dark/light theme</span></div>
+              <div className="about-row"><span>UI</span><span>Glassmorphism shell · Bento grid dashboard · 30-day sparkline with hover tooltip · category tiles with budget bars · system / light / dark theme · FOUC prevention</span></div>
+              <div className="about-row"><span>Navigation</span><span>8 tabs (10→8 restructure) · Analytics sub-nav (Insights | Trends) · Planning sub-nav (Budgets | Goals) · ⌘K command palette · keyboard shortcuts 1–8</span></div>
+              <div className="about-row"><span>Mobile</span><span>Bottom nav bar + FAB · More bottom sheet · slide-up expense/income drawers (drag to dismiss) · swipe left → delete · swipe right → edit · haptic feedback · safe-area insets · prefers-reduced-motion</span></div>
               <div className="about-row"><span>Exchange</span><span>122 currencies in 8 regions · live FX rates · quick converter · BTC + ETH via CoinGecko · search filter</span></div>
-              <div className="about-row"><span>Features</span><span>10 tabs · receipt OCR scanner · anomaly detection · burn-rate forecast · trip tracking · vehicle maintenance KM tracking · 259-color palette</span></div>
-              <div className="about-row"><span>Mobile</span><span>Fully responsive · horizontal tab scroll · touch-friendly · prefers-reduced-motion support</span></div>
-              <div className="about-row"><span>Last updated</span><span>2026-05-21 (v7.15.1)</span></div>
+              <div className="about-row"><span>Features</span><span>Receipt OCR scanner · anomaly detection · burn-rate forecast · trip tracking · fuel tracking (rate · quantity · type · ODO · Trip A/B) · recurring expenses · tags · 259-colour palette</span></div>
+              <div className="about-row"><span>PWA</span><span>Installable · offline-capable · auto-update with force-reload banner · iOS Safari compatible</span></div>
+              <div className="about-row"><span>Last updated</span><span>2026-05-21 · Session 40 · v7.20.1</span></div>
             </div>
           </div>
         </main>

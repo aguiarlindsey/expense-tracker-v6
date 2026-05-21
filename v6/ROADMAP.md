@@ -8,14 +8,14 @@
 ## Overall Progress
 
 ```
-███████░░░░░░░░░░░░░░░░░░░░░░░░░  22%   7 / 32 phases complete
+████████████░░░░░░░░░░░░░░░░░░░░  38%   12 / 32 phases complete
 ```
 
 | | Count | Hours |
 |---|---|---|
-| ✅ Complete | 7 phases | ~23.5h |
+| ✅ Complete | 12 phases | ~38.5h |
 | 🔨 In Progress | 0 phases | — |
-| 📋 Planned | 25 phases | ~116.5h est. |
+| 📋 Planned | 20 phases | ~101.5h est. |
 | **Total** | **32 phases** | **~140h · ~37 days** |
 
 ---
@@ -73,16 +73,16 @@
 > How users move through the app — restructured, faster, more intuitive.
 
 ```
-░░░░░░░░░░  0%   0 / 5 phases
+██████████  100%   5 / 5 phases
 ```
 
 | Status | Phase | Description | Complexity | Est. |
 |--------|-------|-------------|-----------|------|
-| 📋 | **3.1 — Tab Restructure** | 10 tabs → 8 tabs · Analytics sub-nav (Insights \| Trends) · Planning sub-nav (Budgets \| Goals) · keyboard shortcuts update | Medium | 5–7h |
-| 📋 | **3.2 — Bottom Navigation (Mobile)** | 5-icon bottom bar · Home, Expenses, ＋ FAB, Analytics, More · More bottom sheet for remaining tabs | Medium | 4–5h |
-| 📋 | **3.3 — ⌘K Command Center** | Spotlight-style palette · jump to any tab or action · keyboard navigation · `cmdk` library | Medium | 5–7h |
-| 📋 | **3.4 — Dynamic Drawers** | Add Expense + Add Income as slide-up sheets on mobile · CSS-native · no Shadcn needed | Medium | 5–6h |
-| 📋 | **3.5 — Swipe to Delete + Haptic** | Swipe left on expense row → reveal delete/edit · `navigator.vibrate()` on mobile | Low | 2–3h |
+| ✅ | **3.1 — Tab Restructure** | 10 tabs → 8 tabs · Analytics sub-nav (Insights \| Trends) · Planning sub-nav (Budgets \| Goals) · keyboard shortcuts update | Medium | 5–7h |
+| ✅ | **3.2 — Bottom Navigation (Mobile)** | 5-icon bottom bar · Home, Expenses, ＋ FAB, Analytics, More · More bottom sheet for remaining tabs | Medium | 4–5h |
+| ✅ | **3.3 — ⌘K Command Center** | Spotlight-style palette · jump to any tab or action · keyboard navigation · `cmdk` library | Medium | 5–7h |
+| ✅ | **3.4 — Dynamic Drawers** | Add Expense + Add Income as slide-up sheets on mobile · CSS-native · no Shadcn needed | Medium | 5–6h |
+| ✅ | **3.5 — Swipe to Delete + Haptic** | Swipe left on expense row → reveal delete/edit · swipe right → edit · `navigator.vibrate()` on mobile | Low | 2–3h |
 
 ---
 
@@ -181,18 +181,21 @@
 | v7.13.0 | Bento Grid Dashboard + badges + 3-pt progress | ✅ |
 | v7.14.0 | Exchange tab redesign · BTC/ETH rates · pie charts → Insights | ✅ |
 | v7.15.0 | Sparkline + Category tiles (Phase 2.3) | ✅ |
-| v7.15.1 | Dark/Light polish · system theme · FOUC fix · reduced-motion (Phase 2.4) | ✅ Current |
-| v7.16.0 | Tab Restructure (Analytics + Planning) | 📋 |
-| v7.15.0 | ⌘K Command Center | 📋 |
-| v7.16.0 | Dynamic Drawers + Bottom Nav | 📋 |
-| v7.17.0 | Onboarding Wizard | 📋 |
+| v7.15.1 | Dark/Light polish · system theme · FOUC fix · reduced-motion (Phase 2.4) | ✅ |
+| v7.16.0 | Tab Restructure 10→8 · Analytics + Planning sub-navs (Phase 3.1) | ✅ |
+| v7.17.0 | Bottom Navigation · FAB · More sheet (Phase 3.2) | ✅ |
+| v7.18.0 | ⌘K Command Centre · keyboard navigation (Phase 3.3) | ✅ |
+| v7.19.0 | Dynamic Drawers · drag-to-dismiss sheets (Phase 3.4) | ✅ |
+| v7.20.0 | Swipe delete/edit · haptic · ODO/Trip A/B tracking (Phase 3.5) | ✅ |
+| v7.20.1 | PWA force-update fix · sparkline tooltip · fuel OCR quantity fix | ✅ Current |
+| v7.21.0 | Onboarding Wizard | 📋 |
 | v7.18.0 | Financial Health Score | 📋 |
 | v7.19.0 | Budget Rollover + Goal improvements | 📋 |
 | v7.20.0 | Expense Templates + Bulk Edit | 📋 |
-| v7.21.0 | Subscription Tracker + Spend Streak | 📋 |
-| v7.22.0 | Cash Flow Forecast | 📋 |
-| v7.23.0 | PDF Report + Natural Language Search | 📋 |
-| v7.24.0 | Share Sheet + Full Polish + Launch | 📋 |
+| v7.22.0 | Subscription Tracker + Spend Streak | 📋 |
+| v7.23.0 | Cash Flow Forecast | 📋 |
+| v7.24.0 | PDF Report + Natural Language Search | 📋 |
+| v7.25.0 | Share Sheet + Full Polish + Launch | 📋 |
 
 ---
 
@@ -208,4 +211,4 @@
 
 ---
 
-*Last updated: 21-05-2026 · Session 39 · v7.15.1 shipped*
+*Last updated: 21-05-2026 · Session 40 · v7.20.1 shipped*

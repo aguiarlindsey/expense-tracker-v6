@@ -27,7 +27,14 @@
       "Bash(ls *.jsx *.md *.txt)",
       "Bash(ls v6/*.md)",
       "Bash(findstr -i pdf)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(npx vercel *)",
+      "Bash(curl -s \"https://expense-tracker-v6.vercel.app/assets/\")",
+      "Bash(curl -sI \"https://expense-tracker-v6.vercel.app\")",
+      "Bash(curl -s \"https://expense-tracker-v6.vercel.app/index.html\")",
+      "Bash(gh api *)",
+      "Bash(ls *.md)",
+      "Bash(dir /b *.md)"
     ]
   }
 }
