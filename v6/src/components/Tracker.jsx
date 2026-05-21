@@ -504,7 +504,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
     recurringPeriod: 'monthly', nextDueDate: '',
     splitWith: '', splitParts: 1, receiptRef: '',
     taxAmount: 0, taxBreakdown: {},
-    fuelRate: '', fuelQuantity: '', fuelType: '', odoReading: '', tripReading: '',
+    fuelRate: '', fuelQuantity: '', fuelType: '', odoReading: '', tripA: '', tripB: '',
     vehicleCurrentKm: '', vehicleNextServiceKm: '',
     useCatAlloc: false, categoryAllocations: {},
   })
@@ -631,8 +631,9 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
       categoryAllocations: catAlloc,
       vehicleCurrentKm:    form.vehicleCurrentKm    ? parseInt(form.vehicleCurrentKm, 10)    || null : null,
       vehicleNextServiceKm: form.vehicleNextServiceKm ? parseInt(form.vehicleNextServiceKm, 10) || null : null,
-      odoReading:           form.odoReading  ? parseFloat(form.odoReading)  || null : null,
-      tripReading:          form.tripReading ? parseFloat(form.tripReading) || null : null,
+      odoReading: form.odoReading ? parseFloat(form.odoReading) || null : null,
+      tripA:      form.tripA    ? parseFloat(form.tripA)    || null : null,
+      tripB:      form.tripB    ? parseFloat(form.tripB)    || null : null,
     })
     onClose()
   }
@@ -753,19 +754,30 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
                     onChange={e => s('odoReading', e.target.value)} />
                 </div>
                 <div className="form-group">
-                  <label>Trip Meter (km)</label>
+                  <label>Trip A (km)</label>
                   <input type="number" min="0" step="0.1" placeholder="e.g. 320.5"
-                    value={form.tripReading || ''}
-                    onChange={e => s('tripReading', e.target.value)} />
+                    value={form.tripA || ''}
+                    onChange={e => s('tripA', e.target.value)} />
                 </div>
-                {form.tripReading && form.fuelQuantity && parseFloat(form.fuelQuantity) > 0 && (
-                  <div className="form-group" style={{ justifyContent: 'flex-end' }}>
-                    <label>Efficiency</label>
-                    <div style={{ padding: '0.5rem 0.75rem', background: 'var(--surface-alt)', border: '1px solid var(--border)', borderRadius: 8, fontSize: '0.9rem', fontWeight: 600, color: 'var(--primary)' }}>
-                      {(parseFloat(form.tripReading) / parseFloat(form.fuelQuantity)).toFixed(2)} km/L
+                <div className="form-group">
+                  <label>Trip B (km)</label>
+                  <input type="number" min="0" step="0.1" placeholder="e.g. 1240.2"
+                    value={form.tripB || ''}
+                    onChange={e => s('tripB', e.target.value)} />
+                </div>
+                {(() => {
+                  const trip = parseFloat(form.tripA || form.tripB)
+                  const qty  = parseFloat(form.fuelQuantity)
+                  if (!trip || !qty || qty <= 0) return null
+                  return (
+                    <div className="form-group" style={{ justifyContent: 'flex-end' }}>
+                      <label>Efficiency ({form.tripA ? 'Trip A' : 'Trip B'})</label>
+                      <div style={{ padding: '0.5rem 0.75rem', background: 'var(--surface-alt)', border: '1px solid var(--border)', borderRadius: 8, fontSize: '0.9rem', fontWeight: 600, color: 'var(--primary)' }}>
+                        {(trip / qty).toFixed(2)} km/L
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )
+                })()}
               </div>
             </div>
           )}
@@ -1339,15 +1351,16 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
           {(item.tags || []).map(t => <span key={t} className="item-tag">{t}</span>)}
         </div>
         {item.notes && <div className="item-notes">{item.notes}</div>}
-        {item.subcategory === 'Fuel' && (item.fuelRate || item.odoReading || item.tripReading) && (
+        {item.subcategory === 'Fuel' && (item.fuelRate || item.odoReading || item.tripA || item.tripB) && (
           <div className="item-notes">
             {item.fuelRate ? `⛽ ₹${Number(item.fuelRate).toFixed(2)}/L` : '⛽'}
             {item.fuelQuantity ? ` · ${Number(item.fuelQuantity).toFixed(3)} L` : ''}
-            {item.fuelType ? ` · ${item.fuelType}` : ''}
+            {item.fuelType    ? ` · ${item.fuelType}` : ''}
             {item.odoReading  ? ` · ODO ${Number(item.odoReading).toLocaleString()} km` : ''}
-            {item.tripReading ? ` · Trip ${Number(item.tripReading).toFixed(1)} km` : ''}
-            {item.tripReading && item.fuelQuantity
-              ? ` · ${(Number(item.tripReading) / Number(item.fuelQuantity)).toFixed(2)} km/L` : ''}
+            {item.tripA       ? ` · A ${Number(item.tripA).toFixed(1)} km` : ''}
+            {item.tripB       ? ` · B ${Number(item.tripB).toFixed(1)} km` : ''}
+            {(item.tripA || item.tripB) && item.fuelQuantity
+              ? ` · ${(Number(item.tripA || item.tripB) / Number(item.fuelQuantity)).toFixed(2)} km/L` : ''}
           </div>
         )}
         {item.subcategory === 'Vehicle Maintenance' && item.vehicleCurrentKm && (

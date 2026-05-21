@@ -103,8 +103,9 @@ export function makeExpense(partial = {}, source = 'manual') {
     fuelRate:           partial.fuelRate ? parseFloat(partial.fuelRate) : null,
     fuelQuantity:       partial.fuelQuantity ? parseFloat(partial.fuelQuantity) : null,
     fuelType:           partial.fuelType || null,
-    odoReading:         partial.odoReading  ? parseFloat(partial.odoReading)  : null,
-    tripReading:        partial.tripReading ? parseFloat(partial.tripReading) : null,
+    odoReading:         partial.odoReading ? parseFloat(partial.odoReading) : null,
+    tripA:              partial.tripA      ? parseFloat(partial.tripA)      : null,
+    tripB:              partial.tripB      ? parseFloat(partial.tripB)      : null,
     migratedFrom:       source,
     version:            6,
   }
