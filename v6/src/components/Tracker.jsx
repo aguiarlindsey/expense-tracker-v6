@@ -504,7 +504,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
     recurringPeriod: 'monthly', nextDueDate: '',
     splitWith: '', splitParts: 1, receiptRef: '',
     taxAmount: 0, taxBreakdown: {},
-    fuelRate: '', fuelQuantity: '', fuelType: '',
+    fuelRate: '', fuelQuantity: '', fuelType: '', odoReading: '', tripReading: '',
     vehicleCurrentKm: '', vehicleNextServiceKm: '',
     useCatAlloc: false, categoryAllocations: {},
   })
@@ -631,6 +631,8 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
       categoryAllocations: catAlloc,
       vehicleCurrentKm:    form.vehicleCurrentKm    ? parseInt(form.vehicleCurrentKm, 10)    || null : null,
       vehicleNextServiceKm: form.vehicleNextServiceKm ? parseInt(form.vehicleNextServiceKm, 10) || null : null,
+      odoReading:           form.odoReading  ? parseFloat(form.odoReading)  || null : null,
+      tripReading:          form.tripReading ? parseFloat(form.tripReading) || null : null,
     })
     onClose()
   }
@@ -720,25 +722,50 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
           </div>
           {/* Fuel details — only for Transport / Fuel */}
           {form.category === 'Transport' && form.subcategory === 'Fuel' && (
-            <div className="form-row">
-              <div className="form-group">
-                <label>Rate per Litre (₹/L)</label>
-                <input type="number" min="0" step="0.01" placeholder="e.g. 103.50"
-                  value={form.fuelRate || ''}
-                  onChange={e => s('fuelRate', e.target.value)} />
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '0.75rem', marginBottom: '0.5rem' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>⛽ Fuel Details</div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Rate per Litre (₹/L)</label>
+                  <input type="number" min="0" step="0.01" placeholder="e.g. 103.50"
+                    value={form.fuelRate || ''}
+                    onChange={e => s('fuelRate', e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Quantity (Litres)</label>
+                  <input type="number" min="0" step="0.001" placeholder="e.g. 19.401"
+                    value={form.fuelQuantity || ''}
+                    onChange={e => s('fuelQuantity', e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Fuel Type</label>
+                  <select value={form.fuelType || ''} onChange={e => s('fuelType', e.target.value)}>
+                    <option value="">—</option>
+                    {['Petrol','Diesel','CNG','LPG','Premium','Speed','Power'].map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
               </div>
-              <div className="form-group">
-                <label>Quantity (Litres)</label>
-                <input type="number" min="0" step="0.001" placeholder="e.g. 19.401"
-                  value={form.fuelQuantity || ''}
-                  onChange={e => s('fuelQuantity', e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>Fuel Type</label>
-                <select value={form.fuelType || ''} onChange={e => s('fuelType', e.target.value)}>
-                  <option value="">—</option>
-                  {['Petrol','Diesel','CNG','LPG','Premium','Speed','Power'].map(t => <option key={t}>{t}</option>)}
-                </select>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>ODO Reading (km)</label>
+                  <input type="number" min="0" step="1" placeholder="e.g. 45230"
+                    value={form.odoReading || ''}
+                    onChange={e => s('odoReading', e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Trip Meter (km)</label>
+                  <input type="number" min="0" step="0.1" placeholder="e.g. 320.5"
+                    value={form.tripReading || ''}
+                    onChange={e => s('tripReading', e.target.value)} />
+                </div>
+                {form.tripReading && form.fuelQuantity && parseFloat(form.fuelQuantity) > 0 && (
+                  <div className="form-group" style={{ justifyContent: 'flex-end' }}>
+                    <label>Efficiency</label>
+                    <div style={{ padding: '0.5rem 0.75rem', background: 'var(--surface-alt)', border: '1px solid var(--border)', borderRadius: 8, fontSize: '0.9rem', fontWeight: 600, color: 'var(--primary)' }}>
+                      {(parseFloat(form.tripReading) / parseFloat(form.fuelQuantity)).toFixed(2)} km/L
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1312,9 +1339,15 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
           {(item.tags || []).map(t => <span key={t} className="item-tag">{t}</span>)}
         </div>
         {item.notes && <div className="item-notes">{item.notes}</div>}
-        {item.subcategory === 'Fuel' && item.fuelRate && (
+        {item.subcategory === 'Fuel' && (item.fuelRate || item.odoReading || item.tripReading) && (
           <div className="item-notes">
-            ⛽ ₹{Number(item.fuelRate).toFixed(2)}/L{item.fuelQuantity ? ` · ${Number(item.fuelQuantity).toFixed(2)} L` : ''}{item.fuelType ? ` · ${item.fuelType}` : ''}
+            {item.fuelRate ? `⛽ ₹${Number(item.fuelRate).toFixed(2)}/L` : '⛽'}
+            {item.fuelQuantity ? ` · ${Number(item.fuelQuantity).toFixed(3)} L` : ''}
+            {item.fuelType ? ` · ${item.fuelType}` : ''}
+            {item.odoReading  ? ` · ODO ${Number(item.odoReading).toLocaleString()} km` : ''}
+            {item.tripReading ? ` · Trip ${Number(item.tripReading).toFixed(1)} km` : ''}
+            {item.tripReading && item.fuelQuantity
+              ? ` · ${(Number(item.tripReading) / Number(item.fuelQuantity)).toFixed(2)} km/L` : ''}
           </div>
         )}
         {item.subcategory === 'Vehicle Maintenance' && item.vehicleCurrentKm && (
