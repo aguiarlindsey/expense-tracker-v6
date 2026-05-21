@@ -4642,7 +4642,7 @@ export default function Tracker({ session }) {
               <div className="about-row"><span>Exchange</span><span>122 currencies in 8 regions · live FX rates · quick converter · BTC + ETH via CoinGecko · search filter</span></div>
               <div className="about-row"><span>Features</span><span>Receipt OCR scanner · trip tracking · fuel (ODO · Trip A/B · km/L) · recurring expenses · tags · 259-colour palette · incognito mode</span></div>
               <div className="about-row"><span>PWA</span><span>Installable · offline-capable · auto-update with force-reload banner · iOS Safari compatible</span></div>
-              <div className="about-row"><span>Last updated</span><span>2026-05-22 · Session 42 · v7.24.0</span></div>
+              <div className="about-row"><span>Last updated</span><span>2026-05-22 · Session 43 · v7.24.0</span></div>
             </div>
           </div>
         </main>
