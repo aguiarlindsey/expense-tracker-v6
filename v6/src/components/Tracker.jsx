@@ -355,7 +355,9 @@ function GroupedBarChart({ data, budget = 0, incognito = false }) {
             {d.inc > 0 && <rect x={incX} y={incY} width={barW} height={incH} fill="var(--color-inc)" rx="2" opacity="0.85">
               <title>{d.label}: {fmt(d.inc)} income</title>
             </rect>}
-            <text x={cx} y={H - PAD_B + 10} fontSize="9" fill="var(--text-muted)" textAnchor="middle">{d.label}</text>
+            <text x={cx} y={H - PAD_B + 10} fontSize="9" fill="var(--text-muted)" textAnchor="middle">
+              {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(d.label) - 1] || d.label}
+            </text>
           </g>
         )
       })}
