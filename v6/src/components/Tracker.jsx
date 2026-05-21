@@ -481,12 +481,15 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
   const [rateFetching, setRateFetching] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
   const [showTax, setShowTax] = useState(!!(initialData?.taxAmount > 0))
+  const [formError, setFormError] = useState('')
   const s = (k, v) => setForm(p => ({ ...p, [k]: v }))
 
   const applyOcr = (parsed) => {
     if (parsed.amount)      s('amount', parsed.amount)
     if (parsed.date)        s('date', parsed.date)
-    if (parsed.description) s('description', parsed.description)
+    // Use merchant name, or fall back to subcategory/category so description is never blank
+    const desc = parsed.description || parsed.subcategory || parsed.category || ''
+    if (desc) s('description', desc)
     if (parsed.category && CATS[parsed.category]) {
       s('category', parsed.category)
       if (parsed.subcategory) s('subcategory', parsed.subcategory)
@@ -575,7 +578,9 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
 
   const sub = e => {
     e.preventDefault()
-    if (!form.description.trim() || !form.amount || parseFloat(form.amount) <= 0) return
+    if (!form.description.trim()) { setFormError('Description is required — type the merchant name'); return }
+    if (!form.amount || parseFloat(form.amount) <= 0) { setFormError('Enter a valid amount greater than 0'); return }
+    setFormError('')
     const amt  = parseFloat(form.amount)
     const rate = parseFloat(form.conversionRate) || 1
     const catAlloc = form.useCatAlloc && form.categoryAllocations && Object.keys(form.categoryAllocations).length
@@ -916,6 +921,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
               </>
             )
           })()}
+          {formError && <div className="form-error-msg">⚠️ {formError}</div>}
           <div className="modal-footer">
             <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn-primary">{initialData ? 'Save Changes' : 'Add Expense'}</button>
