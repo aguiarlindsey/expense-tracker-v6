@@ -2417,17 +2417,21 @@ export default function Tracker({ session }) {
 
   // Category trends — top 5 categories × last 6 months
   const catTrend6 = useMemo(() => {
-    const months6 = Array.from({ length: 6 }, (_, i) => {
-      const d = new Date(todayStr + 'T12:00:00'); d.setDate(1); d.setMonth(d.getMonth() - (5 - i))
-      return d.toISOString().substring(0, 7)
-    })
+    // All months from Jan 2026 to current month
+    const months = []
+    const now = new Date(todayStr + 'T12:00:00')
+    let y = 2026, m = 1
+    while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)) {
+      months.push(`${y}-${String(m).padStart(2, '0')}`)
+      m++; if (m > 12) { m = 1; y++ }
+    }
     const totals = {}
     expenses.forEach(e => { const c = e.category || 'Other'; totals[c] = (totals[c] || 0) + toINR(e) })
     const top5 = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([c]) => c)
     return top5.map(cat => {
-      const vals = months6.map(m => expenses.filter(e => (e.date || '').startsWith(m) && e.category === cat).reduce((s, e) => s + toINR(e), 0))
+      const vals = months.map(mo => expenses.filter(e => (e.date || '').startsWith(mo) && e.category === cat).reduce((s, e) => s + toINR(e), 0))
       const maxV = Math.max(...vals, 1)
-      return { cat, icon: CATS[cat]?.icon || '📦', color: CATS[cat]?.color || '#667eea', vals, months: months6.map(m => m.substring(5)), maxV }
+      return { cat, icon: CATS[cat]?.icon || '📦', color: CATS[cat]?.color || '#667eea', vals, months, maxV }
     })
   }, [expenses, todayStr])
 
@@ -3562,7 +3566,7 @@ export default function Tracker({ session }) {
 
           {/* ── Category Trends ── */}
           {catTrend6.length > 0 && (
-            <div className="chart-card" style={{ marginBottom: '1rem' }}>
+            <div className="chart-card" style={{ marginBottom: '1rem', overflowX: 'auto' }}>
               <div className="chart-title">📊 Category Trends — Last 6 Months</div>
               <div className="cat-trend-grid">
                 {catTrend6.map(({ cat, icon, color, vals, months, maxV }) => {
