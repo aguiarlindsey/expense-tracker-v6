@@ -439,6 +439,7 @@ function normaliseDecimal(str, maxFracDigits = 3) {
 }
 
 function round2(n) { return Math.round(n * 100) / 100; }
+function round3(n) { return Math.round(n * 1000) / 1000; }
 
 function extractFuelData(text) {
   // Rate per litre: handles "103.80", "103 80", "103,80"
@@ -459,9 +460,9 @@ function extractFuelData(text) {
     const raw = qtyM[1];
     let v = parseFloat(normaliseDecimal(raw, 3));
     // Plain integer with no decimal separator: OCR likely dropped the decimal point
-    // e.g. "369" → 3.69, "3690" → 36.90, "5000" → 50.00
-    if (!isNaN(v) && v > 100 && !raw.match(/[\s.,]/)) v = round2(v / 100);
-    if (!isNaN(v) && v > 0 && v < 200) fuelQuantity = round2(v);
+    // e.g. "369" → 3.690, "3690" → 36.900, "5000" → 50.000
+    if (!isNaN(v) && v > 100 && !raw.match(/[\s.,]/)) v = round3(v / 100);
+    if (!isNaN(v) && v > 0 && v < 200) fuelQuantity = round3(v);
   }
 
   // Fuel type: "Product Name Petrol" / "Product Diesel" / "MOP Petrol"
@@ -533,7 +534,7 @@ export function parseReceipt(rawText) {
   // Corrects cases where OCR drops the decimal entirely (e.g. reads "359" instead of "3.59")
   let fuelQuantity = fuelQtyRaw;
   if (fuelRate && fuelRate > 0 && amount > 0) {
-    const mathQty = round2(amount / fuelRate);
+    const mathQty = round3(amount / fuelRate);
     if (mathQty > 0 && mathQty < 200 && (!fuelQuantity || Math.abs(mathQty - fuelQuantity) > 0.3)) {
       fuelQuantity = mathQty;
     }
