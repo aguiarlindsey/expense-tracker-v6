@@ -1237,10 +1237,56 @@ function AddContributionModal({ goal, goalContribs, onSave, onClose }) {
 // ─── Expense / Income Items ───────────────────────────────
 
 const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSelected, onToggleSelect }) {
-  const cat = CATS[item.category] || CATS['Other']
+  const cat  = CATS[item.category] || CATS['Other']
   const icon = (cat.subIcons && item.subcategory && cat.subIcons[item.subcategory]) || cat.icon
+
+  const REVEAL = 55, CONFIRM = 160
+  const [swipeX, setSwipeX] = useState(0)
+  const startRef  = useRef(null)
+  const swipeRef  = useRef(0)
+  const vibRef    = useRef(false)
+
+  const handleTS = (e) => {
+    if (bulkMode) return
+    startRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    vibRef.current = false
+  }
+  const handleTM = (e) => {
+    if (!startRef.current) return
+    const dx = startRef.current.x - e.touches[0].clientX
+    const dy = Math.abs(startRef.current.y - e.touches[0].clientY)
+    if (dy > Math.abs(dx) * 1.4) { startRef.current = null; return }
+    if (dx <= 0) return
+    const v = Math.min(dx, CONFIRM + 30)
+    swipeRef.current = v; setSwipeX(v)
+    if (dx > REVEAL && !vibRef.current) { navigator.vibrate?.(8); vibRef.current = true }
+  }
+  const handleTE = () => {
+    const d = swipeRef.current
+    swipeRef.current = 0; startRef.current = null; setSwipeX(0)
+    if (d > CONFIRM) { navigator.vibrate?.(40); onDelete(item.id) }
+  }
+
+  const sliding   = swipeX > 0
+  const confirmed = swipeX >= CONFIRM
+
   return (
-    <div className={`item${isSelected ? ' item-selected' : ''}`} style={{ borderLeft: `3px solid ${item.customColor || cat.color}` }}>
+    <div className="swipe-row" style={{ touchAction: 'pan-y' }}>
+      <div className="swipe-bg" style={{
+        opacity: Math.min(swipeX / REVEAL, 1),
+        background: confirmed ? '#dc2626' : '#ef4444',
+      }}>
+        <span>🗑️</span>
+        <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{confirmed ? 'Release' : 'Delete'}</span>
+      </div>
+    <div className={`item${isSelected ? ' item-selected' : ''}`}
+      style={{
+        borderLeft: `3px solid ${item.customColor || cat.color}`,
+        transform: sliding ? `translateX(-${swipeX}px)` : undefined,
+        transition: sliding ? 'none' : 'transform 0.2s ease',
+        position: 'relative', zIndex: 1,
+      }}
+      onTouchStart={handleTS} onTouchMove={handleTM} onTouchEnd={handleTE}>
       {bulkMode && <input type="checkbox" className="item-checkbox" checked={isSelected} onChange={() => onToggleSelect(item.id)} />}
       <div className="item-icon">{icon}</div>
       <div className="item-body">
@@ -1279,6 +1325,7 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
           </div>
         )}
       </div>
+    </div>
     </div>
   )
 })
