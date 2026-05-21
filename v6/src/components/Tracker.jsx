@@ -1253,36 +1253,49 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
   }
   const handleTM = (e) => {
     if (!startRef.current) return
-    const dx = startRef.current.x - e.touches[0].clientX
+    const dx = startRef.current.x - e.touches[0].clientX  // +left / −right
     const dy = Math.abs(startRef.current.y - e.touches[0].clientY)
     if (dy > Math.abs(dx) * 1.4) { startRef.current = null; return }
-    if (dx <= 0) return
-    const v = Math.min(dx, CONFIRM + 30)
+    const lim = CONFIRM + 30
+    const v = dx > 0 ? Math.min(dx, lim) : Math.max(dx, -lim)
     swipeRef.current = v; setSwipeX(v)
-    if (dx > REVEAL && !vibRef.current) { navigator.vibrate?.(8); vibRef.current = true }
+    if (Math.abs(dx) > REVEAL && !vibRef.current) { navigator.vibrate?.(8); vibRef.current = true }
   }
   const handleTE = () => {
     const d = swipeRef.current
     swipeRef.current = 0; startRef.current = null; setSwipeX(0)
-    if (d > CONFIRM) { navigator.vibrate?.(40); onDelete(item.id) }
+    if (d > CONFIRM)        { navigator.vibrate?.(40); onDelete(item.id) }
+    else if (d < -CONFIRM)  { navigator.vibrate?.(40); onEdit(item) }
   }
 
-  const sliding   = swipeX > 0
-  const confirmed = swipeX >= CONFIRM
+  const sliding    = swipeX !== 0
+  const leftSwipe  = swipeX > 0
+  const rightSwipe = swipeX < 0
+  const delConfirm = swipeX >= CONFIRM
+  const editConfirm = swipeX <= -CONFIRM
 
   return (
     <div className="swipe-row" style={{ touchAction: 'pan-y' }}>
-      <div className="swipe-bg" style={{
-        opacity: Math.min(swipeX / REVEAL, 1),
-        background: confirmed ? '#dc2626' : '#ef4444',
+      {/* Edit — left background, revealed by right swipe */}
+      <div className="swipe-bg swipe-bg-edit" style={{
+        opacity: rightSwipe ? Math.min(-swipeX / REVEAL, 1) : 0,
+        background: editConfirm ? '#1d4ed8' : '#2563eb',
+      }}>
+        <span>✏️</span>
+        <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{editConfirm ? 'Release' : 'Edit'}</span>
+      </div>
+      {/* Delete — right background, revealed by left swipe */}
+      <div className="swipe-bg swipe-bg-delete" style={{
+        opacity: leftSwipe ? Math.min(swipeX / REVEAL, 1) : 0,
+        background: delConfirm ? '#dc2626' : '#ef4444',
       }}>
         <span>🗑️</span>
-        <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{confirmed ? 'Release' : 'Delete'}</span>
+        <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{delConfirm ? 'Release' : 'Delete'}</span>
       </div>
     <div className={`item${isSelected ? ' item-selected' : ''}`}
       style={{
         borderLeft: `3px solid ${item.customColor || cat.color}`,
-        transform: sliding ? `translateX(-${swipeX}px)` : undefined,
+        transform: sliding ? `translateX(${-swipeX}px)` : undefined,
         transition: sliding ? 'none' : 'transform 0.2s ease',
         position: 'relative', zIndex: 1,
       }}
