@@ -1296,6 +1296,13 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 
 /* ─── Grouped Bar Chart ───────────────────────────────── */
 .grouped-bar-svg { width: 100%; height: auto; display: block; min-width: 320px; }
+.gbc-wrap { display: flex; flex-direction: column; }
+.gbc-months { display: flex; padding: 4px 0 2px; }
+.gbc-month-label {
+  flex: 1; text-align: center;
+  font-size: 0.75rem; font-weight: var(--fw-medium);
+  color: var(--text-muted);
+}
 .chart-title-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
 .chart-legend { display: flex; align-items: center; font-size: var(--text-xs); color: var(--text-muted); gap: 0.3rem; }
 .chart-legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 99px; flex-shrink: 0; }

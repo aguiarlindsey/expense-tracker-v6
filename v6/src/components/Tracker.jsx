@@ -310,12 +310,15 @@ function BarChart({ data, incognito = false }) {
 
 // ─── Grouped Bar Chart (exp + income per month) ───────────
 
+const GBC_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
 function GroupedBarChart({ data, budget = 0, incognito = false }) {
   if (!data || data.length < 2) return <div className="chart-empty">Not enough data</div>
   const fmt = n => incognito ? '••••' : _fmtINR(n)
   const slice = data.slice(-6)
   const maxVal = Math.max(...slice.flatMap(d => [d.exp, d.inc]), budget, 1)
-  const W = 560, H = 160, PAD_L = 12, PAD_B = 28, PAD_T = 12
+  // PAD_B reduced — month labels now live in HTML below the SVG
+  const W = 560, H = 150, PAD_L = 12, PAD_B = 8, PAD_T = 12
   const chartW = W - PAD_L, chartH = H - PAD_B - PAD_T
   const groupW = chartW / slice.length
   const barW = Math.min(groupW * 0.32, 22)
@@ -323,45 +326,52 @@ function GroupedBarChart({ data, budget = 0, incognito = false }) {
   const yScale = v => PAD_T + chartH * (1 - v / maxVal)
   const GRID = 4
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="grouped-bar-svg">
-      {/* Grid lines */}
-      {Array.from({ length: GRID + 1 }, (_, i) => {
-        const y = PAD_T + (chartH / GRID) * i
-        const v = maxVal * (1 - i / GRID)
-        return (
-          <g key={i}>
-            <line x1={PAD_L} x2={W} y1={y} y2={y} stroke="var(--border)" strokeWidth="0.5" />
-            {i < GRID && <text x={PAD_L} y={y - 3} fontSize="8" fill="var(--text-faint)">{incognito ? '••' : _fmtINR(v)}</text>}
-          </g>
-        )
-      })}
-      {/* Budget line */}
-      {budget > 0 && (() => {
-        const by = yScale(budget)
-        return <line x1={PAD_L} x2={W} y1={by} y2={by} stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4 3" />
-      })()}
-      {/* Bars */}
-      {slice.map((d, i) => {
-        const cx = PAD_L + groupW * i + groupW / 2
-        const expX = cx - gap / 2 - barW
-        const incX = cx + gap / 2
-        const expY = yScale(d.exp), incY = yScale(d.inc)
-        const expH = Math.max(H - PAD_B - expY, 1), incH = Math.max(H - PAD_B - incY, 1)
-        return (
-          <g key={i}>
-            <rect x={expX} y={expY} width={barW} height={expH} fill="var(--color-exp)" rx="2" opacity="0.85">
-              <title>{d.label}: {fmt(d.exp)} spent</title>
-            </rect>
-            {d.inc > 0 && <rect x={incX} y={incY} width={barW} height={incH} fill="var(--color-inc)" rx="2" opacity="0.85">
-              <title>{d.label}: {fmt(d.inc)} income</title>
-            </rect>}
-            <text x={cx} y={H - PAD_B + 10} fontSize="9" fill="var(--text-muted)" textAnchor="middle">
-              {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(d.label) - 1] || d.label}
-            </text>
-          </g>
-        )
-      })}
-    </svg>
+    <div className="gbc-wrap">
+      <svg viewBox={`0 0 ${W} ${H}`} className="grouped-bar-svg">
+        {/* Grid lines + Y labels */}
+        {Array.from({ length: GRID + 1 }, (_, i) => {
+          const y = PAD_T + (chartH / GRID) * i
+          const v = maxVal * (1 - i / GRID)
+          return (
+            <g key={i}>
+              <line x1={PAD_L} x2={W} y1={y} y2={y} stroke="var(--border)" strokeWidth="0.5" />
+              {i < GRID && <text x={PAD_L} y={y - 3} fontSize="8" fill="var(--text-faint)">{incognito ? '••' : _fmtINR(v)}</text>}
+            </g>
+          )
+        })}
+        {/* Budget line */}
+        {budget > 0 && (() => {
+          const by = yScale(budget)
+          return <line x1={PAD_L} x2={W} y1={by} y2={by} stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4 3" />
+        })()}
+        {/* Bars only — no text labels in SVG */}
+        {slice.map((d, i) => {
+          const cx = PAD_L + groupW * i + groupW / 2
+          const expX = cx - gap / 2 - barW
+          const incX = cx + gap / 2
+          const expY = yScale(d.exp), incY = yScale(d.inc)
+          const expH = Math.max(H - PAD_B - expY, 1), incH = Math.max(H - PAD_B - incY, 1)
+          return (
+            <g key={i}>
+              <rect x={expX} y={expY} width={barW} height={expH} fill="var(--color-exp)" rx="2" opacity="0.85">
+                <title>{GBC_MON[parseInt(d.label)-1]}: {fmt(d.exp)} spent</title>
+              </rect>
+              {d.inc > 0 && <rect x={incX} y={incY} width={barW} height={incH} fill="var(--color-inc)" rx="2" opacity="0.85">
+                <title>{GBC_MON[parseInt(d.label)-1]}: {fmt(d.inc)} income</title>
+              </rect>}
+            </g>
+          )
+        })}
+      </svg>
+      {/* Month labels as real HTML — immune to SVG scaling on mobile */}
+      <div className="gbc-months">
+        {slice.map((d, i) => (
+          <div key={i} className="gbc-month-label">
+            {GBC_MON[parseInt(d.label) - 1] || d.label}
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
