@@ -8,15 +8,15 @@
 ## Overall Progress
 
 ```
-████████████░░░░░░░░░░░░░░░░░░░░  38%   12 / 32 phases complete
+████████████████████░░░░░░░░░░░░  59%   19 / 32 phases complete
 ```
 
 | | Count | Hours |
 |---|---|---|
-| ✅ Complete | 12 phases | ~38.5h |
+| ✅ Complete | 19 phases | ~56h |
 | 🔨 In Progress | 0 phases | — |
-| 📋 Planned | 20 phases | ~101.5h est. |
-| **Total** | **32 phases** | **~140h · ~37 days** |
+| 📋 Planned | 13 phases | ~84h est. |
+| **Total** | **32 phases** | **~153h · ~40 days** |
 
 ---
 
@@ -25,10 +25,10 @@
 | Epic | Focus | Progress | Phases | Est. Hours |
 |------|-------|----------|--------|-----------|
 | [1 — Foundation](#epic-1--foundation) | CSS system | `██████████` 100% | 2/2 | ~7h |
-| [2 — Visual Redesign](#epic-2--visual-redesign) | Glass UI, Bento Grid | `██████████` 100% | 4/4 | ~12h |
-| [3 — Navigation & UX](#epic-3--navigation--ux) | Tabs, ⌘K, drawers | `░░░░░░░░░░` 0% | 0/5 | ~25h |
-| [4 — Onboarding](#epic-4--onboarding) | First-run wizard | `░░░░░░░░░░` 0% | 0/3 | ~11h |
-| [5 — Analytics Tab](#epic-5--analytics-tab) | Insights + Trends merged | `░░░░░░░░░░` 0% | 0/3 | ~18h |
+| [2 — Visual Redesign](#epic-2--visual-redesign) | Glass UI, Bento Grid | `██████████` 100% | 5/5 | ~14h |
+| [3 — Navigation & UX](#epic-3--navigation--ux) | Tabs, ⌘K, drawers | `██████████` 100% | 5/5 | ~25h |
+| [4 — Onboarding](#epic-4--onboarding) | First-run wizard | `██████████` 100% | 3/3 | ~11h |
+| [5 — Analytics Tab](#epic-5--analytics-tab) | Insights + Trends merged | `███░░░░░░░` 33% | 1/3 | ~18h |
 | [6 — Planning Tab](#epic-6--planning-tab) | Budgets + Goals merged | `░░░░░░░░░░` 0% | 0/3 | ~18h |
 | [7 — New Features](#epic-7--new-features) | Templates, forecast, PDF | `░░░░░░░░░░` 0% | 0/8 | ~40h |
 | [8 — Launch](#epic-8--launch--polish) | Mobile polish, docs | `░░░░░░░░░░` 0% | 0/4 | ~9h |
@@ -91,14 +91,14 @@
 > First impression for new users — guided setup in under 2 minutes.
 
 ```
-░░░░░░░░░░  0%   0 / 3 phases
+██████████  100%   3 / 3 phases
 ```
 
 | Status | Phase | Description | Complexity | Est. |
 |--------|-------|-------------|-----------|------|
-| 📋 | **4.1 — First-Login Detection** | Check `user_metadata.onboarded` on login · route new users to wizard · returning users go straight to app | Low | 1h |
-| 📋 | **4.2 — Onboarding Wizard** | 5 steps: Welcome → Name/Country → Base Currency → Monthly Budget → Notifications → Done 🎉 · stored in Supabase user_metadata · each step skippable | Medium | 7–8h |
-| 📋 | **4.3 — Empty State Redesign** | First-time empty states with helpful prompts · "Add your first expense" CTA · no blank screens | Low | 2h |
+| ✅ | **4.1 — First-Login Detection** | Check `user_metadata.onboarded` on login · route new users to wizard · returning users go straight to app | Low | 1h |
+| ✅ | **4.2 — Onboarding Wizard** | 5 steps: Welcome → Name → Currency → Budget → Notifications → Done 🎉 · supabase.auth.updateUser · budgets upsert · et_v6_base localStorage | Medium | 7–8h |
+| ✅ | **4.3 — Empty State Redesign** | First-run Overview card · Expenses/Income/Goals/Insights/Recurring all with CTAs · compact no-results variant | Low | 2h |
 
 ---
 
@@ -107,12 +107,12 @@
 > Insights and Trends unified under one intelligent tab.
 
 ```
-░░░░░░░░░░  0%   0 / 3 phases
+███░░░░░░░  33%   1 / 3 phases
 ```
 
 | Status | Phase | Description | Complexity | Est. |
 |--------|-------|-------------|-----------|------|
-| 📋 | **5.1 — Analytics Tab Shell** | New Analytics tab · pill sub-nav (Insights \| Trends) · smooth switching · active state styling | Medium | 3–4h |
+| ✅ | **5.1 — Analytics Tab Shell** | Analytics tab · pill sub-nav (Insights \| Trends) · smooth switching — shipped as part of Phase 3.1 | Medium | 3–4h |
 | 📋 | **5.2 — Financial Health Score** | 0–100 score hero · sub-scores (savings rate, budget use, consistency, goals) · animated ring · prominent on Analytics | High | 6–8h |
 | 📋 | **5.3 — Enhanced Charts** | 6-month bar chart polish · category trend lines · MoM table update · merchant analytics card · payment method split | Medium | 5–6h |
 
@@ -211,4 +211,4 @@
 
 ---
 
-*Last updated: 21-05-2026 · Session 40 · v7.20.1 shipped*
+*Last updated: 22-05-2026 · Session 42 · v7.22.1 shipped*
