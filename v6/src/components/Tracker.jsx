@@ -2308,6 +2308,29 @@ export default function Tracker({ session }) {
     return c
   }, [expenses, monthStr])
 
+  const prevMonthStr = useMemo(() => {
+    const [y, m] = monthStr.split('-').map(Number)
+    return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`
+  }, [monthStr])
+
+  const spentByCatPrevMonth = useMemo(() => {
+    const c = {}
+    expenses.filter(e => (e.date || '').startsWith(prevMonthStr)).forEach(e => { c[e.category] = (c[e.category] || 0) + toINR(e) })
+    return c
+  }, [expenses, prevMonthStr])
+
+  const rolloverAmounts = useMemo(() => {
+    const map = {}
+    Object.keys(budgets.categories || {}).forEach(cat => {
+      if (!budgets.rolloverEnabled?.[cat]) return
+      const prevBgt  = budgets.categories[cat] || 0
+      const prevSpent = spentByCatPrevMonth[cat] || 0
+      const rollover = prevBgt > 0 ? Math.max(0, prevBgt - prevSpent) : 0
+      if (rollover > 0) map[cat] = rollover
+    })
+    return map
+  }, [budgets, spentByCatPrevMonth])
+
   const sparkDays = useMemo(() => {
     const today = new Date()
     const days = []
@@ -3819,12 +3842,32 @@ export default function Tracker({ session }) {
             <div className="chart-title">📁 Per-Category Budgets ({monthStr})</div>
             <div className="cat-budget-grid">
               {Object.keys(CATS).map(cat => {
-                const catBgt = budgets.categories?.[cat] || 0
-                const catSpent = spentByCatMonth[cat] || 0
+                const catBgt         = budgets.categories?.[cat] || 0
+                const catSpent       = spentByCatMonth[cat] || 0
+                const rolloverOn     = budgets.rolloverEnabled?.[cat] || false
+                const rolloverAmt    = rolloverAmounts[cat] || 0
+                const effectiveBgt   = catBgt + (rolloverOn ? rolloverAmt : 0)
                 return (
                   <div key={cat}>
                     <div className="budget-input-row">
-                      <span className="budget-input-label">{CATS[cat].icon} {cat}</span>
+                      <div className="budget-input-label-row">
+                        <span className="budget-input-label">{CATS[cat].icon} {cat}</span>
+                        <div className="rollover-controls">
+                          {rolloverOn && rolloverAmt > 0 && (
+                            <span className="rollover-badge">↻ +{fmtINR(rolloverAmt)}</span>
+                          )}
+                          <button
+                            className={`rollover-toggle${rolloverOn ? ' active' : ''}`}
+                            title={rolloverOn ? 'Rollover on — click to disable' : 'Enable rollover: unused budget carries to next month'}
+                            onClick={() => {
+                              const base = budgetDraft ?? budgets
+                              const nb = { ...base, rolloverEnabled: { ...(base.rolloverEnabled || {}), [cat]: !rolloverOn } }
+                              saveBudgets(nb)
+                              if (budgetDraft) setBudgetDraft(nb)
+                            }}
+                          >↻</button>
+                        </div>
+                      </div>
                       <input type="text" inputMode="decimal" placeholder="0 = off" className="budget-number-input"
                         value={focusedBudget === `cat_${cat}`
                           ? String((budgetDraft ?? budgets).categories?.[cat] || '')
@@ -3833,7 +3876,11 @@ export default function Tracker({ session }) {
                         onChange={e => setBudgetDraft(prev => { const base = prev ?? budgets; return { ...base, categories: { ...(base.categories || {}), [cat]: parseFloat(e.target.value.replace(/[^0-9.]/g, '')) || 0 } } })}
                         onBlur={() => { setFocusedBudget(null); if (budgetDraft) saveBudgets(budgetDraft) }} />
                     </div>
-                    {(catBgt > 0 || catSpent > 0) && <div style={{ paddingLeft: '1.5rem' }}><BudgetBar label={`${fmtINR(catSpent)} spent`} spent={catSpent} budget={catBgt} incognito={incognito} /></div>}
+                    {(effectiveBgt > 0 || catSpent > 0) && (
+                      <div style={{ paddingLeft: '1.5rem' }}>
+                        <BudgetBar label={`${fmtINR(catSpent)} spent`} spent={catSpent} budget={effectiveBgt} incognito={incognito} />
+                      </div>
+                    )}
                   </div>
                 )
               })}

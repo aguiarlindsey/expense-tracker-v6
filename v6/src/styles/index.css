@@ -1248,6 +1248,21 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 }
 .budget-number-input:focus { border-color: var(--primary); }
 .budget-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+
+.budget-input-label-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.rollover-controls { display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0; }
+.rollover-badge {
+  font-size: 0.72rem; font-weight: 600; color: var(--color-brand);
+  background: rgba(102,126,234,0.12); border-radius: 99px; padding: 1px 7px;
+  white-space: nowrap;
+}
+.rollover-toggle {
+  background: none; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 2px 7px; font-size: 0.8rem; cursor: pointer; color: var(--text-muted);
+  transition: border-color 0.15s, color 0.15s, background 0.15s; line-height: 1.4;
+}
+.rollover-toggle:hover { border-color: var(--color-brand); color: var(--color-brand); }
+.rollover-toggle.active { background: rgba(102,126,234,0.12); border-color: var(--color-brand); color: var(--color-brand); }
 .cat-budget-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; }
 
 /* ─── Goals tab ───────────────────────────────────────── */

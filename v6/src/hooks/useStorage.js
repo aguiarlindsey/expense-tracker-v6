@@ -174,7 +174,7 @@ function tripFromDb(row) {
 export function useStorage(userId) {
   const [expenses,      setExpenses]      = useState([])
   const [income,        setIncome]        = useState([])
-  const [budgets,       setBudgets]       = useState({ daily: 0, weekly: 0, monthly: 0, categories: {} })
+  const [budgets,       setBudgets]       = useState({ daily: 0, weekly: 0, monthly: 0, categories: {}, rolloverEnabled: {} })
   const [goals,         setGoals]         = useState([])
   const [contributions, setContributions] = useState([])
   const [trips,         setTrips]         = useState([])
@@ -226,10 +226,11 @@ export function useStorage(userId) {
       setIncome((incRes.data || []).map(incomeFromDb))
       if (budRes.data) {
         setBudgets({
-          daily:      parseFloat(budRes.data.daily)   || 0,
-          weekly:     parseFloat(budRes.data.weekly)  || 0,
-          monthly:    parseFloat(budRes.data.monthly) || 0,
-          categories: budRes.data.categories || {},
+          daily:          parseFloat(budRes.data.daily)   || 0,
+          weekly:         parseFloat(budRes.data.weekly)  || 0,
+          monthly:        parseFloat(budRes.data.monthly) || 0,
+          categories:     budRes.data.categories     || {},
+          rolloverEnabled: budRes.data.rollover_enabled || {},
         })
       }
       setLoading(false)
@@ -304,10 +305,11 @@ export function useStorage(userId) {
     if (payload.eventType === 'DELETE') return
     const row = payload.new
     setBudgets({
-      daily:      parseFloat(row.daily)   || 0,
-      weekly:     parseFloat(row.weekly)  || 0,
-      monthly:    parseFloat(row.monthly) || 0,
-      categories: row.categories || {},
+      daily:           parseFloat(row.daily)   || 0,
+      weekly:          parseFloat(row.weekly)  || 0,
+      monthly:         parseFloat(row.monthly) || 0,
+      categories:      row.categories     || {},
+      rolloverEnabled: row.rollover_enabled || {},
     })
   }
 
@@ -453,6 +455,7 @@ export function useStorage(userId) {
         const { error: err } = await supabase.from('budgets').upsert({
           user_id: userId, daily: payload.daily || 0, weekly: payload.weekly || 0,
           monthly: payload.monthly || 0, categories: payload.categories || {},
+          rollover_enabled: payload.rolloverEnabled || {},
           updated_at: new Date().toISOString(),
         })
         if (err) throw new Error(err.message)
@@ -640,6 +643,7 @@ export function useStorage(userId) {
     const { error: err } = await supabase.from('budgets').upsert({
       user_id: userId, daily: nb.daily || 0, weekly: nb.weekly || 0,
       monthly: nb.monthly || 0, categories: nb.categories || {},
+      rollover_enabled: nb.rolloverEnabled || {},
       updated_at: new Date().toISOString(),
     })
     if (err && isNetworkError(err)) enqueue('saveBudgets', nb)
@@ -817,7 +821,7 @@ export function useStorage(userId) {
     ])
     setExpenses([])
     setIncome([])
-    setBudgets({ daily: 0, weekly: 0, monthly: 0, categories: {} })
+    setBudgets({ daily: 0, weekly: 0, monthly: 0, categories: {}, rolloverEnabled: {} })
     setGoals([])
     setContributions([])
     setTrips([])
