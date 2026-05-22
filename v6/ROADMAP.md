@@ -172,6 +172,16 @@
 
 ---
 
+## Optional / Future
+
+> Not scheduled — add to a future Epic if demand warrants it.
+
+| Feature | Description | Est. |
+|---------|-------------|------|
+| **i18n — Multi-Language Support** | Language switcher in Settings · extract all UI strings into translation dictionary · provide translations · `useTranslation()` throughout · browser locale detection as default | ~20–40h |
+
+---
+
 ## Version Map
 
 | Version | Feature | Status |
