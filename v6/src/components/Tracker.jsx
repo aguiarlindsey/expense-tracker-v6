@@ -3839,7 +3839,7 @@ export default function Tracker({ session }) {
           </div>
 
           <div className="chart-card">
-            <div className="chart-title">📁 Per-Category Budgets ({monthStr})</div>
+            <div className="chart-title">📁 Per-Category Budgets — {new Date(monthStr + '-15T12:00:00').toLocaleString('default', { month: 'long', year: 'numeric' })}</div>
             <div className="cat-budget-grid">
               {Object.keys(CATS).map(cat => {
                 const catBgt         = budgets.categories?.[cat] || 0
