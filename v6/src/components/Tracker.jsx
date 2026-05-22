@@ -662,8 +662,43 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
   const [showScanner, setShowScanner] = useState(false)
   const [showTax, setShowTax] = useState(!!(initialData?.taxAmount > 0))
   const [formError, setFormError] = useState('')
+  const [templates, setTemplates] = useState(() => { try { return JSON.parse(localStorage.getItem('et_v6_templates')) || [] } catch { return [] } })
+  const [savingTpl, setSavingTpl] = useState(false)
+  const [tplName, setTplName] = useState('')
   const { sheetStyle, onTouchStart, onTouchMove, onTouchEnd } = useBottomSheet(onClose)
   const s = (k, v) => setForm(p => ({ ...p, [k]: v }))
+
+  function applyTemplate(t) {
+    setForm(p => ({ ...p,
+      description: t.desc, amount: t.amount ? String(t.amount) : '',
+      currency: t.currency || 'INR', category: t.category || 'Food',
+      subcategory: t.subcategory || '', paymentMethod: t.paymentMethod || 'UPI/QR',
+      expenseType: t.expenseType || 'variable', tags: t.tags || [],
+      notes: t.notes || '', isRecurring: t.isRecurring || false,
+      recurringPeriod: t.recurringPeriod || 'monthly',
+    }))
+  }
+  function saveTemplate() {
+    const name = tplName.trim() || form.description.trim() || `Template ${templates.length + 1}`
+    const t = {
+      id: String(Date.now()), name,
+      desc: form.description, amount: parseFloat(form.amount) || 0,
+      currency: form.currency, category: form.category,
+      subcategory: form.subcategory, paymentMethod: form.paymentMethod,
+      expenseType: form.expenseType, tags: form.tags,
+      notes: form.notes, isRecurring: form.isRecurring,
+      recurringPeriod: form.recurringPeriod,
+    }
+    const updated = [...templates, t].slice(-10)
+    setTemplates(updated)
+    localStorage.setItem('et_v6_templates', JSON.stringify(updated))
+    setSavingTpl(false); setTplName('')
+  }
+  function deleteTpl(id) {
+    const updated = templates.filter(t => t.id !== id)
+    setTemplates(updated)
+    localStorage.setItem('et_v6_templates', JSON.stringify(updated))
+  }
 
   const applyOcr = (parsed) => {
     if (parsed.amount)      s('amount', parsed.amount)
@@ -811,6 +846,21 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
           </div>
         </div>
         <form onSubmit={sub} className="form">
+          {!initialData && templates.length > 0 && (
+            <div className="template-row">
+              <span className="template-row-label">Quick add</span>
+              <div className="template-chips">
+                {templates.map(t => (
+                  <div key={t.id} className="template-chip">
+                    <button type="button" className="template-chip-apply" onClick={() => applyTemplate(t)}>
+                      {CATS[t.category]?.icon || '📦'} {t.name}
+                    </button>
+                    <button type="button" className="template-chip-del" onClick={() => deleteTpl(t.id)}>✕</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="form-row">
             <div className="form-group">
               <label>Date *</label>
@@ -1173,6 +1223,27 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
             )
           })()}
           {formError && <div className="form-error-msg">⚠️ {formError}</div>}
+          {!initialData && (
+            <div className="template-save-row">
+              {savingTpl ? (
+                <div className="template-save-input">
+                  <input type="text" placeholder={form.description || 'Template name…'} value={tplName}
+                    onChange={e => setTplName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); saveTemplate() } if (e.key === 'Escape') setSavingTpl(false) }}
+                    autoFocus />
+                  <button type="button" className="btn-primary-sm" onClick={saveTemplate}>Save</button>
+                  <button type="button" className="btn-secondary-sm" onClick={() => setSavingTpl(false)}>Cancel</button>
+                </div>
+              ) : (
+                <button type="button" className="template-save-btn"
+                  onClick={() => { setSavingTpl(true); setTplName(form.description || '') }}
+                  disabled={templates.length >= 10}
+                  title={templates.length >= 10 ? 'Max 10 templates' : 'Save current form as a reusable template'}>
+                  ☆ Save as template{templates.length >= 10 ? ' (max 10)' : ''}
+                </button>
+              )}
+            </div>
+          )}
           <div className="modal-footer">
             <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn-primary">{initialData ? 'Save Changes' : 'Add Expense'}</button>
