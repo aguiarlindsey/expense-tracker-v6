@@ -1733,6 +1733,7 @@ export default function Tracker({ session }) {
     const p = new URLSearchParams(window.location.search).get('ptab')
     return p === 'goals' ? 'goals' : 'budgets'
   })
+  const [budgetDraft, setBudgetDraft]     = useState(null)
   const [dark, setDark]                   = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s !== null ? s === '1' : window.matchMedia('(prefers-color-scheme: dark)').matches })
   const [themeMode, setThemeMode]         = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s === null ? 'system' : s === '1' ? 'dark' : 'light' })
   const darkRef                           = useRef(null)
@@ -2001,6 +2002,10 @@ export default function Tracker({ session }) {
   }, [])
 
   useEffect(() => { localStorage.setItem('et_v6_base', baseCurrency); _appCurrency = baseCurrency }, [baseCurrency])
+  // Clear budget draft when leaving the budgets sub-tab so inputs re-sync from Supabase on return
+  useEffect(() => {
+    if (!(tab === 'planning' && planningTab === 'budgets')) setBudgetDraft(null)
+  }, [tab, planningTab])
   useEffect(() => {
     const RATE_KEY = 'et_v6_rates2', TTL = 6 * 3600 * 1000
     const load = () => { try { return JSON.parse(localStorage.getItem(RATE_KEY)) } catch { return null } }
@@ -3776,8 +3781,10 @@ export default function Tracker({ session }) {
                 <div key={key} className="budget-input-row">
                   <div className="budget-input-label">{label}<span className="budget-sub">{sub}</span></div>
                   <input type="number" min="0" placeholder="0 = off" className="budget-number-input"
-                    value={budgets[key] || ''}
-                    onChange={e => saveBudgets({ ...budgets, [key]: parseFloat(e.target.value) || 0 })} />
+                    value={(budgetDraft ?? budgets)[key] || ''}
+                    onFocus={() => { if (!budgetDraft) setBudgetDraft({ ...budgets, categories: { ...(budgets.categories || {}) } }) }}
+                    onChange={e => setBudgetDraft(prev => ({ ...(prev ?? budgets), [key]: parseFloat(e.target.value) || 0 }))}
+                    onBlur={() => { if (budgetDraft) saveBudgets(budgetDraft) }} />
                 </div>
               ))}
               <p className="budget-hint">Set to 0 to disable. Saves automatically.</p>
@@ -3810,8 +3817,10 @@ export default function Tracker({ session }) {
                     <div className="budget-input-row">
                       <span className="budget-input-label">{CATS[cat].icon} {cat}</span>
                       <input type="number" min="0" placeholder="0 = off" className="budget-number-input"
-                        value={catBgt || ''}
-                        onChange={e => saveBudgets({ ...budgets, categories: { ...(budgets.categories || {}), [cat]: parseFloat(e.target.value) || 0 } })} />
+                        value={(budgetDraft ?? budgets).categories?.[cat] || ''}
+                        onFocus={() => { if (!budgetDraft) setBudgetDraft({ ...budgets, categories: { ...(budgets.categories || {}) } }) }}
+                        onChange={e => setBudgetDraft(prev => { const base = prev ?? budgets; return { ...base, categories: { ...(base.categories || {}), [cat]: parseFloat(e.target.value) || 0 } } })}
+                        onBlur={() => { if (budgetDraft) saveBudgets(budgetDraft) }} />
                     </div>
                     {(catBgt > 0 || catSpent > 0) && <div style={{ paddingLeft: '1.5rem' }}><BudgetBar label={`${fmtINR(catSpent)} spent`} spent={catSpent} budget={catBgt} incognito={incognito} /></div>}
                   </div>
