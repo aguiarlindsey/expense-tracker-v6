@@ -1845,6 +1845,8 @@ export default function Tracker({ session }) {
   const [delTarget, setDelTarget]         = useState(null)
   const [bulkMode, setBulkMode]           = useState(false)
   const [selectedIds, setSelectedIds]     = useState({})
+  const [bulkEditField, setBulkEditField] = useState(null)
+  const [bulkEditValue, setBulkEditValue] = useState('')
   const [showGoalForm, setShowGoalForm]         = useState(false)
   const [contribGoal, setContribGoal]           = useState(null)
   const [upcomingRecurring, setUpcomingRecurring] = useState([])
@@ -2932,7 +2934,17 @@ export default function Tracker({ session }) {
   const toggleSelect  = useCallback(id => setSelectedIds(prev => { const n = { ...prev }; if (n[id]) delete n[id]; else n[id] = true; return n }), [])
   const selectAll     = useCallback(() => setSelectedIds(Object.fromEntries(filteredExp.map(e => [e.id, true]))), [filteredExp])
   const deselectAll   = useCallback(() => setSelectedIds({}), [])
-  const exitBulk      = useCallback(() => { setBulkMode(false); setSelectedIds({}) }, [])
+  const exitBulk      = useCallback(() => { setBulkMode(false); setSelectedIds({}); setBulkEditField(null); setBulkEditValue('') }, [])
+  const applyBulkEdit = useCallback(async (field, value) => {
+    if (!field || !value) return
+    const toEdit = expenses.filter(e => selectedIds[e.id])
+    await Promise.all(toEdit.map(e => editExpense({
+      ...e,
+      [field]: value,
+      ...(field === 'category' ? { subcategory: '' } : {}),
+    })))
+    setBulkEditField(null); setBulkEditValue(''); exitBulk()
+  }, [expenses, selectedIds, editExpense, exitBulk])
   const selectedCount = Object.keys(selectedIds).length
 
   // ── CRUD handlers ─────────────────────────────────────
@@ -3562,10 +3574,48 @@ export default function Tracker({ session }) {
 
           {bulkMode && (
             <div className="bulk-bar">
-              <span>{selectedCount > 0 ? `${selectedCount} selected` : 'None selected'}</span>
-              <button className="btn-ghost btn-sm" onClick={selectAll}>Select all ({filteredExp.length})</button>
-              {selectedCount > 0 && <button className="btn-ghost btn-sm" onClick={deselectAll}>Deselect all</button>}
-              {selectedCount > 0 && <button className="btn-danger btn-sm" onClick={() => setDelTarget({ many: true, ids: selectedIds })}>🗑️ Delete {selectedCount}</button>}
+              <div className="bulk-bar-top">
+                <span>{selectedCount > 0 ? `${selectedCount} selected` : 'None selected'}</span>
+                <button className="btn-ghost btn-sm" onClick={selectAll}>Select all ({filteredExp.length})</button>
+                {selectedCount > 0 && <button className="btn-ghost btn-sm" onClick={deselectAll}>Deselect all</button>}
+                {selectedCount > 0 && <>
+                  <div className="bulk-sep" />
+                  {[['category','📁 Category'],['paymentMethod','💳 Payment'],['date','📅 Date']].map(([f, lbl]) => (
+                    <button key={f} className={`btn-ghost btn-sm${bulkEditField === f ? ' active' : ''}`}
+                      onClick={() => { setBulkEditField(bulkEditField === f ? null : f); setBulkEditValue('') }}>
+                      {lbl}
+                    </button>
+                  ))}
+                  <div className="bulk-sep" />
+                  <button className="btn-danger btn-sm" onClick={() => setDelTarget({ many: true, ids: selectedIds })}>🗑️ Delete {selectedCount}</button>
+                </>}
+              </div>
+              {bulkEditField && selectedCount > 0 && (
+                <div className="bulk-edit-row">
+                  <span className="bulk-edit-label">
+                    {bulkEditField === 'category' ? 'Set category' : bulkEditField === 'paymentMethod' ? 'Set payment' : 'Set date'}
+                  </span>
+                  {bulkEditField === 'category' && (
+                    <select className="bulk-edit-select" value={bulkEditValue} onChange={e => setBulkEditValue(e.target.value)} autoFocus>
+                      <option value="">— choose —</option>
+                      {Object.keys(CATS).map(c => <option key={c} value={c}>{CATS[c].icon} {c}</option>)}
+                    </select>
+                  )}
+                  {bulkEditField === 'paymentMethod' && (
+                    <select className="bulk-edit-select" value={bulkEditValue} onChange={e => setBulkEditValue(e.target.value)} autoFocus>
+                      <option value="">— choose —</option>
+                      {PAY_METHODS.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  )}
+                  {bulkEditField === 'date' && (
+                    <input type="date" className="bulk-edit-date" value={bulkEditValue} onChange={e => setBulkEditValue(e.target.value)} autoFocus />
+                  )}
+                  <button className="btn-primary-sm" onClick={() => applyBulkEdit(bulkEditField, bulkEditValue)} disabled={!bulkEditValue}>
+                    Apply to {selectedCount}
+                  </button>
+                  <button className="btn-ghost btn-sm" onClick={() => { setBulkEditField(null); setBulkEditValue('') }}>✕</button>
+                </div>
+              )}
             </div>
           )}
 
