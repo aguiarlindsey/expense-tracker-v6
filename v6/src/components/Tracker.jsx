@@ -4747,7 +4747,7 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title">💸 Expense Tracker V7</div>
               <div className="about-meta">
-                <span className="about-badge">v7.24.0</span>
+                <span className="about-badge">v7.25.0</span>
                 <span className="about-badge">Glass UI</span>
                 <span className="about-badge">Bento Dashboard</span>
                 <span className="about-badge">⌘K Palette</span>
@@ -4758,6 +4758,8 @@ export default function Tracker({ session }) {
                 <span className="about-badge">PWA</span>
                 <span className="about-badge">Health Score</span>
                 <span className="about-badge">Onboarding</span>
+                <span className="about-badge">Budget Rollover</span>
+                <span className="about-badge">Goal Rings</span>
               </div>
               <div className="about-row"><span>Architecture</span><span>Vite + React 18 + Supabase · deployed on Vercel</span></div>
               <div className="about-row"><span>Auth</span><span>Magic-link email · WebAuthn biometric lock · Email OTP fallback</span></div>
@@ -4767,11 +4769,12 @@ export default function Tracker({ session }) {
               <div className="about-row"><span>Navigation</span><span>8 tabs · Analytics sub-nav (Insights | Trends) · Planning sub-nav (Budgets | Goals) · ⌘K command palette · keyboard shortcuts 1–8</span></div>
               <div className="about-row"><span>Mobile</span><span>Bottom nav + FAB · More sheet · slide-up drawers (drag to dismiss) · swipe left → delete · swipe right → edit · haptic feedback · safe-area insets</span></div>
               <div className="about-row"><span>Analytics</span><span>Financial Health Score (0–100 animated ring, 4 sub-scores) · grouped bar chart · category trends · merchant top-10 · MoM savings rate · anomaly detection · burn-rate forecast</span></div>
+              <div className="about-row"><span>Planning</span><span>Budget rollover (unused carries to next month, per-category toggle) · goal progress rings · milestone badges (🥉🥈🥇🏆) · contribution timeline · colour-coded countdown</span></div>
               <div className="about-row"><span>Onboarding</span><span>5-step wizard (name · currency · budget · notifications · done) · first-run empty states with CTAs · user_metadata persisted to Supabase</span></div>
               <div className="about-row"><span>Exchange</span><span>122 currencies in 8 regions · live FX rates · quick converter · BTC + ETH via CoinGecko · search filter</span></div>
               <div className="about-row"><span>Features</span><span>Receipt OCR scanner · trip tracking · fuel (ODO · Trip A/B · km/L) · recurring expenses · tags · 259-colour palette · incognito mode</span></div>
               <div className="about-row"><span>PWA</span><span>Installable · offline-capable · auto-update with force-reload banner · iOS Safari compatible</span></div>
-              <div className="about-row"><span>Last updated</span><span>2026-05-22 · Session 43 · v7.24.0</span></div>
+              <div className="about-row"><span>Last updated</span><span>2026-05-22 · Session 44 · v7.25.0</span></div>
             </div>
           </div>
         </main>
