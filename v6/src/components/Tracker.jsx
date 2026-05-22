@@ -25,6 +25,12 @@ function _fmtINR(n) {
 }
 // Module-level alias — sub-components use this; Tracker shadows it with incognito-aware version
 const fmtINR = _fmtINR
+// Number-only formatter for budget inputs — no symbol, 2 decimal places, locale-aware grouping
+function fmtBudgetDisplay(val) {
+  const n = parseFloat(val)
+  if (!n || isNaN(n)) return ''
+  return n.toLocaleString(_localeFor(_appCurrency), { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
 // Display dates as DD-MM-YYYY everywhere; stored/input format stays YYYY-MM-DD
 function fmtDate(iso) {
   if (!iso) return ''
@@ -1734,6 +1740,7 @@ export default function Tracker({ session }) {
     return p === 'goals' ? 'goals' : 'budgets'
   })
   const [budgetDraft, setBudgetDraft]     = useState(null)
+  const [focusedBudget, setFocusedBudget] = useState(null)
   const [dark, setDark]                   = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s !== null ? s === '1' : window.matchMedia('(prefers-color-scheme: dark)').matches })
   const [themeMode, setThemeMode]         = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s === null ? 'system' : s === '1' ? 'dark' : 'light' })
   const darkRef                           = useRef(null)
@@ -3780,11 +3787,13 @@ export default function Tracker({ session }) {
               {[['daily', '📅 Daily', 'per day'], ['weekly', '🗓️ Weekly', 'Sun–Sat'], ['monthly', '📆 Monthly', 'calendar month']].map(([key, label, sub]) => (
                 <div key={key} className="budget-input-row">
                   <div className="budget-input-label">{label}<span className="budget-sub">{sub}</span></div>
-                  <input type="number" min="0" placeholder="0 = off" className="budget-number-input"
-                    value={(budgetDraft ?? budgets)[key] || ''}
-                    onFocus={() => { if (!budgetDraft) setBudgetDraft({ ...budgets, categories: { ...(budgets.categories || {}) } }) }}
-                    onChange={e => setBudgetDraft(prev => ({ ...(prev ?? budgets), [key]: parseFloat(e.target.value) || 0 }))}
-                    onBlur={() => { if (budgetDraft) saveBudgets(budgetDraft) }} />
+                  <input type="text" inputMode="decimal" placeholder="0 = off" className="budget-number-input"
+                    value={focusedBudget === key
+                      ? String((budgetDraft ?? budgets)[key] || '')
+                      : fmtBudgetDisplay((budgetDraft ?? budgets)[key])}
+                    onFocus={() => { setFocusedBudget(key); if (!budgetDraft) setBudgetDraft({ ...budgets, categories: { ...(budgets.categories || {}) } }) }}
+                    onChange={e => setBudgetDraft(prev => ({ ...(prev ?? budgets), [key]: parseFloat(e.target.value.replace(/[^0-9.]/g, '')) || 0 }))}
+                    onBlur={() => { setFocusedBudget(null); if (budgetDraft) saveBudgets(budgetDraft) }} />
                 </div>
               ))}
               <p className="budget-hint">Set to 0 to disable. Saves automatically.</p>
@@ -3816,11 +3825,13 @@ export default function Tracker({ session }) {
                   <div key={cat}>
                     <div className="budget-input-row">
                       <span className="budget-input-label">{CATS[cat].icon} {cat}</span>
-                      <input type="number" min="0" placeholder="0 = off" className="budget-number-input"
-                        value={(budgetDraft ?? budgets).categories?.[cat] || ''}
-                        onFocus={() => { if (!budgetDraft) setBudgetDraft({ ...budgets, categories: { ...(budgets.categories || {}) } }) }}
-                        onChange={e => setBudgetDraft(prev => { const base = prev ?? budgets; return { ...base, categories: { ...(base.categories || {}), [cat]: parseFloat(e.target.value) || 0 } } })}
-                        onBlur={() => { if (budgetDraft) saveBudgets(budgetDraft) }} />
+                      <input type="text" inputMode="decimal" placeholder="0 = off" className="budget-number-input"
+                        value={focusedBudget === `cat_${cat}`
+                          ? String((budgetDraft ?? budgets).categories?.[cat] || '')
+                          : fmtBudgetDisplay((budgetDraft ?? budgets).categories?.[cat])}
+                        onFocus={() => { setFocusedBudget(`cat_${cat}`); if (!budgetDraft) setBudgetDraft({ ...budgets, categories: { ...(budgets.categories || {}) } }) }}
+                        onChange={e => setBudgetDraft(prev => { const base = prev ?? budgets; return { ...base, categories: { ...(base.categories || {}), [cat]: parseFloat(e.target.value.replace(/[^0-9.]/g, '')) || 0 } } })}
+                        onBlur={() => { setFocusedBudget(null); if (budgetDraft) saveBudgets(budgetDraft) }} />
                     </div>
                     {(catBgt > 0 || catSpent > 0) && <div style={{ paddingLeft: '1.5rem' }}><BudgetBar label={`${fmtINR(catSpent)} spent`} spent={catSpent} budget={catBgt} incognito={incognito} /></div>}
                   </div>
