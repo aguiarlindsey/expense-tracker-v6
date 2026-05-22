@@ -1347,6 +1347,22 @@ function IncomeForm({ onSubmit, onClose, initialData, rateData }) {
 // ─── Goal Modals ──────────────────────────────────────────
 
 const GOAL_EMOJIS = ['🎯','💰','🏠','🚗','✈️','🎓','💍','🛍️','💻','🎸','🏋️','🌱','📚','🏖️','🎁']
+const GOAL_MILESTONES = [{ pct: 25, icon: '🥉' }, { pct: 50, icon: '🥈' }, { pct: 75, icon: '🥇' }, { pct: 100, icon: '🏆' }]
+
+function GoalRing({ pct, color, size = 76 }) {
+  const r = (size - 10) / 2
+  const circ = 2 * Math.PI * r
+  const filled = Math.min(pct / 100, 1) * circ
+  return (
+    <svg width={size} height={size} style={{ display: 'block' }}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--border)" strokeWidth={7} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={7}
+        strokeDasharray={`${filled} ${circ - filled}`} strokeLinecap="round"
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{ transition: 'stroke-dasharray 0.6s ease' }} />
+    </svg>
+  )
+}
 
 function CreateGoalModal({ onSave, onClose }) {
   const [form, setForm] = useState({ name: '', target: '', targetDate: '', icon: '🎯', note: '' })
@@ -3920,36 +3936,68 @@ export default function Tracker({ session }) {
                 const barColor    = done ? 'var(--color-inc)' : pct >= 75 ? 'var(--color-warning)' : 'var(--color-brand)'
                 const daysLeft    = goal.targetDate ? Math.ceil((new Date(goal.targetDate + 'T12:00:00') - new Date(todayStr + 'T12:00:00')) / 864e5) : null
                 return (
-                  <div key={goal.id} className="goal-card" style={{ '--goal-accent': barColor }}>
-                    <div className="goal-card-header">
-                      <div className="goal-icon">{goal.icon || '🎯'}</div>
-                      <div className="goal-meta">
-                        <div className="goal-name">{goal.name}</div>
-                        <div className="goal-date">
-                          {goal.targetDate
-                            ? daysLeft < 0 ? '⚠️ Overdue' : daysLeft === 0 ? '🔔 Due today' : `📅 ${daysLeft}d left`
-                            : `Created ${goal.createdAt || 'unknown'}`}
+                  <div key={goal.id} className="goal-card">
+                    {/* ── Ring + meta ── */}
+                    <div className="goal-card-top">
+                      <div className="goal-ring-wrap">
+                        <GoalRing pct={pct} color={barColor} />
+                        <div className="goal-ring-pct" style={{ color: barColor }}>
+                          {done ? '🏆' : `${pct.toFixed(0)}%`}
                         </div>
                       </div>
-                      <div className="goal-card-actions">
-                        {!done && <button className="goal-btn" onClick={() => setContribGoal(goal)}>+ Add</button>}
-                        <button className="goal-btn goal-btn-del" onClick={() => deleteGoal(goal.id)}>✕</button>
+                      <div className="goal-meta">
+                        <div className="goal-meta-top">
+                          <div className="goal-name">{goal.icon || '🎯'} {goal.name}</div>
+                          <div className="goal-card-actions">
+                            {!done && <button className="goal-btn" onClick={() => setContribGoal(goal)}>+ Add</button>}
+                            <button className="goal-btn goal-btn-del" onClick={() => deleteGoal(goal.id)}>✕</button>
+                          </div>
+                        </div>
+                        <div className="goal-milestones">
+                          {GOAL_MILESTONES.map(m => (
+                            <span key={m.pct} className={`goal-milestone${pct >= m.pct ? ' earned' : ''}`}>
+                              {m.icon} {m.pct}%
+                            </span>
+                          ))}
+                        </div>
+                        {!done && (
+                          <div className="goal-countdown" style={{
+                            color: daysLeft === null ? 'var(--text-muted)' : daysLeft < 0 ? 'var(--color-exp)' : daysLeft <= 7 ? 'var(--color-warning)' : 'var(--text-muted)'
+                          }}>
+                            {daysLeft === null
+                              ? (goal.createdAt ? `Started ${goal.createdAt}` : 'No due date')
+                              : daysLeft < 0 ? `⚠️ Overdue by ${Math.abs(daysLeft)}d`
+                              : daysLeft === 0 ? '🔔 Due today!'
+                              : daysLeft <= 7 ? `⏰ Only ${daysLeft}d left!`
+                              : `📅 ${daysLeft} days left`}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="goal-progress-row">
-                      <span className="goal-pct" style={{ color: barColor }}>{done ? '🏆 Complete!' : pct.toFixed(0) + '%'}</span>
-                      <span className="goal-amounts">{fmtINR(contributed)} / {fmtINR(goal.target)}</span>
+                    {/* ── Amounts ── */}
+                    <div className="goal-amounts-row">
+                      <span className="goal-saved">{incognito ? '••••' : fmtINR(contributed)}</span>
+                      <span className="goal-sep"> saved of </span>
+                      <span className="goal-target-amt">{incognito ? '••••' : fmtINR(goal.target)}</span>
                     </div>
-                    <div className="goal-bar-track"><div className="goal-bar-fill" style={{ width: pct + '%', background: barColor }} /></div>
-                    {!done && <div className="goal-remaining">{fmtINR(goal.target - contributed)} remaining{daysLeft > 0 && ` · ≈ ${fmtINR((goal.target - contributed) / daysLeft)}/day`}</div>}
+                    {!done && (
+                      <div className="goal-remaining">
+                        {incognito ? '••••' : fmtINR(goal.target - contributed)} to go
+                        {daysLeft > 0 && !incognito && ` · ≈ ${fmtINR((goal.target - contributed) / daysLeft)}/day`}
+                      </div>
+                    )}
+                    {/* ── Contribution timeline ── */}
                     {goal.contributions.length > 0 && (
-                      <div className="goal-contribs">
-                        <div className="goal-contribs-title">Contributions ({goal.contributions.length})</div>
+                      <div className="goal-timeline">
+                        <div className="goal-tl-header">Contributions ({goal.contributions.length})</div>
                         {[...goal.contributions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5).map(c => (
-                          <div key={c.id} className="contrib-row">
-                            <span className="contrib-date">{fmtDate(c.date)}</span>
-                            <span className="contrib-amount">+{fmtINR(c.amount)}</span>
-                            {c.note && <span className="contrib-note">{c.note}</span>}
+                          <div key={c.id} className="goal-tl-item">
+                            <div className="goal-tl-dot" style={{ background: barColor }} />
+                            <div className="goal-tl-body">
+                              <span className="contrib-date">{fmtDate(c.date)}</span>
+                              <span className="contrib-amount">+{incognito ? '••••' : fmtINR(c.amount)}</span>
+                              {c.note && <span className="contrib-note">{c.note}</span>}
+                            </div>
                             <button className="contrib-del" onClick={() => deleteContribution(c.id)}>✕</button>
                           </div>
                         ))}
