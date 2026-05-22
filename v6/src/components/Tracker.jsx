@@ -1730,7 +1730,7 @@ export default function Tracker({ session }) {
     return p === 'trends' ? 'trends' : 'insights'
   })
   const [planningTab, setPlanningTab]     = useState(() => {
-    const p = new URLSearchParams(window.location.search).get('tab')
+    const p = new URLSearchParams(window.location.search).get('ptab')
     return p === 'goals' ? 'goals' : 'budgets'
   })
   const [dark, setDark]                   = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s !== null ? s === '1' : window.matchMedia('(prefers-color-scheme: dark)').matches })
@@ -3782,12 +3782,21 @@ export default function Tracker({ session }) {
               ))}
               <p className="budget-hint">Set to 0 to disable. Saves automatically.</p>
             </div>
-            <div className="chart-card">
-              <div className="chart-title">📊 Budget vs Actual</div>
-              <BudgetBar icon="📅" label="Daily"   spent={spentToday} budget={budgets.daily}    incognito={incognito} />
-              <BudgetBar icon="🗓️" label="Weekly"  spent={spentWeek}  budget={budgets.weekly}  incognito={incognito} />
-              <BudgetBar icon="📆" label="Monthly" spent={spentMonth} budget={budgets.monthly} incognito={incognito} />
-            </div>
+            {(budgets.daily > 0 || budgets.weekly > 0 || budgets.monthly > 0) ? (
+              <div className="chart-card">
+                <div className="chart-title">📊 Budget vs Actual</div>
+                <BudgetBar icon="📅" label="Daily"   spent={spentToday} budget={budgets.daily}    incognito={incognito} />
+                <BudgetBar icon="🗓️" label="Weekly"  spent={spentWeek}  budget={budgets.weekly}  incognito={incognito} />
+                <BudgetBar icon="📆" label="Monthly" spent={spentMonth} budget={budgets.monthly} incognito={incognito} />
+              </div>
+            ) : (
+              <div className="chart-card">
+                <div className="chart-title">📊 Budget vs Actual</div>
+                <div className="empty-state-sm">
+                  <p>Set a daily, weekly, or monthly limit on the left to track your progress here.</p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="chart-card">
@@ -3809,6 +3818,11 @@ export default function Tracker({ session }) {
                 )
               })}
             </div>
+            {!Object.values(budgets.categories || {}).some(v => v > 0) && (
+              <p className="budget-hint" style={{ marginTop: '0.75rem', textAlign: 'center' }}>
+                Enter an amount next to any category above to set a monthly limit for it.
+              </p>
+            )}
           </div>
         </main>
       )}
