@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef, memo, Fragment } from 'react'
 import { useStorage } from '../hooks/useStorage'
 import { useDebounce } from '../hooks/useDebounce'
 import { CATS, CM, CG, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS, FALLBACK_RATES } from '../utils/constants'
@@ -4074,7 +4074,7 @@ export default function Tracker({ session }) {
                     const moMax = Math.max(...Object.values(m.months), 1)
                     const maxMoAmt = Math.max(...Object.values(m.months), 1)
                     return (
-                      <React.Fragment key={m.name}>
+                      <Fragment key={m.name}>
                         <div
                           className={'mch-card' + (isSelected ? ' mch-card-selected' : '')}
                           onClick={() => setSelectedMerchant(isSelected ? null : m.name)}
@@ -4145,7 +4145,7 @@ export default function Tracker({ session }) {
                             </div>
                           </div>
                         )}
-                      </React.Fragment>
+                      </Fragment>
                     )
                   })}
                 </div>
