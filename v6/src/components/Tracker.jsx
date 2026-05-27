@@ -3194,6 +3194,31 @@ export default function Tracker({ session }) {
               ⚠️ {conflicts.length}
             </span>
           )}
+          {(() => {
+            const { noSpendStreak, underBudgetStreak, underBudgetBest, noSpendThisMonth } = gamificationData
+            const hasBudget = budgets.daily > 0
+            const streak = hasBudget ? underBudgetStreak : noSpendStreak
+            const icon = streak >= 7 ? '🔥' : streak >= 3 ? '✨' : '💡'
+            const UB_BADGES = [{ d: 30, i: '🏆' }, { d: 14, i: '🥇' }, { d: 7, i: '🥈' }, { d: 3, i: '🥉' }]
+            const NS_BADGES = [{ d: 20, i: '🏆' }, { d: 15, i: '🥇' }, { d: 10, i: '🥈' }, { d: 5, i: '🥉' }]
+            const badges = hasBudget ? UB_BADGES : NS_BADGES
+            const earnedVal = hasBudget ? underBudgetBest : noSpendThisMonth
+            const topBadge = badges.find(b => earnedVal >= b.d)
+            const tip = hasBudget
+              ? `${streak}d under-budget streak${underBudgetBest > streak ? ' · best ' + underBudgetBest + 'd' : ''}`
+              : `${streak}d no-spend streak · ${noSpendThisMonth} no-spend days this month`
+            return (
+              <button
+                className="streak-chip"
+                title={tip}
+                onClick={() => setTab('overview')}
+              >
+                <span className="streak-chip-icon">{icon}</span>
+                <span className="streak-chip-num">{streak}</span>
+                {topBadge && <span className="streak-chip-badge">{topBadge.i}</span>}
+              </button>
+            )
+          })()}
           <button className="cmd-pill" title="Command palette (⌘K)" onClick={() => setShowCmd(true)}>
             <span>⌘K</span>
           </button>
@@ -3569,60 +3594,6 @@ export default function Tracker({ session }) {
                     <span>{fmtDay(sparkDays[19].date)}</span>
                     <span>Today</span>
                   </div>
-                </div>
-              )
-            })()}
-
-            {/* Gamification tile */}
-            {(() => {
-              const { noSpendThisMonth, noSpendStreak, underBudgetStreak, underBudgetBest } = gamificationData
-              const hasDailyBudget = budgets.daily > 0
-              const streak = hasDailyBudget ? underBudgetStreak : noSpendStreak
-              const streakLabel = hasDailyBudget ? 'under-budget days' : 'no-spend days'
-              const streakIcon = streak >= 7 ? '🔥' : streak >= 3 ? '✨' : '💡'
-              const UB_BADGES = [
-                { days: 30, icon: '🏆', label: '30d' },
-                { days: 14, icon: '🥇', label: '14d' },
-                { days:  7, icon: '🥈', label: '7d' },
-                { days:  3, icon: '🥉', label: '3d' },
-              ]
-              const NS_BADGES = [
-                { days: 20, icon: '🏆', label: '20d' },
-                { days: 15, icon: '🥇', label: '15d' },
-                { days: 10, icon: '🥈', label: '10d' },
-                { days:  5, icon: '🥉', label: '5d' },
-              ]
-              const badges = hasDailyBudget ? UB_BADGES : NS_BADGES
-              const earnedVal = hasDailyBudget ? underBudgetBest : noSpendThisMonth
-              return (
-                <div className="bento-tile bento-gamif">
-                  <div className="bento-label">Streak</div>
-                  <div className="gamif-streak-row">
-                    <span className="gamif-flame">{streakIcon}</span>
-                    <span className="gamif-streak-num">{streak}</span>
-                  </div>
-                  <div className="bento-sub">{streakLabel}</div>
-                  {!hasDailyBudget && (
-                    <div className="gamif-nospend-row">
-                      <span className="gamif-nospend-count">💤 {noSpendThisMonth}</span>
-                      <span className="gamif-nospend-lbl">no-spend days this month</span>
-                    </div>
-                  )}
-                  {hasDailyBudget && underBudgetBest > underBudgetStreak && (
-                    <div className="bento-sub" style={{ marginTop: 2 }}>Best: {underBudgetBest}d</div>
-                  )}
-                  <div className="gamif-badges">
-                    {badges.map(b => (
-                      <span key={b.days} className={'gamif-badge' + (earnedVal >= b.days ? ' earned' : '')} title={b.label + ' milestone'}>
-                        {b.icon}
-                      </span>
-                    ))}
-                  </div>
-                  {!hasDailyBudget && (
-                    <div className="gamif-hint" onClick={() => { setTab('planning'); setPlanningTab('budgets') }}>
-                      Set daily budget for streak tracking →
-                    </div>
-                  )}
                 </div>
               )
             })()}
