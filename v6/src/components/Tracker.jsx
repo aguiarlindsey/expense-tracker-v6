@@ -1830,7 +1830,7 @@ export default function Tracker({ session }) {
   })
   const [analyticsTab, setAnalyticsTab]   = useState(() => {
     const p = new URLSearchParams(window.location.search).get('tab')
-    return p === 'trends' ? 'trends' : p === 'merchants' ? 'merchants' : 'insights'
+    return p === 'trends' ? 'trends' : p === 'merchants' ? 'merchants' : p === 'forecast' ? 'forecast' : 'insights'
   })
   const [selectedMerchant, setSelectedMerchant] = useState(null)
   const [planningTab, setPlanningTab]     = useState(() => {
@@ -2268,6 +2268,7 @@ export default function Tracker({ session }) {
     { id: 'nav-insights',   group: 'Go to',   icon: '💡', label: 'Analytics — Insights',  keywords: ['analytics','charts','stats','anomaly'],   action: () => { setTab('analytics'); setAnalyticsTab('insights') } },
     { id: 'nav-trends',     group: 'Go to',   icon: '📈', label: 'Analytics — Trends',    keywords: ['analytics','monthly','comparison','mom'],  action: () => { setTab('analytics'); setAnalyticsTab('trends') } },
     { id: 'nav-merchants',  group: 'Go to',   icon: '🏪', label: 'Analytics — Merchants', keywords: ['merchants','top spend','vendor','shop','order'], action: () => { setTab('analytics'); setAnalyticsTab('merchants'); setSelectedMerchant(null) } },
+    { id: 'nav-forecast',   group: 'Go to',   icon: '📅', label: 'Analytics — Forecast', keywords: ['forecast','cashflow','cash flow','projection','runway','30 day','60 day','90 day'], action: () => { setTab('analytics'); setAnalyticsTab('forecast') } },
     { id: 'nav-budgets',    group: 'Go to',   icon: '💰', label: 'Planning — Budgets',    keywords: ['planning','budget','limit','category'],   action: () => { setTab('planning'); setPlanningTab('budgets') } },
     { id: 'nav-goals',      group: 'Go to',   icon: '🎯', label: 'Planning — Goals',      keywords: ['planning','savings','targets','milestone'],action: () => { setTab('planning'); setPlanningTab('goals') } },
     { id: 'nav-recurring',  group: 'Go to',   icon: '🔄', label: 'Recurring',             keywords: ['subscriptions','repeat','monthly','emi'],  action: () => setTab('recurring') },
@@ -3103,6 +3104,71 @@ export default function Tracker({ session }) {
     return { spentSoFar, dailyRate, projected, prevTotal, trend, projectedInc, projectedSavings, daysInMonth, dayOfMonth, prevMonthStr }
   }, [expenses, income, monthStr, todayStr])
 
+  // ── Cash Flow Forecast (Phase 7.6) ──────────────────
+  const cashFlowForecast = useMemo(() => {
+    const today = new Date(todayStr + 'T12:00:00')
+
+    // Variable expense daily rate — last 30 days, non-recurring
+    const d30ago = new Date(today); d30ago.setDate(d30ago.getDate() - 30)
+    const d30str = d30ago.toISOString().split('T')[0]
+    const varExpTotal = expenses
+      .filter(e => e.date && e.date > d30str && e.date <= todayStr && !e.isRecurring)
+      .reduce((s, e) => s + toINR(e), 0)
+    const varDailyRate = varExpTotal / 30
+
+    // Recurring expense monthly equiv → daily rate
+    const recExpMonthly = expenses.filter(e => e.isRecurring)
+      .reduce((s, e) => s + monthlyEquiv(toINR(e), e.recurringPeriod || 'monthly'), 0)
+    const recDailyRate = recExpMonthly / 30.44
+
+    const totalDailyRate = varDailyRate + recDailyRate
+
+    // Income: recurring monthly + variable last 90d avg → daily rate
+    const recIncMonthly = income.filter(i => i.isRecurring)
+      .reduce((s, i) => s + monthlyEquiv(toINR(i), i.recurringPeriod || 'monthly'), 0)
+    const d90ago = new Date(today); d90ago.setDate(d90ago.getDate() - 90)
+    const d90str = d90ago.toISOString().split('T')[0]
+    const varIncTotal = income
+      .filter(i => i.date && i.date > d90str && i.date <= todayStr && !i.isRecurring)
+      .reduce((s, i) => s + toINR(i), 0)
+    const incDailyRate = recIncMonthly / 30.44 + varIncTotal / 90
+
+    const netDailyRate = incDailyRate - totalDailyRate
+
+    // 30 / 60 / 90-day projections
+    const proj = [30, 60, 90].map(days => ({
+      days,
+      exp: totalDailyRate * days,
+      inc: incDailyRate   * days,
+      net: netDailyRate   * days,
+    }))
+
+    // Upcoming recurring charges in next 90 days
+    const upcoming = []
+    expenses.filter(e => e.isRecurring && e.nextDueDate && e.nextDueDate > todayStr).forEach(e => {
+      const daysUntil = Math.round((new Date(e.nextDueDate + 'T12:00:00') - today) / 864e5)
+      if (daysUntil <= 90) {
+        upcoming.push({ desc: e.description || 'Recurring', amount: toINR(e), due: e.nextDueDate, daysUntil, category: e.category, period: e.recurringPeriod || 'monthly' })
+      }
+    })
+    upcoming.sort((a, b) => a.due.localeCompare(b.due))
+
+    // Past 30 days daily actuals for chart
+    const pastData = []
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(today); d.setDate(d.getDate() - i)
+      const ds = d.toISOString().split('T')[0]
+      const dayExp = expenses.filter(e => e.date === ds).reduce((s, e) => s + toINR(e), 0)
+      pastData.push({ date: ds, exp: dayExp })
+    }
+
+    return {
+      varDailyRate, recDailyRate, recExpMonthly, totalDailyRate,
+      incDailyRate, recIncMonthly, netDailyRate,
+      proj, upcoming: upcoming.slice(0, 15), pastData,
+    }
+  }, [expenses, income, todayStr])
+
   // ── Subscription zombie detection ────────────────────
   const SUB_SUBS = new Set(['OTT/Streaming', 'Streaming', 'Subscriptions', 'Software', 'Gaming', 'Cable'])
   const subZombieData = useMemo(() => {
@@ -3860,6 +3926,9 @@ export default function Tracker({ session }) {
             <button role="tab" aria-selected={analyticsTab === 'merchants'}
               className={'sub-nav-btn' + (analyticsTab === 'merchants' ? ' active' : '')}
               onClick={() => { setAnalyticsTab('merchants'); setSelectedMerchant(null) }}>🏪 Merchants</button>
+            <button role="tab" aria-selected={analyticsTab === 'forecast'}
+              className={'sub-nav-btn' + (analyticsTab === 'forecast' ? ' active' : '')}
+              onClick={() => setAnalyticsTab('forecast')}>📅 Forecast</button>
           </div>
         </div>
       )}
@@ -4150,6 +4219,185 @@ export default function Tracker({ session }) {
                   })}
                 </div>
               </>
+            )}
+          </main>
+        )
+      })()}
+
+      {/* ══════════ FORECAST ══════════ */}
+      {tab === 'analytics' && analyticsTab === 'forecast' && (() => {
+        const { varDailyRate, recDailyRate, recExpMonthly, totalDailyRate,
+                incDailyRate, netDailyRate, proj, upcoming, pastData } = cashFlowForecast
+        const today = new Date(todayStr + 'T12:00:00')
+
+        // Chart geometry
+        const W = 600, H = 120, PL = 4, PR = 4, PT = 10, PB = 22
+        const chartW = W - PL - PR, chartH = H - PT - PB
+        const nCols = 60, colW = chartW / nCols, barW = Math.max(colW - 1, 1)
+        const maxY = Math.max(...pastData.map(d => d.exp), totalDailyRate, 1) * 1.15
+        const sy = v => PT + chartH * (1 - Math.min(v / maxY, 1))
+        const projY = sy(totalDailyRate)
+
+        return (
+          <main>
+            {/* 30 / 60 / 90-day projection tiles */}
+            <div className="fcst-tiles">
+              {proj.map(p => (
+                <div key={p.days} className="fcst-tile">
+                  <div className="fcst-tile-days">{p.days}d</div>
+                  <div className="fcst-tile-exp">{incognito ? '••••' : fmtINR(Math.round(p.exp))}</div>
+                  <div className="fcst-tile-sub">projected spend</div>
+                  {incDailyRate > 0 && (
+                    <div className={'fcst-tile-net' + (p.net >= 0 ? ' pos' : ' neg')}>
+                      {p.net >= 0 ? '+' : '−'}{incognito ? '••••' : fmtINR(Math.round(Math.abs(p.net)))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Daily rate breakdown */}
+            <div className="chart-card fcst-rate-card">
+              <div className="chart-title">📊 Daily Rate Breakdown</div>
+              <div className="fcst-rates">
+                <div className="fcst-rate-row">
+                  <span className="fcst-rate-lbl">Variable (30d avg)</span>
+                  <div className="fcst-rate-bar-track">
+                    <div className="fcst-rate-bar-fill exp" style={{ width: totalDailyRate > 0 ? (varDailyRate / totalDailyRate * 100) + '%' : '50%' }} />
+                  </div>
+                  <span className="fcst-rate-val">{incognito ? '••' : fmtINR(Math.round(varDailyRate))}/d</span>
+                </div>
+                {recDailyRate > 0 && (
+                  <div className="fcst-rate-row">
+                    <span className="fcst-rate-lbl">Recurring ({incognito ? '••' : fmtINR(Math.round(recExpMonthly))}/mo)</span>
+                    <div className="fcst-rate-bar-track">
+                      <div className="fcst-rate-bar-fill rec" style={{ width: totalDailyRate > 0 ? (recDailyRate / totalDailyRate * 100) + '%' : '50%' }} />
+                    </div>
+                    <span className="fcst-rate-val">{incognito ? '••' : fmtINR(Math.round(recDailyRate))}/d</span>
+                  </div>
+                )}
+                <div className="fcst-rates-divider" />
+                <div className="fcst-rate-row fcst-rate-total-row">
+                  <span className="fcst-rate-lbl">Total outflow</span>
+                  <span />
+                  <span className="fcst-rate-val" style={{ color: 'var(--color-exp)' }}>{incognito ? '••' : fmtINR(Math.round(totalDailyRate))}/d</span>
+                </div>
+                {incDailyRate > 0 && <>
+                  <div className="fcst-rate-row">
+                    <span className="fcst-rate-lbl">Income</span>
+                    <span />
+                    <span className="fcst-rate-val" style={{ color: 'var(--color-inc)' }}>+{incognito ? '••' : fmtINR(Math.round(incDailyRate))}/d</span>
+                  </div>
+                  <div className="fcst-rate-row fcst-rate-total-row">
+                    <span className="fcst-rate-lbl">Net daily</span>
+                    <span />
+                    <span className="fcst-rate-val" style={{ color: netDailyRate >= 0 ? 'var(--color-inc)' : 'var(--color-exp)' }}>
+                      {netDailyRate >= 0 ? '+' : '−'}{incognito ? '••' : fmtINR(Math.round(Math.abs(netDailyRate)))}/d
+                    </span>
+                  </div>
+                </>}
+              </div>
+              {netDailyRate < 0 && incDailyRate > 0 && (
+                <div className="fcst-deficit-banner">
+                  ⚠️ Spending exceeds income by {incognito ? '••' : fmtINR(Math.round(Math.abs(netDailyRate)))}/day · {incognito ? '••' : fmtINR(Math.round(Math.abs(netDailyRate * 30)))}/mo deficit
+                </div>
+              )}
+              {netDailyRate >= 0 && incDailyRate > 0 && (
+                <div className="fcst-surplus-banner">
+                  ✅ Saving ~{incognito ? '••' : fmtINR(Math.round(netDailyRate * 30))}/month at current pace
+                </div>
+              )}
+            </div>
+
+            {/* Spend trajectory SVG: past 30d actual + next 30d projected */}
+            <div className="chart-card" style={{ marginBottom: '1rem' }}>
+              <div className="chart-title-row">
+                <span className="chart-title">📉 Spend Trajectory — Past 30d + Next 30d</span>
+                <div className="chart-legend">
+                  <span className="chart-legend-dot" style={{ background: 'var(--color-exp)' }} />Actual
+                  <span style={{ marginLeft: '0.75rem', fontSize: '0.78rem', color: 'var(--text-muted)', letterSpacing: '0.1em' }}>···</span>
+                  <span style={{ marginLeft: '4px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>Projected</span>
+                </div>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', minWidth: '320px', display: 'block' }}>
+                  {[0.25, 0.5, 0.75, 1].map(f => (
+                    <line key={f} x1={PL} x2={W - PR} y1={sy(maxY * f)} y2={sy(maxY * f)}
+                      stroke="var(--border)" strokeWidth="0.5" />
+                  ))}
+                  {/* Past 30d actual bars */}
+                  {pastData.map((d, i) => {
+                    const x = PL + i * colW
+                    const y = sy(d.exp)
+                    const h = Math.max((H - PB) - y, d.exp > 0 ? 1 : 0)
+                    return d.exp > 0 ? (
+                      <rect key={i} x={x} y={y} width={barW} height={h}
+                        fill="var(--color-exp)" rx="1" opacity="0.85">
+                        <title>{d.date}: {fmtINR(d.exp)}</title>
+                      </rect>
+                    ) : null
+                  })}
+                  {/* TODAY divider */}
+                  <line x1={PL + 30 * colW} x2={PL + 30 * colW} y1={PT - 4} y2={H - PB}
+                    stroke="var(--primary)" strokeWidth="1.5" strokeDasharray="3 2" />
+                  <text x={PL + 30 * colW + 2} y={PT + 6} fontSize="7" fill="var(--primary)" fontWeight="600">TODAY</text>
+                  {/* Future 30d projected bars (ghosted) */}
+                  {totalDailyRate > 0 && Array.from({ length: 30 }, (_, i) => {
+                    const x = PL + (30 + i) * colW
+                    const y = sy(totalDailyRate)
+                    const h = Math.max((H - PB) - y, 1)
+                    return (
+                      <rect key={i} x={x} y={y} width={barW} height={h}
+                        fill="var(--color-exp)" rx="1" opacity="0.22">
+                        <title>Projected: {fmtINR(Math.round(totalDailyRate))}/day</title>
+                      </rect>
+                    )
+                  })}
+                  {/* Projected level dashed line */}
+                  {totalDailyRate > 0 && (
+                    <line x1={PL + 30 * colW} x2={W - PR} y1={projY} y2={projY}
+                      stroke="var(--color-exp)" strokeWidth="1.5" strokeDasharray="4 3" opacity="0.65" />
+                  )}
+                  {/* X-axis labels */}
+                  {[-20, -10, 10, 20].map(off => {
+                    const x = PL + (30 + off) * colW + colW / 2
+                    const lbl = (off > 0 ? '+' : '') + off + 'd'
+                    return <text key={off} x={x} y={H - 5} textAnchor="middle" fontSize="7.5" fill="var(--text-muted)">{lbl}</text>
+                  })}
+                </svg>
+              </div>
+            </div>
+
+            {/* Upcoming recurring charges */}
+            {upcoming.length > 0 && (
+              <div className="chart-card" style={{ marginBottom: '1rem' }}>
+                <div className="chart-title">📋 Upcoming Recurring — Next 90 Days</div>
+                <div className="fcst-upcoming">
+                  {upcoming.map((u, i) => (
+                    <div key={i} className="fcst-upcoming-row">
+                      <span className="fcst-upcoming-icon">{CATS[u.category]?.icon || '🔄'}</span>
+                      <div className="fcst-upcoming-info">
+                        <span className="fcst-upcoming-desc">{u.desc}</span>
+                        <span className="fcst-upcoming-period">{u.period}</span>
+                      </div>
+                      <span className="fcst-upcoming-date">{fmtDate(u.due)}</span>
+                      <span className={'fcst-upcoming-badge' + (u.daysUntil <= 7 ? ' urgent' : u.daysUntil <= 14 ? ' soon' : '')}>
+                        {u.daysUntil === 0 ? 'Today' : u.daysUntil === 1 ? 'Tomorrow' : `in ${u.daysUntil}d`}
+                      </span>
+                      <span className="fcst-upcoming-amt">{incognito ? '••••' : fmtINR(u.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {expenses.length === 0 && (
+              <div className="empty-state">
+                <div className="empty-icon">📅</div>
+                <h3>No forecast data yet</h3>
+                <p>Add some expenses and recurring subscriptions to see your 30/60/90-day cash flow projection.</p>
+                <button className="btn-primary btn-sm" onClick={() => setShowEF(true)}>➕ Add Expense</button>
+              </div>
             )}
           </main>
         )

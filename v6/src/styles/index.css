@@ -2214,3 +2214,127 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 .lock-otp-confirm-input:focus { border-color: var(--primary); }
 .lock-resend-exhausted { font-size: 0.8rem; color: var(--text-muted); margin-top: 1rem; text-align: center; line-height: 1.4; }
 
+/* ─── Phase 7.6 — Cash Flow Forecast ─────────────────────────────── */
+.fcst-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.fcst-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1rem 0.75rem;
+  text-align: center;
+}
+.fcst-tile-days {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.35rem;
+}
+.fcst-tile-exp {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-exp);
+  margin-bottom: 0.15rem;
+}
+.fcst-tile-sub {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+.fcst-tile-net {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.18rem 0.5rem;
+  border-radius: 20px;
+  display: inline-block;
+}
+.fcst-tile-net.pos { background: rgba(34,197,94,0.12); color: var(--color-inc); }
+.fcst-tile-net.neg { background: rgba(239,68,68,0.12); color: var(--color-exp); }
+
+.fcst-rate-card { margin-bottom: 1rem; }
+.fcst-rates { display: flex; flex-direction: column; gap: 0.55rem; margin-top: 0.75rem; }
+.fcst-rate-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.6rem;
+}
+.fcst-rate-lbl { font-size: 0.83rem; color: var(--text-muted); }
+.fcst-rate-bar-track {
+  width: 80px;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.fcst-rate-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+.fcst-rate-bar-fill.exp { background: var(--color-exp); }
+.fcst-rate-bar-fill.rec { background: var(--primary); }
+.fcst-rate-val { font-size: 0.83rem; font-weight: 600; color: var(--text); white-space: nowrap; min-width: 70px; text-align: right; }
+.fcst-rates-divider { height: 1px; background: var(--border); margin: 0.25rem 0; }
+.fcst-rate-total-row .fcst-rate-lbl { font-weight: 600; color: var(--text); }
+.fcst-rate-total-row .fcst-rate-val { font-size: 0.88rem; }
+
+.fcst-deficit-banner {
+  margin-top: 0.8rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(239,68,68,0.09);
+  border-left: 3px solid var(--color-exp);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: var(--color-exp);
+  font-weight: 500;
+  line-height: 1.4;
+}
+.fcst-surplus-banner {
+  margin-top: 0.8rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(34,197,94,0.09);
+  border-left: 3px solid var(--color-inc);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: var(--color-inc);
+  font-weight: 500;
+}
+
+.fcst-upcoming { display: flex; flex-direction: column; margin-top: 0.5rem; }
+.fcst-upcoming-row {
+  display: grid;
+  grid-template-columns: 24px 1fr auto auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.fcst-upcoming-row:last-child { border-bottom: none; }
+.fcst-upcoming-icon { font-size: 1rem; text-align: center; }
+.fcst-upcoming-info { display: flex; flex-direction: column; min-width: 0; }
+.fcst-upcoming-desc { font-size: 0.86rem; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fcst-upcoming-period { font-size: 0.7rem; color: var(--text-muted); text-transform: capitalize; }
+.fcst-upcoming-date { font-size: 0.76rem; color: var(--text-muted); white-space: nowrap; }
+.fcst-upcoming-badge {
+  font-size: 0.7rem; font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 20px;
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.fcst-upcoming-badge.urgent { background: rgba(239,68,68,0.12); color: var(--color-exp); }
+.fcst-upcoming-badge.soon   { background: rgba(245,158,11,0.12); color: var(--color-warning); }
+.fcst-upcoming-amt { font-size: 0.86rem; font-weight: 600; color: var(--text); white-space: nowrap; }
+
+@media (max-width: 480px) {
+  .fcst-tile { padding: 0.75rem 0.4rem; }
+  .fcst-tile-exp { font-size: 0.95rem; }
+  .fcst-rate-bar-track { width: 50px; }
+  .fcst-upcoming-row { grid-template-columns: 24px 1fr auto auto; }
+  .fcst-upcoming-date { display: none; }
+}
+
