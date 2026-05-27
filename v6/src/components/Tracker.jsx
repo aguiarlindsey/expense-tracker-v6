@@ -4036,8 +4036,6 @@ export default function Tracker({ session }) {
           )
         }
 
-        const sel = selectedMerchant ? merchantData.find(m => m.name === selectedMerchant) : null
-        const maxMoAmt = sel ? Math.max(...Object.values(sel.months), 1) : 1
         const globalMax = merchantData[0]?.total || 1
 
         return (
@@ -4067,92 +4065,87 @@ export default function Tracker({ session }) {
                   </div>
                 </div>
 
-                {/* Drill-down panel */}
-                {sel && (
-                  <div className="mch-detail-panel">
-                    <div className="mch-detail-header">
-                      <div className="mch-detail-name">
-                        <span>{CATS[sel.topCat]?.icon || '🏪'}</span>
-                        <span>{sel.name}</span>
-                      </div>
-                      <button className="mch-detail-close" onClick={() => setSelectedMerchant(null)}>✕</button>
-                    </div>
-                    <div className="mch-detail-stats">
-                      <div className="mch-detail-stat">
-                        <span className="mch-detail-val">{incognito ? '••••' : fmtINR(sel.total)}</span>
-                        <span className="mch-detail-lbl">total</span>
-                      </div>
-                      <div className="mch-detail-stat">
-                        <span className="mch-detail-val">{sel.count}</span>
-                        <span className="mch-detail-lbl">orders</span>
-                      </div>
-                      <div className="mch-detail-stat">
-                        <span className="mch-detail-val">{incognito ? '••' : fmtINR(Math.round(sel.avg))}</span>
-                        <span className="mch-detail-lbl">avg/order</span>
-                      </div>
-                    </div>
-                    <div className="mch-detail-meta">
-                      <span>📅 {sel.first} → {sel.last}</span>
-                      <span>🏷️ {sel.topCat}</span>
-                    </div>
-                    <div className="mch-detail-trend-label">
-                      <span>Monthly trend — last 6 months</span>
-                    </div>
-                    <div className="mch-detail-bars">
-                      {last6.map(mo => {
-                        const amt = sel.months[mo] || 0
-                        const h = maxMoAmt > 0 ? Math.max((amt / maxMoAmt) * 60, amt > 0 ? 4 : 0) : 0
-                        const label = new Date(mo + '-01T12:00:00').toLocaleString('default', { month: 'short' })
-                        return (
-                          <div key={mo} className="mch-detail-bar-col">
-                            <div className="mch-detail-bar-amt">{amt > 0 ? (incognito ? '••' : fmtINR(amt)) : ''}</div>
-                            <div className="mch-detail-bar-track">
-                              <div className="mch-detail-bar-fill" style={{ height: h + 'px' }} />
-                            </div>
-                            <div className="mch-detail-bar-lbl">{label}</div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Merchant card list */}
+                {/* Merchant card list — detail panel expands inline below selected card */}
                 <div className="mch-list">
                   {merchantData.map((m, i) => {
                     const pct = allExpINR > 0 ? (m.total / allExpINR * 100).toFixed(1) : 0
                     const barW = globalMax > 0 ? (m.total / globalMax * 100) : 0
                     const isSelected = selectedMerchant === m.name
                     const moMax = Math.max(...Object.values(m.months), 1)
+                    const maxMoAmt = Math.max(...Object.values(m.months), 1)
                     return (
-                      <div key={m.name}
-                        className={'mch-card' + (isSelected ? ' mch-card-selected' : '')}
-                        onClick={() => setSelectedMerchant(isSelected ? null : m.name)}
-                        role="button" tabIndex={0}
-                        onKeyDown={ev => ev.key === 'Enter' && setSelectedMerchant(isSelected ? null : m.name)}
-                      >
-                        <div className="mch-card-rank">#{i + 1}</div>
-                        <div className="mch-card-body">
-                          <div className="mch-card-top">
-                            <span className="mch-card-icon">{CATS[m.topCat]?.icon || '🏪'}</span>
-                            <span className="mch-card-name">{m.name}</span>
-                            <span className="mch-card-cat">{m.topCat}</span>
+                      <React.Fragment key={m.name}>
+                        <div
+                          className={'mch-card' + (isSelected ? ' mch-card-selected' : '')}
+                          onClick={() => setSelectedMerchant(isSelected ? null : m.name)}
+                          role="button" tabIndex={0}
+                          onKeyDown={ev => ev.key === 'Enter' && setSelectedMerchant(isSelected ? null : m.name)}
+                        >
+                          <div className="mch-card-rank">#{i + 1}</div>
+                          <div className="mch-card-body">
+                            <div className="mch-card-top">
+                              <span className="mch-card-icon">{CATS[m.topCat]?.icon || '🏪'}</span>
+                              <span className="mch-card-name">{m.name}</span>
+                              <span className="mch-card-cat">{m.topCat}</span>
+                            </div>
+                            <div className="mch-card-bar-track">
+                              <div className="mch-card-bar-fill" style={{ width: barW + '%' }} />
+                            </div>
+                            <div className="mch-card-stats">
+                              <span className="mch-stat">{m.count} txns</span>
+                              <span className="mch-stat">avg {incognito ? '••' : fmtINR(Math.round(m.avg))}</span>
+                              <span className="mch-stat">last {m.last}</span>
+                            </div>
                           </div>
-                          <div className="mch-card-bar-track">
-                            <div className="mch-card-bar-fill" style={{ width: barW + '%' }} />
+                          <div className="mch-card-right">
+                            <div className="mch-card-total">{incognito ? '••••' : fmtINR(m.total)}</div>
+                            <div className="mch-card-pct">{pct}%</div>
+                            <MiniBar months={m.months} maxVal={moMax} />
                           </div>
-                          <div className="mch-card-stats">
-                            <span className="mch-stat">{m.count} txns</span>
-                            <span className="mch-stat">avg {incognito ? '••' : fmtINR(Math.round(m.avg))}</span>
-                            <span className="mch-stat">last {m.last}</span>
-                          </div>
+                          <span className="mch-card-chevron">{isSelected ? '▲' : '▼'}</span>
                         </div>
-                        <div className="mch-card-right">
-                          <div className="mch-card-total">{incognito ? '••••' : fmtINR(m.total)}</div>
-                          <div className="mch-card-pct">{pct}%</div>
-                          <MiniBar months={m.months} maxVal={moMax} />
-                        </div>
-                      </div>
+
+                        {/* Inline accordion detail */}
+                        {isSelected && (
+                          <div className="mch-detail-panel mch-detail-inline">
+                            <div className="mch-detail-stats">
+                              <div className="mch-detail-stat">
+                                <span className="mch-detail-val">{incognito ? '••••' : fmtINR(m.total)}</span>
+                                <span className="mch-detail-lbl">total</span>
+                              </div>
+                              <div className="mch-detail-stat">
+                                <span className="mch-detail-val">{m.count}</span>
+                                <span className="mch-detail-lbl">orders</span>
+                              </div>
+                              <div className="mch-detail-stat">
+                                <span className="mch-detail-val">{incognito ? '••' : fmtINR(Math.round(m.avg))}</span>
+                                <span className="mch-detail-lbl">avg/order</span>
+                              </div>
+                            </div>
+                            <div className="mch-detail-meta">
+                              <span>📅 {m.first} → {m.last}</span>
+                              <span>🏷️ {m.topCat}</span>
+                            </div>
+                            <div className="mch-detail-trend-label">Monthly trend — last 6 months</div>
+                            <div className="mch-detail-bars">
+                              {last6.map(mo => {
+                                const amt = m.months[mo] || 0
+                                const h = maxMoAmt > 0 ? Math.max((amt / maxMoAmt) * 60, amt > 0 ? 4 : 0) : 0
+                                const label = new Date(mo + '-01T12:00:00').toLocaleString('default', { month: 'short' })
+                                return (
+                                  <div key={mo} className="mch-detail-bar-col">
+                                    <div className="mch-detail-bar-amt">{amt > 0 ? (incognito ? '••' : fmtINR(amt)) : ''}</div>
+                                    <div className="mch-detail-bar-track">
+                                      <div className="mch-detail-bar-fill" style={{ height: h + 'px' }} />
+                                    </div>
+                                    <div className="mch-detail-bar-lbl">{label}</div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </React.Fragment>
                     )
                   })}
                 </div>
