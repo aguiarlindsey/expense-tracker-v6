@@ -1975,6 +1975,39 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 .rec-amount { font-size: 0.92rem; font-weight: 600; }
 .rec-due { font-size: 0.75rem; margin-top: 2px; }
 .rec-total { padding: 0.6rem 1rem; font-size: 0.82rem; color: var(--text-muted); border-top: 1px solid var(--border); background: var(--bg); }
+.due-overdue { color: var(--color-exp); }
+.due-urgent  { color: var(--color-warning); }
+.due-soon    { color: var(--color-brand); }
+.due-muted   { color: var(--text-muted); }
+
+/* ─── Subscription Tracker ──────────────────────────────── */
+.sub-summary-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.sub-summary-row:has(.sub-summary-tile:nth-child(4)) { grid-template-columns: repeat(4, 1fr); }
+.sub-summary-tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 1rem; text-align: center; }
+.sub-summary-tile-risk { border-color: var(--color-warning); background: color-mix(in srgb, var(--color-warning) 8%, var(--surface)); }
+.sub-summary-val { font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); }
+.sub-summary-lbl { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+.sub-zombie-banner { background: color-mix(in srgb, var(--color-warning) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--color-warning) 40%, transparent); border-radius: var(--radius); padding: 0.75rem 1rem; margin-bottom: 12px; }
+.sub-zombie-title  { font-size: 0.82rem; font-weight: 600; color: var(--color-warning); margin-bottom: 8px; }
+.sub-zombie-list   { display: flex; flex-direction: column; gap: 4px; }
+.sub-zombie-row    { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 0.8rem; }
+.sub-zombie-desc   { font-weight: 500; color: var(--text); }
+.sub-zombie-meta   { color: var(--text-muted); font-size: 0.75rem; white-space: nowrap; }
+
+.sub-card { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); transition: background 0.15s; }
+.sub-card:last-of-type { border-bottom: none; }
+.sub-card:hover { background: var(--bg); }
+.sub-card-zombie { border-left: 3px solid var(--color-warning); padding-left: calc(1rem - 3px); }
+.sub-card-left { flex: 1; min-width: 0; }
+.sub-card-right { text-align: right; flex-shrink: 0; }
+.sub-card-name { font-weight: 500; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sub-card-meta { font-size: 0.78rem; color: var(--text-muted); margin-top: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sub-card-amount { font-size: 0.92rem; font-weight: 600; color: var(--color-exp); font-variant-numeric: tabular-nums; }
+.sub-card-monthly { font-size: 0.72rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.sub-card-due { font-size: 0.75rem; margin-top: 2px; }
+.sub-risk-badge { background: color-mix(in srgb, var(--color-warning) 15%, transparent); color: var(--color-warning); border: 1px solid color-mix(in srgb, var(--color-warning) 40%, transparent); border-radius: 4px; padding: 1px 5px; font-size: 0.7rem; font-weight: 600; white-space: nowrap; }
+.sub-creep-badge { background: color-mix(in srgb, var(--color-exp) 12%, transparent); color: var(--color-exp); border: 1px solid color-mix(in srgb, var(--color-exp) 35%, transparent); border-radius: 4px; padding: 1px 5px; font-size: 0.7rem; font-weight: 600; white-space: nowrap; }
 
 /* ─── Responsive: tablet (≤768px) ─────────────────────── */
 @media (max-width: 768px) {

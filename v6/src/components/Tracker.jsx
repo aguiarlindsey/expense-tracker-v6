@@ -42,6 +42,16 @@ function toINR(e) {
   if (!e.currency || e.currency === 'INR') return parseFloat(e.amount || 0)
   return parseFloat(e.amountINR || e.amount || 0)
 }
+function monthlyEquiv(amountINR, period) {
+  switch (period) {
+    case 'daily':     return amountINR * 30.44
+    case 'weekly':    return amountINR * 4.33
+    case 'monthly':   return amountINR
+    case 'quarterly': return amountINR / 3
+    case 'yearly':    return amountINR / 12
+    default:          return amountINR
+  }
+}
 function byDate(list) {
   const g = {}
   list.forEach(e => { const d = e.date || 'Unknown';(g[d] || (g[d] = [])).push(e) })
@@ -3049,7 +3059,7 @@ export default function Tracker({ session }) {
     { id: 'income',     label: '💵 Income' },
     { id: 'analytics',  label: '📈 Analytics' },
     { id: 'planning',   label: '📋 Planning' },
-    { id: 'recurring',  label: '🔄 Recur' },
+    { id: 'recurring',  label: '📋 Subs' },
     { id: 'trips',      label: '✈️ Trips' },
     { id: 'exchange',   label: '💱 FX' },
     { id: 'settings',   label: '⚙️ Settings' },
@@ -4903,81 +4913,183 @@ export default function Tracker({ session }) {
 
       {/* ══════════ RECURRING ══════════ */}
       {tab === 'recurring' && (() => {
+        const SUB_CATS = new Set(['OTT/Streaming', 'Streaming', 'Subscriptions', 'Software', 'Gaming', 'Cable', 'Music', 'Cloud Storage', 'News', 'Fitness'])
+        const SUB_CAT_GROUPS = new Set(['Entertainment', 'Technology'])
         const recurExp = expenses.filter(e => e.isRecurring)
         const recurInc = income.filter(i => i.isRecurring)
+
+        function isSubType(e) {
+          if (SUB_CATS.has(e.subcategory)) return true
+          if (SUB_CAT_GROUPS.has(e.category) && (e.recurringPeriod === 'monthly' || e.recurringPeriod === 'yearly')) return true
+          return false
+        }
+        const subExp   = recurExp.filter(e => isSubType(e))
+        const otherExp = recurExp.filter(e => !isSubType(e))
+
+        const subMonthlyTotal  = subExp.reduce((s, e)   => s + monthlyEquiv(toINR(e), e.recurringPeriod), 0)
+        const otherMonthlyTotal = otherExp.reduce((s, e) => s + monthlyEquiv(toINR(e), e.recurringPeriod), 0)
+        const totalMonthly     = subMonthlyTotal + otherMonthlyTotal
+
+        // Cancel-risk = recurring but no charge in 45+ days (reuse zombie data)
+        const zombieSet = new Set(subZombieData.zombies.map(z => z.desc.toLowerCase().trim()))
+        const creepMap  = {}
+        subZombieData.creep.forEach(c => { creepMap[c.desc.toLowerCase().trim()] = c.pct })
+
         function daysUntil(d) {
           if (!d) return null
           return Math.round((new Date(d + 'T12:00:00') - new Date(todayStr + 'T12:00:00')) / 86400000)
         }
         function dueBadge(d) {
           const n = daysUntil(d)
-          if (n === null) return { label: 'No due date', color: 'var(--text-muted)' }
-          if (n < 0)  return { label: `${Math.abs(n)}d overdue`, color: 'var(--color-exp)' }
-          if (n === 0) return { label: 'Due today',   color: 'var(--color-warning)' }
-          if (n <= 3)  return { label: `Due in ${n}d`, color: 'var(--color-warning)' }
-          return { label: `Due in ${n}d`, color: 'var(--text-muted)' }
+          if (n === null) return { label: 'No due date', cls: 'due-muted' }
+          if (n < 0)  return { label: `${Math.abs(n)}d overdue`, cls: 'due-overdue' }
+          if (n === 0) return { label: 'Due today',   cls: 'due-urgent' }
+          if (n <= 3)  return { label: `In ${n}d`,    cls: 'due-urgent' }
+          if (n <= 7)  return { label: `In ${n}d`,    cls: 'due-soon' }
+          return { label: `In ${n}d`, cls: 'due-muted' }
         }
+
+        function renderSubCard(e) {
+          const amtINR   = toINR(e)
+          const moAmt    = monthlyEquiv(amtINR, e.recurringPeriod)
+          const due      = dueBadge(e.nextDueDate)
+          const key      = (e.description || '').toLowerCase().trim()
+          const isZombie = zombieSet.has(key)
+          const creepPct = creepMap[key]
+          return (
+            <div key={e.id} className={'sub-card' + (isZombie ? ' sub-card-zombie' : '')}>
+              <div className="sub-card-left">
+                <div className="sub-card-name">
+                  {e.description}
+                  {isZombie && <span className="sub-risk-badge">⚠️ Cancel risk</span>}
+                  {creepPct && <span className="sub-creep-badge">+{creepPct}%</span>}
+                </div>
+                <div className="sub-card-meta">
+                  <span>{CATS[e.category]?.icon || '📦'} {e.subcategory || e.category || 'Other'}</span>
+                  <span className="rec-period-badge">{e.recurringPeriod || 'monthly'}</span>
+                </div>
+              </div>
+              <div className="sub-card-right">
+                <div className="sub-card-amount">{fmtINR(amtINR)}</div>
+                {e.recurringPeriod !== 'monthly' && (
+                  <div className="sub-card-monthly">{fmtINR(moAmt)}/mo</div>
+                )}
+                <div className={'sub-card-due ' + due.cls}>{due.label}</div>
+              </div>
+            </div>
+          )
+        }
+
+        function renderRecRow(e) {
+          const due = dueBadge(e.nextDueDate)
+          return (
+            <div key={e.id} className="rec-item">
+              <div className="rec-item-left">
+                <div className="rec-desc">{e.description}</div>
+                <div className="rec-meta">
+                  {CATS[e.category]?.icon || ''} {e.category || 'Other'}
+                  {e.subcategory && <span>· {e.subcategory}</span>}
+                  {e.recurringPeriod && <span className="rec-period-badge">{e.recurringPeriod}</span>}
+                </div>
+              </div>
+              <div className="rec-item-right">
+                <div className="rec-amount" style={{ color: 'var(--color-exp)' }}>{fmtINR(toINR(e))}</div>
+                <div className={'rec-due ' + due.cls}>{due.label}</div>
+              </div>
+            </div>
+          )
+        }
+
+        const cancelRisks = subZombieData.zombies
+
         return (
           <main>
-            {recurExp.length === 0 && recurInc.length === 0 && (
+            {recurExp.length === 0 && recurInc.length === 0 ? (
               <div className="empty-state">
-                <div className="empty-icon">🔄</div>
+                <div className="empty-icon">📋</div>
                 <h3>No recurring items yet</h3>
-                <p>Tick "Recurring" when adding an expense or income — rent, salary, subscriptions. They'll auto-generate each period.</p>
+                <p>Tick "Recurring" when adding an expense or income — rent, salary, subscriptions. They'll appear here with due dates and cancel-risk detection.</p>
                 <div className="empty-actions">
                   <button className="btn-primary btn-sm" onClick={() => setShowEF(true)}>➕ Add Expense</button>
                   <button className="btn-income btn-sm"  onClick={() => setShowIF(true)}>💵 Add Income</button>
                 </div>
               </div>
-            )}
-            {recurExp.length > 0 && (
-              <div className="rec-section">
-                <div className="rec-section-title">Recurring Expenses ({recurExp.length})</div>
-                {recurExp.map(e => {
-                  const badge = dueBadge(e.nextDueDate)
-                  return (
-                    <div key={e.id} className="rec-item">
-                      <div className="rec-item-left">
-                        <div className="rec-desc">{e.description}</div>
-                        <div className="rec-meta">
-                          {CATS[e.category]?.icon || ''} {e.category || 'Other'}
-                          {e.subcategory && <span>· {e.subcategory}</span>}
-                          {e.recurringPeriod && <span className="rec-period-badge">{e.recurringPeriod}</span>}
-                        </div>
-                      </div>
-                      <div className="rec-item-right">
-                        <div className="rec-amount" style={{ color: 'var(--color-exp)' }}>{fmtINR(toINR(e))}</div>
-                        <div className="rec-due" style={{ color: badge.color }}>{badge.label}</div>
-                      </div>
+            ) : (
+              <>
+                {/* Summary tiles */}
+                <div className="sub-summary-row">
+                  <div className="sub-summary-tile">
+                    <div className="sub-summary-val">{fmtINR(totalMonthly)}</div>
+                    <div className="sub-summary-lbl">per month</div>
+                  </div>
+                  <div className="sub-summary-tile">
+                    <div className="sub-summary-val">{recurExp.length}</div>
+                    <div className="sub-summary-lbl">active</div>
+                  </div>
+                  <div className="sub-summary-tile">
+                    <div className="sub-summary-val">{fmtINR(totalMonthly * 12)}</div>
+                    <div className="sub-summary-lbl">per year</div>
+                  </div>
+                  {cancelRisks.length > 0 && (
+                    <div className="sub-summary-tile sub-summary-tile-risk">
+                      <div className="sub-summary-val">{cancelRisks.length}</div>
+                      <div className="sub-summary-lbl">cancel risk</div>
                     </div>
-                  )
-                })}
-                <div className="rec-total">
-                  Monthly recurring spend: <strong style={{ color: 'var(--color-exp)' }}>{fmtINR(recurExp.reduce((s, e) => s + toINR(e), 0))}</strong>
+                  )}
                 </div>
-              </div>
-            )}
-            {recurInc.length > 0 && (
-              <div className="rec-section" style={{ marginTop: 16 }}>
-                <div className="rec-section-title">Recurring Income ({recurInc.length})</div>
-                {recurInc.map(i => (
-                  <div key={i.id} className="rec-item">
-                    <div className="rec-item-left">
-                      <div className="rec-desc">{i.description}</div>
-                      <div className="rec-meta">
-                        {i.source || 'Other'}
-                        {i.recurringPeriod && <span className="rec-period-badge">{i.recurringPeriod}</span>}
-                      </div>
-                    </div>
-                    <div className="rec-item-right">
-                      <div className="rec-amount" style={{ color: 'var(--color-inc)' }}>+{fmtINR(toINR(i))}</div>
+
+                {/* Cancel-risk alert */}
+                {cancelRisks.length > 0 && (
+                  <div className="sub-zombie-banner">
+                    <div className="sub-zombie-title">⚠️ {cancelRisks.length} Cancel Risk{cancelRisks.length !== 1 ? 's' : ''} — marked recurring but no charge in 45+ days</div>
+                    <div className="sub-zombie-list">
+                      {cancelRisks.map((z, i) => (
+                        <div key={i} className="sub-zombie-row">
+                          <span className="sub-zombie-desc">{z.desc}</span>
+                          <span className="sub-zombie-meta">{fmtINR(z.avgAmt)}/charge · last {z.daysSinceLast}d ago</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
-                <div className="rec-total">
-                  Monthly recurring income: <strong style={{ color: 'var(--color-inc)' }}>{fmtINR(recurInc.reduce((s, i) => s + toINR(i), 0))}</strong>
-                </div>
-              </div>
+                )}
+
+                {/* Subscriptions */}
+                {subExp.length > 0 && (
+                  <div className="rec-section">
+                    <div className="rec-section-title">Subscriptions ({subExp.length}) · {fmtINR(subMonthlyTotal)}/mo</div>
+                    {subExp.map(e => renderSubCard(e))}
+                  </div>
+                )}
+
+                {/* Other recurring expenses */}
+                {otherExp.length > 0 && (
+                  <div className="rec-section" style={{ marginTop: subExp.length ? 12 : 0 }}>
+                    <div className="rec-section-title">Other Recurring ({otherExp.length}) · {fmtINR(otherMonthlyTotal)}/mo</div>
+                    {otherExp.map(e => renderRecRow(e))}
+                  </div>
+                )}
+
+                {/* Recurring income */}
+                {recurInc.length > 0 && (
+                  <div className="rec-section" style={{ marginTop: 12 }}>
+                    <div className="rec-section-title">Recurring Income ({recurInc.length}) · +{fmtINR(recurInc.reduce((s, i) => s + monthlyEquiv(toINR(i), i.recurringPeriod), 0))}/mo</div>
+                    {recurInc.map(i => (
+                      <div key={i.id} className="rec-item">
+                        <div className="rec-item-left">
+                          <div className="rec-desc">{i.description}</div>
+                          <div className="rec-meta">
+                            {i.source || 'Other'}
+                            {i.recurringPeriod && <span className="rec-period-badge">{i.recurringPeriod}</span>}
+                          </div>
+                        </div>
+                        <div className="rec-item-right">
+                          <div className="rec-amount" style={{ color: 'var(--color-inc)' }}>+{fmtINR(toINR(i))}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </main>
         )
