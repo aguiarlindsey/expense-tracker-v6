@@ -1830,8 +1830,9 @@ export default function Tracker({ session }) {
   })
   const [analyticsTab, setAnalyticsTab]   = useState(() => {
     const p = new URLSearchParams(window.location.search).get('tab')
-    return p === 'trends' ? 'trends' : 'insights'
+    return p === 'trends' ? 'trends' : p === 'merchants' ? 'merchants' : 'insights'
   })
+  const [selectedMerchant, setSelectedMerchant] = useState(null)
   const [planningTab, setPlanningTab]     = useState(() => {
     const p = new URLSearchParams(window.location.search).get('ptab')
     return p === 'goals' ? 'goals' : 'budgets'
@@ -2266,6 +2267,7 @@ export default function Tracker({ session }) {
     { id: 'nav-income',     group: 'Go to',   icon: '💵', label: 'Income',                keywords: ['salary','earnings','revenue'],            action: () => setTab('income') },
     { id: 'nav-insights',   group: 'Go to',   icon: '💡', label: 'Analytics — Insights',  keywords: ['analytics','charts','stats','anomaly'],   action: () => { setTab('analytics'); setAnalyticsTab('insights') } },
     { id: 'nav-trends',     group: 'Go to',   icon: '📈', label: 'Analytics — Trends',    keywords: ['analytics','monthly','comparison','mom'],  action: () => { setTab('analytics'); setAnalyticsTab('trends') } },
+    { id: 'nav-merchants',  group: 'Go to',   icon: '🏪', label: 'Analytics — Merchants', keywords: ['merchants','top spend','vendor','shop','order'], action: () => { setTab('analytics'); setAnalyticsTab('merchants'); setSelectedMerchant(null) } },
     { id: 'nav-budgets',    group: 'Go to',   icon: '💰', label: 'Planning — Budgets',    keywords: ['planning','budget','limit','category'],   action: () => { setTab('planning'); setPlanningTab('budgets') } },
     { id: 'nav-goals',      group: 'Go to',   icon: '🎯', label: 'Planning — Goals',      keywords: ['planning','savings','targets','milestone'],action: () => { setTab('planning'); setPlanningTab('goals') } },
     { id: 'nav-recurring',  group: 'Go to',   icon: '🔄', label: 'Recurring',             keywords: ['subscriptions','repeat','monthly','emi'],  action: () => setTab('recurring') },
@@ -2663,18 +2665,30 @@ export default function Tracker({ session }) {
     })
   }, [expenses, todayStr])
 
-  // Merchant analytics — top 10 by total spend
+  // Merchant analytics — top 20 by total spend, with monthly breakdown + category
   const merchantData = useMemo(() => {
     const map = {}
     expenses.forEach(e => {
-      const key = (e.description || e.desc || '').trim()
+      const key = (e.description || '').trim()
       if (!key) return
-      if (!map[key]) map[key] = { name: key, total: 0, count: 0, last: '' }
-      map[key].total += toINR(e)
+      if (!map[key]) map[key] = { name: key, total: 0, count: 0, first: '', last: '', months: {}, cats: {} }
+      const amtINR = toINR(e)
+      map[key].total += amtINR
       map[key].count++
       if (!map[key].last || e.date > map[key].last) map[key].last = e.date
+      if (!map[key].first || e.date < map[key].first) map[key].first = e.date
+      const mo = (e.date || '').substring(0, 7)
+      if (mo) map[key].months[mo] = (map[key].months[mo] || 0) + amtINR
+      if (e.category) map[key].cats[e.category] = (map[key].cats[e.category] || 0) + 1
     })
-    return Object.values(map).sort((a, b) => b.total - a.total).slice(0, 10)
+    return Object.values(map)
+      .map(m => ({
+        ...m,
+        avg: m.total / m.count,
+        topCat: Object.entries(m.cats).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Other',
+      }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 20)
   }, [expenses])
 
   const expTypeData = useMemo(() => {
@@ -3872,6 +3886,9 @@ export default function Tracker({ session }) {
             <button role="tab" aria-selected={analyticsTab === 'trends'}
               className={'sub-nav-btn' + (analyticsTab === 'trends' ? ' active' : '')}
               onClick={() => setAnalyticsTab('trends')}>📈 Trends</button>
+            <button role="tab" aria-selected={analyticsTab === 'merchants'}
+              className={'sub-nav-btn' + (analyticsTab === 'merchants' ? ' active' : '')}
+              onClick={() => { setAnalyticsTab('merchants'); setSelectedMerchant(null) }}>🏪 Merchants</button>
           </div>
         </div>
       )}
@@ -3941,40 +3958,6 @@ export default function Tracker({ session }) {
             </div>
           )}
 
-          {/* ── Merchant Analytics ── */}
-          {merchantData.length > 0 && (
-            <div className="chart-card" style={{ marginBottom: '1rem' }}>
-              <div className="chart-title">🏪 Top Merchants by Spend</div>
-              <div className="merchant-table-wrap">
-                <table className="merchant-table">
-                  <thead><tr><th>#</th><th>Merchant</th><th>Txns</th><th>Avg</th><th>Total</th></tr></thead>
-                  <tbody>
-                    {merchantData.map((m, i) => {
-                      const pct = allExpINR > 0 ? (m.total / allExpINR * 100).toFixed(1) : 0
-                      const barW = merchantData[0].total > 0 ? (m.total / merchantData[0].total * 100) : 0
-                      return (
-                        <tr key={i}>
-                          <td className="merchant-rank">{i + 1}</td>
-                          <td className="merchant-name">
-                            <div>{m.name}</div>
-                            <div className="merchant-bar-track">
-                              <div className="merchant-bar-fill" style={{ width: `${barW}%` }} />
-                            </div>
-                          </td>
-                          <td className="merchant-cnt">{m.count}</td>
-                          <td className="merchant-avg">{incognito ? '••••' : fmtINR(Math.round(m.total / m.count))}</td>
-                          <td className="merchant-total">
-                            <span>{incognito ? '••••••' : fmtINR(m.total)}</span>
-                            <span className="merchant-pct">{pct}%</span>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
 
           {catData.length > 0 && (
             <div className="chart-card" style={{ marginBottom: '1rem' }}>
@@ -4055,6 +4038,158 @@ export default function Tracker({ session }) {
           )}
         </main>
       )}
+
+      {/* ══════════ MERCHANTS ══════════ */}
+      {tab === 'analytics' && analyticsTab === 'merchants' && (() => {
+        // Last 6 months for mini trend bars
+        const last6 = []
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date(todayStr + 'T12:00:00')
+          d.setDate(1); d.setMonth(d.getMonth() - i)
+          last6.push(d.toISOString().substring(0, 7))
+        }
+
+        function MiniBar({ months, maxVal }) {
+          return (
+            <div className="mch-mini-bars">
+              {last6.map(mo => {
+                const amt = months[mo] || 0
+                const h = maxVal > 0 ? Math.max((amt / maxVal) * 28, amt > 0 ? 2 : 0) : 0
+                return (
+                  <div key={mo} className="mch-mini-bar-wrap" title={mo + ': ' + (amt > 0 ? fmtINR(amt) : 'no spend')}>
+                    <div className="mch-mini-bar" style={{ height: h + 'px' }} />
+                  </div>
+                )
+              })}
+            </div>
+          )
+        }
+
+        const sel = selectedMerchant ? merchantData.find(m => m.name === selectedMerchant) : null
+        const maxMoAmt = sel ? Math.max(...Object.values(sel.months), 1) : 1
+        const globalMax = merchantData[0]?.total || 1
+
+        return (
+          <main>
+            {merchantData.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">🏪</div>
+                <h3>No merchant data yet</h3>
+                <p>Add a few expenses and merchants will appear here with spend totals, frequency, and monthly trends.</p>
+                <button className="btn-primary btn-sm" onClick={() => setShowEF(true)}>➕ Add Expense</button>
+              </div>
+            ) : (
+              <>
+                {/* Summary strip */}
+                <div className="mch-summary-strip">
+                  <div className="mch-summary-item">
+                    <span className="mch-summary-val">{merchantData.length}</span>
+                    <span className="mch-summary-lbl">merchants</span>
+                  </div>
+                  <div className="mch-summary-item">
+                    <span className="mch-summary-val">{incognito ? '••••' : fmtINR(merchantData[0]?.total || 0)}</span>
+                    <span className="mch-summary-lbl">top spend</span>
+                  </div>
+                  <div className="mch-summary-item">
+                    <span className="mch-summary-val">{merchantData.reduce((s, m) => s + m.count, 0)}</span>
+                    <span className="mch-summary-lbl">total txns</span>
+                  </div>
+                </div>
+
+                {/* Drill-down panel */}
+                {sel && (
+                  <div className="mch-detail-panel">
+                    <div className="mch-detail-header">
+                      <div className="mch-detail-name">
+                        <span>{CATS[sel.topCat]?.icon || '🏪'}</span>
+                        <span>{sel.name}</span>
+                      </div>
+                      <button className="mch-detail-close" onClick={() => setSelectedMerchant(null)}>✕</button>
+                    </div>
+                    <div className="mch-detail-stats">
+                      <div className="mch-detail-stat">
+                        <span className="mch-detail-val">{incognito ? '••••' : fmtINR(sel.total)}</span>
+                        <span className="mch-detail-lbl">total</span>
+                      </div>
+                      <div className="mch-detail-stat">
+                        <span className="mch-detail-val">{sel.count}</span>
+                        <span className="mch-detail-lbl">orders</span>
+                      </div>
+                      <div className="mch-detail-stat">
+                        <span className="mch-detail-val">{incognito ? '••' : fmtINR(Math.round(sel.avg))}</span>
+                        <span className="mch-detail-lbl">avg/order</span>
+                      </div>
+                    </div>
+                    <div className="mch-detail-meta">
+                      <span>📅 {sel.first} → {sel.last}</span>
+                      <span>🏷️ {sel.topCat}</span>
+                    </div>
+                    <div className="mch-detail-trend-label">
+                      <span>Monthly trend — last 6 months</span>
+                    </div>
+                    <div className="mch-detail-bars">
+                      {last6.map(mo => {
+                        const amt = sel.months[mo] || 0
+                        const h = maxMoAmt > 0 ? Math.max((amt / maxMoAmt) * 60, amt > 0 ? 4 : 0) : 0
+                        const label = new Date(mo + '-01T12:00:00').toLocaleString('default', { month: 'short' })
+                        return (
+                          <div key={mo} className="mch-detail-bar-col">
+                            <div className="mch-detail-bar-amt">{amt > 0 ? (incognito ? '••' : fmtINR(amt)) : ''}</div>
+                            <div className="mch-detail-bar-track">
+                              <div className="mch-detail-bar-fill" style={{ height: h + 'px' }} />
+                            </div>
+                            <div className="mch-detail-bar-lbl">{label}</div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Merchant card list */}
+                <div className="mch-list">
+                  {merchantData.map((m, i) => {
+                    const pct = allExpINR > 0 ? (m.total / allExpINR * 100).toFixed(1) : 0
+                    const barW = globalMax > 0 ? (m.total / globalMax * 100) : 0
+                    const isSelected = selectedMerchant === m.name
+                    const moMax = Math.max(...Object.values(m.months), 1)
+                    return (
+                      <div key={m.name}
+                        className={'mch-card' + (isSelected ? ' mch-card-selected' : '')}
+                        onClick={() => setSelectedMerchant(isSelected ? null : m.name)}
+                        role="button" tabIndex={0}
+                        onKeyDown={ev => ev.key === 'Enter' && setSelectedMerchant(isSelected ? null : m.name)}
+                      >
+                        <div className="mch-card-rank">#{i + 1}</div>
+                        <div className="mch-card-body">
+                          <div className="mch-card-top">
+                            <span className="mch-card-icon">{CATS[m.topCat]?.icon || '🏪'}</span>
+                            <span className="mch-card-name">{m.name}</span>
+                            <span className="mch-card-cat">{m.topCat}</span>
+                          </div>
+                          <div className="mch-card-bar-track">
+                            <div className="mch-card-bar-fill" style={{ width: barW + '%' }} />
+                          </div>
+                          <div className="mch-card-stats">
+                            <span className="mch-stat">{m.count} txns</span>
+                            <span className="mch-stat">avg {incognito ? '••' : fmtINR(Math.round(m.avg))}</span>
+                            <span className="mch-stat">last {m.last}</span>
+                          </div>
+                        </div>
+                        <div className="mch-card-right">
+                          <div className="mch-card-total">{incognito ? '••••' : fmtINR(m.total)}</div>
+                          <div className="mch-card-pct">{pct}%</div>
+                          <MiniBar months={m.months} maxVal={moMax} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+          </main>
+        )
+      })()}
 
       {/* ══════════ PLANNING sub-nav ══════════ */}
       {tab === 'planning' && (
@@ -5032,7 +5167,7 @@ export default function Tracker({ session }) {
               <div className="about-row"><span>UI</span><span>Glassmorphism shell · Bento grid dashboard · 30-day sparkline · category tiles · month picker · system / light / dark theme · FOUC prevention · locale-aware number formatting</span></div>
               <div className="about-row"><span>Navigation</span><span>8 tabs · Analytics sub-nav (Insights | Trends) · Planning sub-nav (Budgets | Goals) · ⌘K command palette · keyboard shortcuts 1–8</span></div>
               <div className="about-row"><span>Mobile</span><span>Bottom nav + FAB · More sheet · slide-up drawers (drag to dismiss) · swipe left → delete · swipe right → edit · haptic feedback · safe-area insets</span></div>
-              <div className="about-row"><span>Analytics</span><span>Financial Health Score (0–100 animated ring, 4 sub-scores) · grouped bar chart · category trends · merchant top-10 · MoM savings rate · anomaly detection · burn-rate forecast</span></div>
+              <div className="about-row"><span>Analytics</span><span>Financial Health Score (0–100 animated ring, 4 sub-scores) · grouped bar chart · category trends · MoM savings rate · anomaly detection · burn-rate forecast · Merchant Analytics tab (top-20 cards with 6-month mini trend bars + drill-down)</span></div>
               <div className="about-row"><span>Planning</span><span>Budget rollover (unused carries to next month, per-category toggle) · goal progress rings · milestone badges (🥉🥈🥇🏆) · contribution timeline · colour-coded countdown</span></div>
               <div className="about-row"><span>Onboarding</span><span>5-step wizard (name · currency · budget · notifications · done) · first-run empty states with CTAs · user_metadata persisted to Supabase</span></div>
               <div className="about-row"><span>Exchange</span><span>122 currencies in 8 regions · live FX rates · quick converter · BTC + ETH via CoinGecko · search filter</span></div>
