@@ -5358,7 +5358,7 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title">💸 Expense Tracker V7</div>
               <div className="about-meta">
-                <span className="about-badge">v7.30.0</span>
+                <span className="about-badge">v7.31.0</span>
                 <span className="about-badge">Glass UI</span>
                 <span className="about-badge">Bento Dashboard</span>
                 <span className="about-badge">⌘K Palette</span>
@@ -5376,21 +5376,22 @@ export default function Tracker({ session }) {
                 <span className="about-badge">Subscription Tracker</span>
                 <span className="about-badge">Spend Streak</span>
                 <span className="about-badge">Merchant Analytics</span>
+                <span className="about-badge">Cash Flow Forecast</span>
               </div>
               <div className="about-row"><span>Architecture</span><span>Vite + React 18 + Supabase · deployed on Vercel</span></div>
               <div className="about-row"><span>Auth</span><span>Magic-link email · WebAuthn biometric lock · Email OTP fallback</span></div>
               <div className="about-row"><span>Database</span><span>Supabase Postgres + RLS · SQL views for aggregations · dependency-ordered offline sync</span></div>
               <div className="about-row"><span>Security</span><span>Server-enforced biometric lock · alphanumeric OTP · rate limiting · RLS on all tables · HTTP security headers</span></div>
               <div className="about-row"><span>UI</span><span>Glassmorphism shell · Bento grid dashboard · 30-day sparkline · category tiles · month picker · system / light / dark theme · FOUC prevention · locale-aware number formatting</span></div>
-              <div className="about-row"><span>Navigation</span><span>8 tabs · Analytics sub-nav (Insights | Trends | Merchants) · Planning sub-nav (Budgets | Goals) · ⌘K command palette · keyboard shortcuts 1–8</span></div>
+              <div className="about-row"><span>Navigation</span><span>8 tabs · Analytics sub-nav (Insights | Trends | Merchants | Forecast) · Planning sub-nav (Budgets | Goals) · ⌘K command palette · keyboard shortcuts 1–8</span></div>
               <div className="about-row"><span>Mobile</span><span>Bottom nav + FAB · More sheet · slide-up drawers (drag to dismiss) · swipe left → delete · swipe right → edit · haptic feedback · safe-area insets</span></div>
-              <div className="about-row"><span>Analytics</span><span>Financial Health Score (0–100 animated ring, 4 sub-scores) · grouped bar chart · category trends · MoM savings rate · anomaly detection · burn-rate forecast · Merchant Analytics (top-20, 6-month mini bars, drill-down panel)</span></div>
+              <div className="about-row"><span>Analytics</span><span>Financial Health Score (0–100 animated ring, 4 sub-scores) · grouped bar chart · category trends · MoM savings rate · anomaly detection · Merchant Analytics (top-20, 6-month mini bars, drill-down panel) · Cash Flow Forecast (30/60/90d projections, spend trajectory, upcoming recurring)</span></div>
               <div className="about-row"><span>Planning</span><span>Budget rollover (unused carries to next month, per-category toggle) · goal progress rings · milestone badges (🥉🥈🥇🏆) · contribution timeline · colour-coded countdown</span></div>
               <div className="about-row"><span>Onboarding</span><span>5-step wizard (name · currency · budget · notifications · done) · first-run empty states with CTAs · user_metadata persisted to Supabase</span></div>
               <div className="about-row"><span>Exchange</span><span>122 currencies in 8 regions · live FX rates · quick converter · BTC + ETH via CoinGecko · search filter</span></div>
               <div className="about-row"><span>Features</span><span>Expense templates (one-tap FAB) · bulk edit · subscription tracker (cancel-risk, zombie detection) · spend streak + gamification (🔥 badges) · receipt OCR · trip tracking · fuel (ODO · Trip A/B · km/L) · incognito mode · 259-colour palette</span></div>
               <div className="about-row"><span>PWA</span><span>Installable · offline-capable · auto-update with force-reload banner · iOS Safari compatible</span></div>
-              <div className="about-row"><span>Last updated</span><span>2026-05-27 · Session 45 · v7.30.0</span></div>
+              <div className="about-row"><span>Last updated</span><span>2026-05-27 · Session 46 · v7.31.0</span></div>
             </div>
           </div>
         </main>

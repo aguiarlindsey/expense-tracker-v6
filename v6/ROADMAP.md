@@ -8,15 +8,15 @@
 ## Overall Progress
 
 ```
-███████████████████████░░░░░░░░░  66%   21 / 32 phases complete
+████████████████████████░░░░░░░░  69%   22 / 32 phases complete
 ```
 
 | | Count | Hours |
 |---|---|---|
-| ✅ Complete | 21 phases | ~69h |
+| ✅ Complete | 22 phases | ~75h |
 | 🔨 In Progress | 0 phases | — |
-| 📋 Planned | 11 phases | ~71h est. |
-| **Total** | **32 phases** | **~155h · ~40 days** |
+| 📋 Planned | 10 phases | ~65h est. |
+| **Total** | **32 phases** | **~187h · ~47 days** |
 
 ---
 
@@ -139,7 +139,7 @@
 > Meaningful additions that make daily use more powerful.
 
 ```
-██████░░░░  63%   5 / 8 phases
+███████░░░  75%   6 / 8 phases
 ```
 
 | Status | Phase | Description | Complexity | Est. |
@@ -149,7 +149,7 @@
 | ✅ | **7.3 — Subscription Tracker** | Dedicated view of all recurring expenses · monthly cost total · next due dates · cancel-risk flag for unused subs | Medium | 4–5h |
 | ✅ | **7.4 — Spend Streak + Gamification** | 🔥 consecutive under-budget days · no-spend day badges · monthly milestone toasts | Medium | 4–5h |
 | ✅ | **7.5 — Merchant Analytics** | Top merchants by spend · order count · per-merchant trend · lives inside Analytics tab | Medium | 3–4h |
-| 📋 | **7.6 — Cash Flow Forecast** | Project next 30/60/90 days from recurring + variable spend average · runway indicator | High | 6–8h |
+| ✅ | **7.6 — Cash Flow Forecast** | 30/60/90-day projection tiles · variable + recurring daily rates · spend trajectory SVG · upcoming recurring charges list · deficit/surplus runway banner · 📅 Forecast sub-tab in Analytics | High | 6–8h |
 | 📋 | **7.7 — PDF Monthly Report** | Formatted monthly export via `jsPDF` (free) · cover page, category breakdown, top expenses | Medium | 5–7h |
 | 📋 | **7.8 — Natural Language Search** | Parse "food last week over 500" → auto-apply filters · falls back to current search if parse fails | High | 6–8h |
 
@@ -209,8 +209,8 @@
 | v7.27.0 | Phase 7.2 — Bulk Edit | ✅ |
 | v7.28.0 | Phase 7.3 — Subscription Tracker | ✅ |
 | v7.29.0 | Phase 7.4 — Spend Streak + Gamification | ✅ |
-| v7.30.0 | Phase 7.5 — Merchant Analytics | ✅ Current |
-| v7.31.0 | Phase 7.6 — Cash Flow Forecast | 📋 |
+| v7.30.0 | Phase 7.5 — Merchant Analytics | ✅ |
+| v7.31.0 | Phase 7.6 — Cash Flow Forecast | ✅ Current |
 | v7.32.0 | Phase 7.7 — PDF Monthly Report | 📋 |
 | v7.33.0 | Phase 7.8 — Natural Language Search | 📋 |
 | v7.34.0 | Epic 8 — Launch & Polish | 📋 |
@@ -229,4 +229,4 @@
 
 ---
 
-*Last updated: 22-05-2026 · Session 42 · v7.24.0 shipped*
+*Last updated: 27-05-2026 · Session 46 · v7.31.0 shipped*
