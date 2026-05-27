@@ -139,16 +139,16 @@
 > Meaningful additions that make daily use more powerful.
 
 ```
-░░░░░░░░░░  0%   0 / 8 phases
+██████░░░░  63%   5 / 8 phases
 ```
 
 | Status | Phase | Description | Complexity | Est. |
 |--------|-------|-------------|-----------|------|
-| 📋 | **7.1 — Expense Templates** | Save frequent expenses as one-tap quick-add templates · stored in localStorage · accessible from FAB | Medium | 4–5h |
-| 📋 | **7.2 — Bulk Edit** | Select multiple expenses · change category / payment method / date in one action | Medium | 3–4h |
-| 📋 | **7.3 — Subscription Tracker** | Dedicated view of all recurring expenses · monthly cost total · next due dates · cancel-risk flag for unused subs | Medium | 4–5h |
-| 📋 | **7.4 — Spend Streak + Gamification** | 🔥 consecutive under-budget days · no-spend day badges · monthly milestone toasts | Medium | 4–5h |
-| 📋 | **7.5 — Merchant Analytics** | Top merchants by spend · order count · per-merchant trend · lives inside Analytics tab | Medium | 3–4h |
+| ✅ | **7.1 — Expense Templates** | Save frequent expenses as one-tap quick-add templates · stored in localStorage · accessible from FAB | Medium | 4–5h |
+| ✅ | **7.2 — Bulk Edit** | Select multiple expenses · change category / payment method / date in one action | Medium | 3–4h |
+| ✅ | **7.3 — Subscription Tracker** | Dedicated view of all recurring expenses · monthly cost total · next due dates · cancel-risk flag for unused subs | Medium | 4–5h |
+| ✅ | **7.4 — Spend Streak + Gamification** | 🔥 consecutive under-budget days · no-spend day badges · monthly milestone toasts | Medium | 4–5h |
+| ✅ | **7.5 — Merchant Analytics** | Top merchants by spend · order count · per-merchant trend · lives inside Analytics tab | Medium | 3–4h |
 | 📋 | **7.6 — Cash Flow Forecast** | Project next 30/60/90 days from recurring + variable spend average · runway indicator | High | 6–8h |
 | 📋 | **7.7 — PDF Monthly Report** | Formatted monthly export via `jsPDF` (free) · cover page, category breakdown, top expenses | Medium | 5–7h |
 | 📋 | **7.8 — Natural Language Search** | Parse "food last week over 500" → auto-apply filters · falls back to current search if parse fails | High | 6–8h |
@@ -197,15 +197,23 @@
 | v7.18.0 | ⌘K Command Centre · keyboard navigation (Phase 3.3) | ✅ |
 | v7.19.0 | Dynamic Drawers · drag-to-dismiss sheets (Phase 3.4) | ✅ |
 | v7.20.0 | Swipe delete/edit · haptic · ODO/Trip A/B tracking (Phase 3.5) | ✅ |
-| v7.20.1 | PWA force-update fix · sparkline tooltip · fuel OCR quantity fix | ✅ Current |
-| v7.21.0 | Onboarding Wizard | 📋 |
-| v7.18.0 | Financial Health Score | 📋 |
-| v7.19.0 | Budget Rollover + Goal improvements | 📋 |
-| v7.20.0 | Expense Templates + Bulk Edit | 📋 |
-| v7.22.0 | Subscription Tracker + Spend Streak | 📋 |
-| v7.23.0 | Cash Flow Forecast | 📋 |
-| v7.24.0 | PDF Report + Natural Language Search | 📋 |
-| v7.25.0 | Share Sheet + Full Polish + Launch | 📋 |
+| v7.20.1 | PWA force-update fix · sparkline tooltip · fuel OCR quantity fix | ✅ |
+| v7.21.0 | Month strip fixes · monthStr useState · month picker dropdown | ✅ |
+| v7.21.1 | First-login detection (user_metadata.onboarded) | ✅ |
+| v7.22.0 | Onboarding Wizard (5-step) | ✅ |
+| v7.22.1 | Empty state redesign (8 screens) | ✅ |
+| v7.23.0 | Financial Health Score (animated SVG ring, 4 sub-scores) | ✅ |
+| v7.24.0 | Enhanced Charts (grouped bar, category trends, MoM rate) | ✅ |
+| v7.25.0 | Epic 6: Planning Tab · Budget Rollover · Goal Improvements | ✅ |
+| v7.26.0 | Phase 7.1 — Expense Templates | ✅ |
+| v7.27.0 | Phase 7.2 — Bulk Edit | ✅ |
+| v7.28.0 | Phase 7.3 — Subscription Tracker | ✅ |
+| v7.29.0 | Phase 7.4 — Spend Streak + Gamification | ✅ |
+| v7.30.0 | Phase 7.5 — Merchant Analytics | ✅ Current |
+| v7.31.0 | Phase 7.6 — Cash Flow Forecast | 📋 |
+| v7.32.0 | Phase 7.7 — PDF Monthly Report | 📋 |
+| v7.33.0 | Phase 7.8 — Natural Language Search | 📋 |
+| v7.34.0 | Epic 8 — Launch & Polish | 📋 |
 
 ---
 
