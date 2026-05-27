@@ -2412,6 +2412,59 @@ export default function Tracker({ session }) {
     return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`
   }, [monthStr])
 
+  // ── Gamification data ─────────────────────────────────
+  const gamificationData = useMemo(() => {
+    const dayOfMonth = parseInt(todayStr.split('-')[2], 10)
+    const spendByDay = {}
+    expenses.forEach(e => { if (e.date) spendByDay[e.date] = (spendByDay[e.date] || 0) + toINR(e) })
+
+    // No-spend days this month: days 1..today with zero expenses
+    let noSpendThisMonth = 0
+    for (let i = 1; i <= dayOfMonth; i++) {
+      if (!(monthStr + '-' + String(i).padStart(2, '0') in spendByDay)) noSpendThisMonth++
+    }
+
+    // Consecutive no-spend streak going back from today
+    let noSpendStreak = 0
+    const nsDt = new Date(todayStr + 'T12:00:00')
+    for (let i = 0; i < 365; i++) {
+      if (nsDt.toISOString().split('T')[0] in spendByDay) break
+      noSpendStreak++
+      nsDt.setDate(nsDt.getDate() - 1)
+    }
+
+    // Under-budget streak (only when daily budget is set)
+    let underBudgetStreak = 0, underBudgetBest = 0
+    if (budgets.daily > 0 && expenses.length) {
+      const firstDate = expenses.reduce((m, e) => (e.date && e.date < m ? e.date : m), todayStr)
+
+      // Current streak: go back from today until a day over budget
+      const ubDt = new Date(todayStr + 'T12:00:00')
+      for (let i = 0; i < 730; i++) {
+        const ds = ubDt.toISOString().split('T')[0]
+        if (ds < firstDate) break
+        if ((spendByDay[ds] || 0) > budgets.daily) break
+        underBudgetStreak++
+        ubDt.setDate(ubDt.getDate() - 1)
+      }
+
+      // Best streak: walk forward from firstDate to today
+      const fwdDt = new Date(firstDate + 'T12:00:00')
+      const endDt = new Date(todayStr + 'T12:00:00')
+      let run = 0
+      while (fwdDt <= endDt) {
+        const ds = fwdDt.toISOString().split('T')[0]
+        if ((spendByDay[ds] || 0) <= budgets.daily) {
+          run++
+          if (run > underBudgetBest) underBudgetBest = run
+        } else { run = 0 }
+        fwdDt.setDate(fwdDt.getDate() + 1)
+      }
+    }
+
+    return { noSpendThisMonth, noSpendStreak, underBudgetStreak, underBudgetBest }
+  }, [expenses, monthStr, todayStr, budgets.daily])
+
   const spentByCatPrevMonth = useMemo(() => {
     const c = {}
     expenses.filter(e => (e.date || '').startsWith(prevMonthStr)).forEach(e => { c[e.category] = (c[e.category] || 0) + toINR(e) })
@@ -2506,6 +2559,32 @@ export default function Tracker({ session }) {
     upcoming.sort((a, b) => a.daysUntil - b.daysUntil)
     setUpcomingRecurring(upcoming.slice(0, 5))
   }, [expenses, loading, todayStr])
+
+  // ── Gamification milestone toasts ────────────────────
+  useEffect(() => {
+    if (loading) return
+    const { noSpendThisMonth, underBudgetStreak } = gamificationData
+    const NS_MILESTONES = [5, 10, 15, 20, 25]
+    const UB_MILESTONES = [3, 7, 14, 30]
+    NS_MILESTONES.forEach(m => {
+      if (noSpendThisMonth === m) {
+        const key = `gamif-nospend-${monthStr}-${m}`
+        if (!_firedToasts.current.has(key)) {
+          _firedToasts.current.add(key)
+          addToast('success', '💤', `${m} No-Spend Days This Month!`, `You've had ${m} days with zero spending in ${monthStr}.`, 7000)
+        }
+      }
+    })
+    UB_MILESTONES.forEach(m => {
+      if (underBudgetStreak === m) {
+        const key = `gamif-streak-${todayStr}-${m}`
+        if (!_firedToasts.current.has(key)) {
+          _firedToasts.current.add(key)
+          addToast('success', '🔥', `${m}-Day Under-Budget Streak!`, `${m} consecutive days within your daily budget. Keep it up!`, 8000)
+        }
+      }
+    })
+  }, [gamificationData, monthStr, todayStr, loading])
 
   // ── Service reminders (from receipt scanner) ─────────
   useEffect(() => {
@@ -3476,6 +3555,60 @@ export default function Tracker({ session }) {
                     <span>{fmtDay(sparkDays[19].date)}</span>
                     <span>Today</span>
                   </div>
+                </div>
+              )
+            })()}
+
+            {/* Gamification tile */}
+            {(() => {
+              const { noSpendThisMonth, noSpendStreak, underBudgetStreak, underBudgetBest } = gamificationData
+              const hasDailyBudget = budgets.daily > 0
+              const streak = hasDailyBudget ? underBudgetStreak : noSpendStreak
+              const streakLabel = hasDailyBudget ? 'under-budget days' : 'no-spend days'
+              const streakIcon = streak >= 7 ? '🔥' : streak >= 3 ? '✨' : '💡'
+              const UB_BADGES = [
+                { days: 30, icon: '🏆', label: '30d' },
+                { days: 14, icon: '🥇', label: '14d' },
+                { days:  7, icon: '🥈', label: '7d' },
+                { days:  3, icon: '🥉', label: '3d' },
+              ]
+              const NS_BADGES = [
+                { days: 20, icon: '🏆', label: '20d' },
+                { days: 15, icon: '🥇', label: '15d' },
+                { days: 10, icon: '🥈', label: '10d' },
+                { days:  5, icon: '🥉', label: '5d' },
+              ]
+              const badges = hasDailyBudget ? UB_BADGES : NS_BADGES
+              const earnedVal = hasDailyBudget ? underBudgetBest : noSpendThisMonth
+              return (
+                <div className="bento-tile bento-gamif">
+                  <div className="bento-label">Streak</div>
+                  <div className="gamif-streak-row">
+                    <span className="gamif-flame">{streakIcon}</span>
+                    <span className="gamif-streak-num">{streak}</span>
+                  </div>
+                  <div className="bento-sub">{streakLabel}</div>
+                  {!hasDailyBudget && (
+                    <div className="gamif-nospend-row">
+                      <span className="gamif-nospend-count">💤 {noSpendThisMonth}</span>
+                      <span className="gamif-nospend-lbl">no-spend days this month</span>
+                    </div>
+                  )}
+                  {hasDailyBudget && underBudgetBest > underBudgetStreak && (
+                    <div className="bento-sub" style={{ marginTop: 2 }}>Best: {underBudgetBest}d</div>
+                  )}
+                  <div className="gamif-badges">
+                    {badges.map(b => (
+                      <span key={b.days} className={'gamif-badge' + (earnedVal >= b.days ? ' earned' : '')} title={b.label + ' milestone'}>
+                        {b.icon}
+                      </span>
+                    ))}
+                  </div>
+                  {!hasDailyBudget && (
+                    <div className="gamif-hint" onClick={() => { setTab('planning'); setPlanningTab('budgets') }}>
+                      Set daily budget for streak tracking →
+                    </div>
+                  )}
                 </div>
               )
             })()}

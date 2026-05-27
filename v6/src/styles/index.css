@@ -1962,6 +1962,20 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 .sub-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
 .sub-table tr:last-child td { border-bottom: none; }
 
+/* ─── Gamification bento tile ────────────────────────── */
+.bento-gamif { display: flex; flex-direction: column; gap: 4px; }
+.gamif-streak-row { display: flex; align-items: baseline; gap: 6px; margin-top: 2px; }
+.gamif-flame { font-size: 1.4rem; line-height: 1; }
+.gamif-streak-num { font-size: 2rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--text); line-height: 1; }
+.gamif-nospend-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.gamif-nospend-count { font-size: 0.88rem; font-weight: 600; color: var(--color-brand); font-variant-numeric: tabular-nums; }
+.gamif-nospend-lbl { font-size: 0.72rem; color: var(--text-muted); }
+.gamif-badges { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.gamif-badge { font-size: 1.1rem; opacity: 0.25; transition: opacity 0.2s, transform 0.2s; }
+.gamif-badge.earned { opacity: 1; filter: drop-shadow(0 0 4px rgba(99,102,241,0.4)); transform: scale(1.08); }
+.gamif-hint { font-size: 0.7rem; color: var(--color-brand); cursor: pointer; margin-top: 4px; }
+.gamif-hint:hover { text-decoration: underline; }
+
 /* ─── Recurring tab ───────────────────────────────────── */
 .rec-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 .rec-section-title { padding: 0.75rem 1rem; font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); border-bottom: 1px solid var(--border); background: var(--bg); }
