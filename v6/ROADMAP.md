@@ -8,14 +8,14 @@
 ## Overall Progress
 
 ```
-████████████████████████░░░░░░░░  69%   22 / 32 phases complete
+█████████████████████████████░░░  78%   25 / 32 phases complete
 ```
 
 | | Count | Hours |
 |---|---|---|
-| ✅ Complete | 22 phases | ~75h |
+| ✅ Complete | 25 phases | ~93h |
 | 🔨 In Progress | 0 phases | — |
-| 📋 Planned | 10 phases | ~65h est. |
+| 📋 Planned | 7 phases | ~47h est. |
 | **Total** | **32 phases** | **~187h · ~47 days** |
 
 ---
@@ -29,7 +29,7 @@
 | [3 — Navigation & UX](#epic-3--navigation--ux) | Tabs, ⌘K, drawers | `██████████` 100% | 5/5 | ~25h |
 | [4 — Onboarding](#epic-4--onboarding) | First-run wizard | `██████████` 100% | 3/3 | ~11h |
 | [5 — Analytics Tab](#epic-5--analytics-tab) | Insights + Trends merged | `██████████` 100% | 3/3 | ~18h |
-| [6 — Planning Tab](#epic-6--planning-tab) | Budgets + Goals merged | `░░░░░░░░░░` 0% | 0/3 | ~18h |
+| [6 — Planning Tab](#epic-6--planning-tab) | Budgets + Goals merged | `██████████` 100% | 3/3 | ~18h |
 | [7 — New Features](#epic-7--new-features) | Templates, forecast, PDF | `░░░░░░░░░░` 0% | 0/8 | ~40h |
 | [8 — Launch](#epic-8--launch--polish) | Mobile polish, docs | `░░░░░░░░░░` 0% | 0/4 | ~9h |
 
@@ -123,14 +123,14 @@
 > Budgets and Goals unified into one forward-looking tab.
 
 ```
-░░░░░░░░░░  0%   0 / 3 phases
+██████████  100%   3 / 3 phases
 ```
 
 | Status | Phase | Description | Complexity | Est. |
 |--------|-------|-------------|-----------|------|
-| 📋 | **6.1 — Planning Tab Shell** | New Planning tab · pill sub-nav (Budgets \| Goals) · smooth switching | Medium | 3–4h |
-| 📋 | **6.2 — Budget Rollover** | Unused budget carries to next month · configurable per category · new Supabase column · visual indicator | Medium | 4–5h |
-| 📋 | **6.3 — Goal Improvements** | Contribution history timeline · milestone badges · target date countdown · progress ring animations | Medium | 4–6h |
+| ✅ | **6.1 — Planning Tab Shell** | New Planning tab · pill sub-nav (Budgets \| Goals) · smooth switching | Medium | 3–4h |
+| ✅ | **6.2 — Budget Rollover** | Unused budget carries to next month · configurable per category · new Supabase column · visual indicator | Medium | 4–5h |
+| ✅ | **6.3 — Goal Improvements** | Contribution history timeline · milestone badges · target date countdown · progress ring animations | Medium | 4–6h |
 
 ---
 
@@ -139,7 +139,7 @@
 > Meaningful additions that make daily use more powerful.
 
 ```
-███████░░░  75%   6 / 8 phases
+████████░░  75%   6 / 8 phases
 ```
 
 | Status | Phase | Description | Complexity | Est. |
