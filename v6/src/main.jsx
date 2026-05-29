@@ -4,17 +4,6 @@ import { useRegisterSW } from 'virtual:pwa-register/react'
 import './styles/index.css'
 import App from './App.jsx'
 
-// On every load: unregister any stale SW and wipe all caches
-// This runs once per page load (not per render), ensuring deploys land immediately
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => {
-    regs.forEach(r => r.unregister())
-  }).catch(() => {})
-}
-if ('caches' in window) {
-  caches.keys().then(keys => keys.forEach(k => caches.delete(k))).catch(() => {})
-}
-
 // Synchronous reload — works in iOS Safari PWA standalone mode
 // Must be called directly from a click handler, not inside async/await
 function hardReload() {
