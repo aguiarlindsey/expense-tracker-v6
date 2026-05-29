@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Zap } from 'lucide-react'
 import { supabase } from './utils/supabase'
 import { useAuth } from './hooks/useAuth'
 import { useSupabaseHeartbeat } from './hooks/useSupabaseHeartbeat'
@@ -61,7 +62,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <span className="app-logo">💸 Expense Tracker</span>
+        <span className="app-logo" style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}><Zap size={16} color="var(--primary)" />Expense Tracker</span>
         <div className="app-header-right">
           <span className="app-user">{session.user.email}</span>
           <button className="app-signout" onClick={handleSignOut}>Sign out</button>
