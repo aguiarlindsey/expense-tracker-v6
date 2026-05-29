@@ -2,8 +2,8 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
 // A4: 210 × 297mm — 20mm margins → 170mm usable
-const M     = 20          // margin
-const TW    = 170         // table width (210 - 2×20)
+const M  = 20   // margin
+const TW = 170  // table width
 
 const PRIMARY    = [79,  70,  229]
 const DARK       = [30,  27,  75]
@@ -14,18 +14,39 @@ const INC_STRIPE = [240, 253, 244]
 const MUTED_RGB  = [130, 130, 150]
 const BODY_TXT   = [40,  40,  60]
 
-// jsPDF's built-in Helvetica only covers Latin-1.
-// Non-Latin-1 currency glyphs (₹ ₽ ₩ ₱ ₿ etc.) render as blanks.
-// Map them to safe ASCII alternatives so numbers remain legible.
-const SYMBOL_MAP = {
-  '₹': 'Rs.', '₽': 'RUB ', '₩': 'KRW ', '₱': 'PHP ', '₿': 'BTC ',
-  '₺': 'TRY ', '₴': 'UAH ', '₸': 'KZT ', '₫': 'VND ', '₦': 'NGN ',
-  '฿': 'THB ', '₵': 'GHS ', '₾': 'GEL ', '₼': 'AZN ', '₲': 'PYG ',
-  '₡': 'CRC ', '₭': 'LAK ',
+// ── Currency formatting for PDF ───────────────────────────────────────────────
+// jsPDF's built-in Helvetica uses WinAnsi (Windows-1252) encoding.
+// Safe: ASCII, £ (£), ¥ (¥), € (€ is in Win-1252 at 0x80).
+// NOT safe: ₹ ₽ ₩ ₱ ₿ and most other modern currency symbols (outside Win-1252).
+// Use currency-code prefix for unsafe glyphs so numbers stay legible.
+const PDF_SYMBOLS = {
+  USD: '$',    AUD: 'A$',   CAD: 'CA$',  SGD: 'S$',   HKD: 'HK$',
+  NZD: 'NZ$', MXN: '$',    TWD: 'NT$',
+  EUR: '€',            // € — Win-1252 safe
+  GBP: '£',            // £ — Latin-1 safe
+  JPY: '¥',  CNY: '¥',  // ¥ — Latin-1 safe
+  INR: 'Rs.',  NPR: 'Rs.',  LKR: 'Rs.',  BDT: 'Tk.',  PKR: 'Rs.',
+  RUB: 'RUB ', CHF: 'Fr.',  SEK: 'kr',   NOK: 'kr',   DKK: 'kr',
+  PHP: 'PHP ', IDR: 'Rp.',  THB: 'THB ', MYR: 'RM',   KRW: 'KRW ',
+  BRL: 'R$',   ZAR: 'R',    AED: 'AED ', SAR: 'SAR ',
+  BTC: 'BTC ', ETH: 'ETH ',
 }
-function pdfSafe(str) {
-  if (typeof str !== 'string') str = String(str)
-  return str.replace(/[₹₽₩₱₿₺₴₸₫₦฿₵₾₼₲₡₭]/g, s => SYMBOL_MAP[s] || s)
+
+// South-Asian currencies use lakh/crore grouping (en-IN); all others en-US
+const SA_SET = new Set(['INR','NPR','LKR','BDT','PKR'])
+function localeFor(code) { return SA_SET.has(code) ? 'en-IN' : 'en-US' }
+
+// Returns a formatter function bound to baseCurrency
+function makeFmt(baseCurrency) {
+  const prefix = PDF_SYMBOLS[baseCurrency] ?? (baseCurrency + ' ')
+  const locale = localeFor(baseCurrency)
+  return (amount) => {
+    const n = parseFloat(amount) || 0
+    const abs = Math.abs(n)
+    const sign = n < 0 ? '-' : ''
+    const numStr = abs.toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+    return sign + prefix + numStr
+  }
 }
 
 function hexToRgb(hex) {
@@ -33,7 +54,7 @@ function hexToRgb(hex) {
   return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)]
 }
 
-// Shared autoTable config
+// Shared autoTable config — every table in the PDF uses this as a base
 function tbl(headColor, altStripe = STRIPE) {
   return {
     theme: 'striped',
@@ -55,7 +76,7 @@ function tbl(headColor, altStripe = STRIPE) {
   }
 }
 
-// Page header band helper
+// Reusable page header band (dark bg + accent underline)
 function pageHeader(doc, W, title, subtitle, bandColor, accentColor) {
   doc.setFillColor(...bandColor)
   doc.rect(0, 0, W, 22, 'F')
@@ -71,18 +92,23 @@ function pageHeader(doc, W, title, subtitle, bandColor, accentColor) {
   doc.text(subtitle, W - M, 14.5, { align: 'right' })
 }
 
-export function generateMonthlyPDF({ monthStr, expenses, income, fmtAmount, toBase, CATS, userEmail }) {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-  const W = doc.internal.pageSize.getWidth()   // 210
-  const H = doc.internal.pageSize.getHeight()  // 297
+// ─────────────────────────────────────────────────────────────────────────────
 
-  // ── Month label ─────────────────────────────────────
+export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, toBase, CATS, userEmail }) {
+  const fmt = makeFmt(baseCurrency)   // all amounts go through this
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const W = doc.internal.pageSize.getWidth()
+  const H = doc.internal.pageSize.getHeight()
+
+  // Month label
   let monthLabel = 'All Time'
   if (monthStr) {
     const [y, m] = monthStr.split('-')
     monthLabel = new Date(+y, +m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
   }
 
+  // Filter data to selected month
   const filtExp = monthStr ? expenses.filter(e => (e.date || '').startsWith(monthStr)) : expenses
   const filtInc = monthStr ? income.filter(i  => (i.date  || '').startsWith(monthStr)) : income
 
@@ -91,10 +117,9 @@ export function generateMonthlyPDF({ monthStr, expenses, income, fmtAmount, toBa
   const net      = totalInc - totalExp
 
   // ══════════════════════════════════════════════════════
-  // PAGE 1 — Cover
+  // PAGE 1 — Cover + Summary + Category breakdown
   // ══════════════════════════════════════════════════════
 
-  // Header band
   doc.setFillColor(...DARK)
   doc.rect(0, 0, W, 55, 'F')
   doc.setFillColor(...PRIMARY)
@@ -104,12 +129,13 @@ export function generateMonthlyPDF({ monthStr, expenses, income, fmtAmount, toBa
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(22)
   doc.text('Expense Tracker', M, 24)
+
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(11)
   doc.setTextColor(160, 160, 200)
-  doc.text('Monthly Report', M, 34)
+  doc.text('Monthly Report', M, 35)
 
-  // Month pill
+  // Month pill (width auto-fits text)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(9)
   const pillW = doc.getTextWidth(monthLabel) + 14
@@ -119,41 +145,34 @@ export function generateMonthlyPDF({ monthStr, expenses, income, fmtAmount, toBa
   doc.setTextColor(255, 255, 255)
   doc.text(monthLabel, pillX + pillW / 2, 26, { align: 'center' })
 
-  // Generated / email line
   const now = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(7.5)
   doc.setTextColor(140, 140, 170)
-  doc.text(`Generated: ${now}`, M, 48)
-  if (userEmail) doc.text(userEmail, W - M, 48, { align: 'right' })
+  doc.text(`Generated: ${now}`, M, 49)
+  if (userEmail) doc.text(userEmail, W - M, 49, { align: 'right' })
 
-  // ── Summary metrics — use autoTable for reliable centering ──
-  const netLabel = net >= 0 ? `+${pdfSafe(fmtAmount(net))}` : pdfSafe(fmtAmount(net))
-  const summaryData = [
-    [pdfSafe(fmtAmount(totalExp)), pdfSafe(fmtAmount(totalInc)), netLabel, String(filtExp.length)],
-  ]
-  const summaryHeaders = [['SPENT', 'INCOME', 'NET SAVINGS', 'TRANSACTIONS']]
-
+  // ── Summary metrics (autoTable → reliable centering) ──
+  const netStr = (net < 0 ? '-' : '+') + fmt(Math.abs(net))
   autoTable(doc, {
     startY: 63,
-    head: summaryHeaders,
-    body: summaryData,
     tableWidth: TW,
     margin: { left: M, right: M },
     theme: 'plain',
+    head: [['SPENT', 'INCOME', 'NET SAVINGS', 'TRANSACTIONS']],
+    body: [[fmt(totalExp), fmt(totalInc), netStr, String(filtExp.length)]],
     headStyles: {
       fillColor: [235, 235, 248],
       textColor: MUTED_RGB,
-      fontStyle: 'bold',
-      fontSize: 7,
+      fontStyle: 'bold', fontSize: 7,
       halign: 'center',
       cellPadding: { top: 3, bottom: 2, left: 4, right: 4 },
     },
     bodyStyles: {
-      fontStyle: 'bold',
-      fontSize: 11,
+      fontStyle: 'bold', fontSize: 11,
       halign: 'center',
-      cellPadding: { top: 4, bottom: 5, left: 4, right: 4 },
+      cellPadding: { top: 5, bottom: 6, left: 4, right: 4 },
+      overflow: 'linebreak',
     },
     columnStyles: {
       0: { cellWidth: TW / 4, textColor: EXP_CLR },
@@ -161,14 +180,11 @@ export function generateMonthlyPDF({ monthStr, expenses, income, fmtAmount, toBa
       2: { cellWidth: TW / 4, textColor: net >= 0 ? INC_CLR : EXP_CLR },
       3: { cellWidth: TW / 4, textColor: PRIMARY },
     },
-    didDrawPage(data) {
-      // Draw coloured top bar on each summary column header
-    },
   })
 
+  // ── Category breakdown ───────────────────────────────
   const afterSummary = doc.lastAutoTable.finalY + 8
 
-  // ── Category breakdown ───────────────────────────────
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(11)
   doc.setTextColor(...DARK)
@@ -188,7 +204,7 @@ export function generateMonthlyPDF({ monthStr, expenses, income, fmtAmount, toBa
     .sort((a, b) => b[1].amount - a[1].amount)
     .map(([cat, d]) => [
       cat,
-      pdfSafe(fmtAmount(d.amount)),
+      fmt(d.amount),
       totalExp > 0 ? (d.amount / totalExp * 100).toFixed(1) + '%' : '—',
       String(d.count),
     ])
@@ -206,7 +222,7 @@ export function generateMonthlyPDF({ monthStr, expenses, income, fmtAmount, toBa
       3: { cellWidth: 14, halign: 'center' },
     },
     didDrawCell(data) {
-      // Coloured left bar on category column body rows
+      // Coloured left bar on category column, body rows only
       if (data.section === 'body' && data.column.index === 0 && catRows[data.row.index]) {
         const rgb = hexToRgb(CATS[catRows[data.row.index][0]]?.color)
         if (rgb) {
@@ -225,7 +241,7 @@ export function generateMonthlyPDF({ monthStr, expenses, income, fmtAmount, toBa
   pageHeader(
     doc, W,
     `Expenses — ${monthLabel}`,
-    `${filtExp.length} transaction${filtExp.length !== 1 ? 's' : ''} · ${pdfSafe(fmtAmount(totalExp))}`,
+    `${filtExp.length} transaction${filtExp.length !== 1 ? 's' : ''} · ${fmt(totalExp)}`,
     DARK, EXP_CLR
   )
 
@@ -236,7 +252,7 @@ export function generateMonthlyPDF({ monthStr, expenses, income, fmtAmount, toBa
       e.desc || '—',
       e.category || '—',
       e.paymentMethod || '—',
-      pdfSafe(fmtAmount(toBase(e))),
+      fmt(toBase(e)),
     ])
 
   // Expense cols: 24 + 63 + 35 + 24 + 24 = 170 ✓
@@ -263,7 +279,7 @@ export function generateMonthlyPDF({ monthStr, expenses, income, fmtAmount, toBa
     pageHeader(
       doc, W,
       `Income — ${monthLabel}`,
-      `${filtInc.length} entr${filtInc.length !== 1 ? 'ies' : 'y'} · ${pdfSafe(fmtAmount(totalInc))}`,
+      `${filtInc.length} entr${filtInc.length !== 1 ? 'ies' : 'y'} · ${fmt(totalInc)}`,
       [5, 80, 60], INC_CLR
     )
 
@@ -273,7 +289,7 @@ export function generateMonthlyPDF({ monthStr, expenses, income, fmtAmount, toBa
         i.date   || '—',
         i.desc   || '—',
         i.source || '—',
-        pdfSafe(fmtAmount(toBase(i))),
+        fmt(toBase(i)),
       ])
 
     // Income cols: 24 + 84 + 38 + 24 = 170 ✓

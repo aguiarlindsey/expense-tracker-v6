@@ -1896,11 +1896,11 @@ export default function Tracker({ session }) {
 
   const handleExportPDF = (ms = monthStr) => {
     generateMonthlyPDF({
-      monthStr: ms,
+      monthStr,
       expenses,
       income,
-      fmtAmount: _fmtINR,
-      toBase:    toINR,
+      baseCurrency,
+      toBase: toINR,
       CATS,
       userEmail: session.user.email,
     })
