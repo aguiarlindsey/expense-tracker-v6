@@ -422,6 +422,14 @@ body {
   font-size: var(--text-xs);
   font-weight: var(--fw-semibold);
 }
+.strip-pdf-btn {
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text-muted); cursor: pointer; padding: 3px 6px;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  margin-left: auto;
+}
+.strip-pdf-btn:hover { color: var(--primary); border-color: var(--primary); background: rgba(79,70,229,0.07); }
 .strip-track {
   height: 6px;
   background: var(--border);

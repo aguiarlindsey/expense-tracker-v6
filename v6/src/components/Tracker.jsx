@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef, memo, Fragment } from 'react'
-import { Zap, LayoutDashboard, DollarSign, TrendingUp, ClipboardList, RefreshCw, Settings, Home, Menu, Plane, ArrowLeftRight, Euro, PoundSterling, JapaneseYen, IndianRupee, RussianRuble, SwissFranc, PhilippinePeso, Bitcoin, Lightbulb, Store, Calendar, Wallet, Target, PlusCircle, Sun, Moon, EyeOff, Eye, Command, Search } from 'lucide-react'
+import { Zap, LayoutDashboard, DollarSign, TrendingUp, ClipboardList, RefreshCw, Settings, Home, Menu, Plane, ArrowLeftRight, Euro, PoundSterling, JapaneseYen, IndianRupee, RussianRuble, SwissFranc, PhilippinePeso, Bitcoin, Lightbulb, Store, Calendar, Wallet, Target, PlusCircle, Sun, Moon, EyeOff, Eye, Command, Search, FileDown } from 'lucide-react'
 import { useStorage } from '../hooks/useStorage'
 import { useDebounce } from '../hooks/useDebounce'
 import { CATS, CM, CG, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS, FALLBACK_RATES } from '../utils/constants'
@@ -10,6 +10,7 @@ import { useInsightViews } from '../hooks/useInsightViews'
 import { useBiometric } from '../hooks/useBiometric'
 import ConflictModal from './ConflictModal'
 import ReceiptScanner from './ReceiptScanner'
+import { generateMonthlyPDF } from '../utils/generatePDF'
 
 // ─── Currency icon map ───────────────────────────────────
 const CURRENCY_ICON_MAP = {
@@ -1893,6 +1894,18 @@ export default function Tracker({ session }) {
   const [savingsGoal, setSavingsGoal] = useState(() => parseFloat(localStorage.getItem('et_v6_sts_goal') || '0') || 0)
   useEffect(() => { try { localStorage.setItem('et_v6_sts_goal', String(savingsGoal)) } catch {} }, [savingsGoal])
 
+  const handleExportPDF = (ms = monthStr) => {
+    generateMonthlyPDF({
+      monthStr: ms,
+      expenses,
+      income,
+      fmtAmount: _fmtINR,
+      toBase:    toINR,
+      CATS,
+      userEmail: session.user.email,
+    })
+  }
+
   const handleExportJSON = () => {
     const payload = {
       version: 6, exportedAt: new Date().toISOString(),
@@ -3409,6 +3422,9 @@ export default function Tracker({ session }) {
                       {pct.toFixed(0)}%
                     </span>
                   )}
+                  <button className="strip-pdf-btn" onClick={() => handleExportPDF(monthStr)} title={`Download PDF report for ${monthLabel}`}>
+                    <FileDown size={14} />
+                  </button>
                 </div>
                 {showMonthPicker && (
                   <div className="strip-month-dropdown" role="listbox">
@@ -5270,10 +5286,19 @@ export default function Tracker({ session }) {
             <p className="settings-desc">Download a copy of all your data. JSON is a full backup; CSV is for spreadsheets (expenses only).</p>
             <div className="settings-row">
               <div className="settings-row-label">
+                <strong>Monthly PDF Report</strong>
+                <span>Formatted report for {(() => { const [y,m] = monthStr.split('-'); return new Date(+y,+m-1,1).toLocaleDateString('en-US',{month:'long',year:'numeric'}) })()} — cover, category breakdown, all transactions.</span>
+              </div>
+              <button className="btn-primary btn-sm" onClick={() => handleExportPDF(monthStr)} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <FileDown size={14} />PDF Report
+              </button>
+            </div>
+            <div className="settings-row">
+              <div className="settings-row-label">
                 <strong>Export as JSON</strong>
                 <span>Full backup — {expenses.length} expenses + {income.length} income. Re-importable.</span>
               </div>
-              <button className="btn-primary btn-sm" onClick={handleExportJSON}>Download JSON</button>
+              <button className="btn-ghost btn-sm" onClick={handleExportJSON}>Download JSON</button>
             </div>
             <div className="settings-row">
               <div className="settings-row-label">
