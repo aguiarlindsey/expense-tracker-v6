@@ -1,5 +1,4 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { createWorker } from 'tesseract.js';
 import { parseReceipt } from '../utils/receiptParser.js';
 
 const isMobile = () => typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
@@ -88,6 +87,7 @@ async function preprocessImage(blobUrl, cropPct) {
 }
 
 async function runOcrOnCanvas(canvas, onProgress) {
+  const { createWorker } = await import('tesseract.js');
   const worker = await createWorker('eng', 1, {
     workerPath: '/tesseract-worker.min.js',
     workerBlobURL: false,
