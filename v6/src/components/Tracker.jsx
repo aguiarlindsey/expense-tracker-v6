@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef, memo, Fragment } from 'react'
-import { Zap, LayoutDashboard, DollarSign, TrendingUp, ClipboardList, RefreshCw, Settings, Home, Menu, Plane, ArrowLeftRight, Euro, PoundSterling, JapaneseYen, IndianRupee, RussianRuble, SwissFranc, PhilippinePeso, Bitcoin } from 'lucide-react'
+import { Zap, LayoutDashboard, DollarSign, TrendingUp, ClipboardList, RefreshCw, Settings, Home, Menu, Plane, ArrowLeftRight, Euro, PoundSterling, JapaneseYen, IndianRupee, RussianRuble, SwissFranc, PhilippinePeso, Bitcoin, Lightbulb, Store, Calendar, Wallet, Target, PlusCircle, Sun, Moon, EyeOff, Eye, Command, Search } from 'lucide-react'
 import { useStorage } from '../hooks/useStorage'
 import { useDebounce } from '../hooks/useDebounce'
 import { CATS, CM, CG, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS, FALLBACK_RATES } from '../utils/constants'
@@ -1770,7 +1770,7 @@ function CommandPalette({ open, onClose, commands }) {
     <div className="cmd-overlay" onMouseDown={onClose}>
       <div className="cmd-modal" onMouseDown={e => e.stopPropagation()} role="dialog" aria-label="Command palette">
         <div className="cmd-search-wrap">
-          <span className="cmd-search-icon">⌘</span>
+          <span className="cmd-search-icon"><Search size={15} /></span>
           <input ref={inputRef} className="cmd-search" autoComplete="off" spellCheck={false}
             placeholder="Jump to tab, search actions…"
             value={query} onChange={e => setQuery(e.target.value)} />
@@ -2278,23 +2278,23 @@ export default function Tracker({ session }) {
 
   // ── Command palette commands ──────────────────────────
   const cmdCommands = useMemo(() => [
-    { id: 'nav-overview',   group: 'Go to',   icon: '📊', label: 'Overview',              keywords: ['home','dashboard','bento','spend'],       action: () => setTab('overview') },
-    { id: 'nav-income',     group: 'Go to',   icon: '💵', label: 'Income',                keywords: ['salary','earnings','revenue'],            action: () => setTab('income') },
-    { id: 'nav-insights',   group: 'Go to',   icon: '💡', label: 'Analytics — Insights',  keywords: ['analytics','charts','stats','anomaly'],   action: () => { setTab('analytics'); setAnalyticsTab('insights') } },
-    { id: 'nav-trends',     group: 'Go to',   icon: '📈', label: 'Analytics — Trends',    keywords: ['analytics','monthly','comparison','mom'],  action: () => { setTab('analytics'); setAnalyticsTab('trends') } },
-    { id: 'nav-merchants',  group: 'Go to',   icon: '🏪', label: 'Analytics — Merchants', keywords: ['merchants','top spend','vendor','shop','order'], action: () => { setTab('analytics'); setAnalyticsTab('merchants'); setSelectedMerchant(null) } },
-    { id: 'nav-forecast',   group: 'Go to',   icon: '📅', label: 'Analytics — Forecast', keywords: ['forecast','cashflow','cash flow','projection','runway','30 day','60 day','90 day'], action: () => { setTab('analytics'); setAnalyticsTab('forecast') } },
-    { id: 'nav-budgets',    group: 'Go to',   icon: '💰', label: 'Planning — Budgets',    keywords: ['planning','budget','limit','category'],   action: () => { setTab('planning'); setPlanningTab('budgets') } },
-    { id: 'nav-goals',      group: 'Go to',   icon: '🎯', label: 'Planning — Goals',      keywords: ['planning','savings','targets','milestone'],action: () => { setTab('planning'); setPlanningTab('goals') } },
-    { id: 'nav-recurring',  group: 'Go to',   icon: '🔄', label: 'Recurring',             keywords: ['subscriptions','repeat','monthly','emi'],  action: () => setTab('recurring') },
-    { id: 'nav-trips',      group: 'Go to',   icon: '✈️', label: 'Trips',                 keywords: ['travel','journey','vacation'],            action: () => setTab('trips') },
-    { id: 'nav-exchange',   group: 'Go to',   icon: '💱', label: 'Exchange (FX)',         keywords: ['currency','rates','forex','usd','btc'],   action: () => setTab('exchange') },
-    { id: 'nav-settings',   group: 'Go to',   icon: '⚙️', label: 'Settings',              keywords: ['preferences','account','export','import'],action: () => setTab('settings') },
-    { id: 'act-add-exp',    group: 'Actions', icon: '➕', label: 'Add Expense',           keywords: ['new','spend','record','create'],          action: () => setShowEF(true), hint: 'N' },
-    { id: 'act-add-inc',    group: 'Actions', icon: '💚', label: 'Add Income',            keywords: ['new','salary','earn','create'],           action: () => setShowIF(true), hint: 'I' },
-    { id: 'act-theme',      group: 'Actions', icon: dark ? '☀️' : '🌙', label: dark ? 'Switch to Light Mode' : 'Switch to Dark Mode', keywords: ['theme','appearance','dark','light'], action: () => setTheme(dark ? 'light' : 'dark'), hint: 'D' },
-    { id: 'act-incognito',  group: 'Actions', icon: '🙈', label: incognito ? 'Show Amounts' : 'Hide Amounts', keywords: ['privacy','blur','incognito','hide'], action: () => setIncognito(m => !m), hint: 'H' },
-  ], [dark, incognito]) // eslint-disable-line react-hooks/exhaustive-deps
+    { id: 'nav-overview',   group: 'Go to',   icon: <LayoutDashboard size={15} />, label: 'Overview',              keywords: ['home','dashboard','bento','spend'],       action: () => setTab('overview') },
+    { id: 'nav-income',     group: 'Go to',   icon: <IncomeIcon size={15} />,      label: 'Income',                keywords: ['salary','earnings','revenue'],            action: () => setTab('income') },
+    { id: 'nav-insights',   group: 'Go to',   icon: <Lightbulb size={15} />,       label: 'Analytics — Insights',  keywords: ['analytics','charts','stats','anomaly'],   action: () => { setTab('analytics'); setAnalyticsTab('insights') } },
+    { id: 'nav-trends',     group: 'Go to',   icon: <TrendingUp size={15} />,      label: 'Analytics — Trends',    keywords: ['analytics','monthly','comparison','mom'],  action: () => { setTab('analytics'); setAnalyticsTab('trends') } },
+    { id: 'nav-merchants',  group: 'Go to',   icon: <Store size={15} />,           label: 'Analytics — Merchants', keywords: ['merchants','top spend','vendor','shop','order'], action: () => { setTab('analytics'); setAnalyticsTab('merchants'); setSelectedMerchant(null) } },
+    { id: 'nav-forecast',   group: 'Go to',   icon: <Calendar size={15} />,        label: 'Analytics — Forecast',  keywords: ['forecast','cashflow','cash flow','projection','runway','30 day','60 day','90 day'], action: () => { setTab('analytics'); setAnalyticsTab('forecast') } },
+    { id: 'nav-budgets',    group: 'Go to',   icon: <Wallet size={15} />,          label: 'Planning — Budgets',    keywords: ['planning','budget','limit','category'],   action: () => { setTab('planning'); setPlanningTab('budgets') } },
+    { id: 'nav-goals',      group: 'Go to',   icon: <Target size={15} />,          label: 'Planning — Goals',      keywords: ['planning','savings','targets','milestone'],action: () => { setTab('planning'); setPlanningTab('goals') } },
+    { id: 'nav-recurring',  group: 'Go to',   icon: <RefreshCw size={15} />,       label: 'Recurring',             keywords: ['subscriptions','repeat','monthly','emi'],  action: () => setTab('recurring') },
+    { id: 'nav-trips',      group: 'Go to',   icon: <Plane size={15} />,           label: 'Trips',                 keywords: ['travel','journey','vacation'],            action: () => setTab('trips') },
+    { id: 'nav-exchange',   group: 'Go to',   icon: <ArrowLeftRight size={15} />,  label: 'Exchange (FX)',         keywords: ['currency','rates','forex','usd','btc'],   action: () => setTab('exchange') },
+    { id: 'nav-settings',   group: 'Go to',   icon: <Settings size={15} />,        label: 'Settings',              keywords: ['preferences','account','export','import'],action: () => setTab('settings') },
+    { id: 'act-add-exp',    group: 'Actions', icon: <PlusCircle size={15} />,      label: 'Add Expense',           keywords: ['new','spend','record','create'],          action: () => setShowEF(true), hint: 'N' },
+    { id: 'act-add-inc',    group: 'Actions', icon: <PlusCircle size={15} />,      label: 'Add Income',            keywords: ['new','salary','earn','create'],           action: () => setShowIF(true), hint: 'I' },
+    { id: 'act-theme',      group: 'Actions', icon: dark ? <Sun size={15} /> : <Moon size={15} />, label: dark ? 'Switch to Light Mode' : 'Switch to Dark Mode', keywords: ['theme','appearance','dark','light'], action: () => setTheme(dark ? 'light' : 'dark'), hint: 'D' },
+    { id: 'act-incognito',  group: 'Actions', icon: incognito ? <Eye size={15} /> : <EyeOff size={15} />, label: incognito ? 'Show Amounts' : 'Hide Amounts', keywords: ['privacy','blur','incognito','hide'], action: () => setIncognito(m => !m), hint: 'H' },
+  ], [dark, incognito, IncomeIcon]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Filters — expenses ───────────────────────────────
   const [expSearch,    setExpSearch]    = useState('')
