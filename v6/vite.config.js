@@ -13,6 +13,8 @@ export default defineConfig({
       includeAssets: ['favicon.svg'],
       workbox: {
         importScripts: ['/sw-push.js'],
+        skipWaiting: true,
+        clientsClaim: true,
       },
       manifest: {
         name: 'Expense Tracker',
