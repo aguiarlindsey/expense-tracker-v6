@@ -44,7 +44,7 @@ function makeFmt(baseCurrency) {
     const n = parseFloat(amount) || 0
     const abs = Math.abs(n)
     const sign = n < 0 ? '-' : ''
-    const numStr = abs.toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+    const numStr = abs.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     return sign + prefix + numStr
   }
 }
@@ -216,10 +216,10 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
     head: [['Category', 'Amount', '% of Total', 'Txns']],
     body: catRows.length ? catRows : [['No expenses this month', '—', '—', '0']],
     columnStyles: {
-      0: { cellWidth: 86 },
+      0: { cellWidth: 84 },
       1: { cellWidth: 44, halign: 'right' },
       2: { cellWidth: 26, halign: 'right' },
-      3: { cellWidth: 14, halign: 'center' },
+      3: { cellWidth: 16, halign: 'center' },
     },
     didDrawCell(data) {
       // Coloured left bar on category column, body rows only
