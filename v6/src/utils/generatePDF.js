@@ -231,23 +231,23 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
     .sort((a, b) => b[1].amount - a[1].amount)
     .map(([cat, d]) => [
       cat,
-      fmt(d.amount),
       totalExp > 0 ? (d.amount / totalExp * 100).toFixed(1) + '%' : '—',
       String(d.count),
+      fmt(d.amount),
     ])
 
-  // Category cols: 68 + 44 + 36 + 22 = 170 ✓
+  // Category cols: 68 + 36 + 22 + 44 = 170 ✓  (Amount last, right-aligned)
   // Col 0 left-padding = 9 (5 base + 4 to clear the 3.5mm colour bar + 1 gap)
   autoTable(doc, {
     ...tbl(doc, PRIMARY),
     startY: afterSummary + 7,
-    head: [['Category', 'Amount', '% of Total', 'Txns']],
-    body: catRows.length ? catRows : [['No expenses this month', '—', '—', '0']],
+    head: [['Category', '% of Total', 'Txns', 'Amount']],
+    body: catRows.length ? catRows : [['No expenses this month', '—', '0', '—']],
     columnStyles: {
       0: { cellWidth: 68, halign: 'left', cellPadding: { ...BP, left: 9 } },
-      1: { cellWidth: 44, halign: 'right', overflow: 'hidden' },
-      2: { cellWidth: 36, halign: 'right' },
-      3: { cellWidth: 22, halign: 'center' },
+      1: { cellWidth: 36, halign: 'right' },
+      2: { cellWidth: 22, halign: 'center' },
+      3: { cellWidth: 44, halign: 'right', overflow: 'hidden' },
     },
     didDrawCell(data) {
       // Row dividers (from shared tbl helper — redeclare here since we override didDrawCell)
