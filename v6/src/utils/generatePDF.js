@@ -63,7 +63,7 @@ function tbl(doc, headColor, altStripe = STRIPE) {
       fontSize: 8.5,
       cellPadding: HP,
       valign: 'middle',
-      halign: 'left',
+      halign: 'center',
     },
     bodyStyles: {
       fontSize: 8.5,
