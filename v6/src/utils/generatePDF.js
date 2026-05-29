@@ -249,7 +249,7 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
     .map(e => [
       e.date || '—',
-      e.desc || '—',
+      e.description || '—',
       e.category || '—',
       e.paymentMethod || '—',
       fmt(toBase(e)),
@@ -286,9 +286,9 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
     const incRows = [...filtInc]
       .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
       .map(i => [
-        i.date   || '—',
-        i.desc   || '—',
-        i.source || '—',
+        i.date        || '—',
+        i.description || '—',
+        i.source      || '—',
         fmt(toBase(i)),
       ])
 
