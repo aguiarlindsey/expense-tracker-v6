@@ -910,9 +910,18 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
   --color-brand:   #8b88f0;
 }
 .dark body { background: linear-gradient(160deg, #0d1030 0%, #111111 55%, #0d1828 100%) fixed; }
-.dark .tab:hover  { background: rgba(255,255,255,0.05); }
-.dark .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; background: rgba(79,70,229,0.12); }
-.dark .glass-shell { box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
+.dark .tab         { color: #94a3b8; }
+.dark .tab:hover   { color: #cbd5e1; background: rgba(255,255,255,0.06); }
+.dark .tab.active  { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; background: rgba(79,70,229,0.15); }
+.dark .glass-shell {
+  background: rgba(30,32,50,0.92);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 2px 16px rgba(0,0,0,0.5);
+  border-bottom-color: rgba(120,120,180,0.25);
+}
+.dark .bnav { background: rgba(30,32,50,0.96); border-top-color: rgba(120,120,180,0.22); }
+.dark .bnav-btn { color: #94a3b8; }
+.dark .bnav-btn:hover { color: #cbd5e1; }
+.dark .bnav-btn.active { color: var(--primary); }
 .dark .item-badge-rec { background: #2d1f5e; border-color: #6d28d9; color: #c4b5fd; }
 .dark .error-banner { background: #450a0a; color: #fca5a5; border-color: #7f1d1d; }
 
