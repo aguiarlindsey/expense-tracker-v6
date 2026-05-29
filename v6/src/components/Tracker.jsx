@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef, memo, Fragment } from 'react'
+import { Zap } from 'lucide-react'
 import { useStorage } from '../hooks/useStorage'
 import { useDebounce } from '../hooks/useDebounce'
 import { CATS, CM, CG, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS, FALLBACK_RATES } from '../utils/constants'
@@ -1591,7 +1592,7 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
       {/* Edit — left background, revealed by right swipe */}
       <div className="swipe-bg swipe-bg-edit" style={{
         opacity: rightSwipe ? Math.min(-swipeX / REVEAL, 1) : 0,
-        background: editConfirm ? '#1d4ed8' : '#2563eb',
+        background: editConfirm ? '#4338ca' : '#4f46e5',
       }}>
         <span>✏️</span>
         <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{editConfirm ? 'Release' : 'Edit'}</span>
@@ -3242,7 +3243,7 @@ export default function Tracker({ session }) {
       {/* ── Header ── */}
       <div className="tracker-header">
         <div className="tracker-header-left">
-          <span className="tracker-title">💸 Expense Tracker</span>
+          <span className="tracker-title" style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}><Zap size={18} color="var(--primary)" />Expense Tracker</span>
           <span className="tracker-stats">{expenses.length} expenses · {income.length} income</span>
         </div>
         <div className="tracker-header-right">
@@ -3314,7 +3315,7 @@ export default function Tracker({ session }) {
         <main>
           {expenses.length === 0 && (
             <div className="empty-overview">
-              <div className="empty-overview-icon">💸</div>
+              <div className="empty-overview-icon"><Zap size={56} color="var(--primary)" strokeWidth={1.5} /></div>
               <h2>Welcome to Expense Tracker</h2>
               <p className="empty-overview-sub">
                 {session?.user?.user_metadata?.display_name
@@ -3633,23 +3634,23 @@ export default function Tracker({ session }) {
                       onTouchMove={onPointer}>
                       <defs>
                         <linearGradient id="spark-grad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#2563eb" stopOpacity="0.25" />
-                          <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
+                          <stop offset="0%" stopColor="#4f46e5" stopOpacity="0.25" />
+                          <stop offset="100%" stopColor="#4f46e5" stopOpacity="0" />
                         </linearGradient>
                       </defs>
                       <path d={fillD} fill="url(#spark-grad)" />
-                      <polyline points={polyPts} fill="none" stroke="#2563eb" strokeWidth="2"
+                      <polyline points={polyPts} fill="none" stroke="#4f46e5" strokeWidth="2"
                         strokeLinejoin="round" strokeLinecap="round" />
                       {sparkDays[peakIdx].total > 0 && sparkHover !== peakIdx && (
                         <circle cx={pts[peakIdx][0]} cy={pts[peakIdx][1]} r="3.5" fill="#7c3aed" />
                       )}
-                      <circle cx={pts[29][0]} cy={pts[29][1]} r="3.5" fill="#2563eb" />
+                      <circle cx={pts[29][0]} cy={pts[29][1]} r="3.5" fill="#4f46e5" />
                       {sparkHover !== null && (
                         <>
                           <line x1={pts[sparkHover][0]} y1={0} x2={pts[sparkHover][0]} y2={H}
-                            stroke="#2563eb" strokeWidth="1" strokeDasharray="3 2" opacity="0.45" />
+                            stroke="#4f46e5" strokeWidth="1" strokeDasharray="3 2" opacity="0.45" />
                           <circle cx={pts[sparkHover][0]} cy={pts[sparkHover][1]} r="5"
-                            fill="#2563eb" stroke="var(--surface)" strokeWidth="2" />
+                            fill="#4f46e5" stroke="var(--surface)" strokeWidth="2" />
                         </>
                       )}
                     </svg>
@@ -3816,7 +3817,7 @@ export default function Tracker({ session }) {
           {grouped.length === 0 ? (
             expenses.length === 0 ? (
               <div className="empty-state">
-                <div className="empty-icon">💸</div>
+                <div className="empty-icon"><Zap size={48} color="var(--primary)" strokeWidth={1.5} /></div>
                 <h3>No expenses yet</h3>
                 <p>Start tracking where your money goes. Every entry helps build your financial picture.</p>
                 <div className="empty-actions">
@@ -5356,7 +5357,7 @@ export default function Tracker({ session }) {
           <div className="settings-section" style={{ marginTop: 16 }}>
             <h3>ℹ️ About</h3>
             <div className="about-card">
-              <div className="about-title">💸 Expense Tracker V7</div>
+              <div className="about-title" style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}><Zap size={18} color="var(--primary)" />Expense Tracker V7</div>
               <div className="about-meta">
                 <span className="about-badge">v7.31.0</span>
                 <span className="about-badge">Glass UI</span>

@@ -669,7 +669,7 @@ body {
   text-align: center; padding: 3rem 1.5rem; color: var(--text-muted);
   display: flex; flex-direction: column; align-items: center;
 }
-.empty-icon { font-size: 3rem; margin-bottom: 1rem; line-height: 1; }
+.empty-icon { display: flex; justify-content: center; margin-bottom: 1rem; }
 .empty-state h3 { font-size: 1.05rem; font-weight: var(--fw-bold); margin-bottom: 0.4rem; color: var(--text); }
 .empty-state p { font-size: var(--text-sm); margin-bottom: 1.25rem; max-width: 280px; line-height: 1.55; }
 .empty-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
@@ -684,7 +684,7 @@ body {
   text-align: center; padding: 2.5rem 1.5rem 2rem;
   display: flex; flex-direction: column; align-items: center;
 }
-.empty-overview-icon { font-size: 3.5rem; margin-bottom: 1rem; }
+.empty-overview-icon { display: flex; justify-content: center; margin-bottom: 1rem; }
 .empty-overview h2 { font-size: 1.3rem; font-weight: var(--fw-bold); color: var(--text); margin-bottom: 0.5rem; }
 .empty-overview-sub { font-size: var(--text-sm); color: var(--text-muted); margin-bottom: 1.75rem; max-width: 300px; line-height: 1.6; }
 .empty-overview-features {
