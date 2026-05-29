@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef, memo, Fragment } from 'react'
-import { Zap, LayoutDashboard, DollarSign, TrendingUp, ClipboardList, RefreshCw, Settings, Home, Menu, Plane, ArrowLeftRight } from 'lucide-react'
+import { Zap, LayoutDashboard, DollarSign, TrendingUp, ClipboardList, RefreshCw, Settings, Home, Menu, Plane, ArrowLeftRight, Euro, PoundSterling, JapaneseYen, IndianRupee, RussianRuble, SwissFranc, PhilippinePeso, Bitcoin } from 'lucide-react'
 import { useStorage } from '../hooks/useStorage'
 import { useDebounce } from '../hooks/useDebounce'
 import { CATS, CM, CG, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS, FALLBACK_RATES } from '../utils/constants'
@@ -10,6 +10,20 @@ import { useInsightViews } from '../hooks/useInsightViews'
 import { useBiometric } from '../hooks/useBiometric'
 import ConflictModal from './ConflictModal'
 import ReceiptScanner from './ReceiptScanner'
+
+// ─── Currency icon map ───────────────────────────────────
+const CURRENCY_ICON_MAP = {
+  USD: DollarSign, AUD: DollarSign, CAD: DollarSign, SGD: DollarSign,
+  HKD: DollarSign, NZD: DollarSign, MXN: DollarSign, TWD: DollarSign,
+  EUR: Euro,
+  GBP: PoundSterling,
+  JPY: JapaneseYen, CNY: JapaneseYen,
+  INR: IndianRupee, NPR: IndianRupee, LKR: IndianRupee, BDT: IndianRupee, PKR: IndianRupee,
+  RUB: RussianRuble,
+  CHF: SwissFranc,
+  PHP: PhilippinePeso,
+  BTC: Bitcoin, ETH: Bitcoin,
+}
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -3214,9 +3228,14 @@ export default function Tracker({ session }) {
 
   if (loading) return <div className="tracker-loading"><div className="spinner" /><p>Loading your data…</p></div>
 
+  const _curSym = (CM[baseCurrency] || CM['INR']).symbol
+  const IncomeIcon = CURRENCY_ICON_MAP[baseCurrency] ||
+    // eslint-disable-next-line react/display-name
+    (({ size, style }) => <span style={{ fontSize: (size||13)*0.9, fontWeight: 700, lineHeight: 1, ...style }}>{_curSym}</span>)
+
   const TABS = [
     { id: 'overview',   label: 'Overview',  Icon: LayoutDashboard },
-    { id: 'income',     label: 'Income',    Icon: DollarSign },
+    { id: 'income',     label: 'Income',    Icon: IncomeIcon },
     { id: 'analytics',  label: 'Analytics', Icon: TrendingUp },
     { id: 'planning',   label: 'Planning',  Icon: ClipboardList },
     { id: 'recurring',  label: 'Subs',      Icon: RefreshCw },
@@ -5623,8 +5642,8 @@ export default function Tracker({ session }) {
       {/* ── Bottom nav — mobile only ── */}
       <nav className="bnav" aria-label="Bottom navigation">
         {[
-          { id: 'overview', Icon: Home,       label: 'Home' },
-          { id: 'income',   Icon: DollarSign, label: 'Income' },
+          { id: 'overview', Icon: Home,        label: 'Home' },
+          { id: 'income',   Icon: IncomeIcon,  label: 'Income' },
         ].map(t => (
           <button key={t.id} className={'bnav-btn' + (tab === t.id ? ' active' : '')}
             onClick={() => setTab(t.id)}>
