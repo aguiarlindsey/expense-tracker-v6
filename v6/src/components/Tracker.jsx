@@ -11,6 +11,7 @@ import { useBiometric } from '../hooks/useBiometric'
 import ConflictModal from './ConflictModal'
 import ReceiptScanner from './ReceiptScanner'
 import { generateMonthlyPDF } from '../utils/generatePDF'
+import { parseNLQuery } from '../utils/parseNLQuery'
 
 // ─── Currency icon map ───────────────────────────────────
 const CURRENCY_ICON_MAP = {
@@ -2327,6 +2328,10 @@ export default function Tracker({ session }) {
   const [expAmtMax,    setExpAmtMax]    = useState('')
   const [showAdvExp,   setShowAdvExp]   = useState(false)
   const dExpSearch = useDebounce(expSearch)
+  const nlQuery    = useMemo(
+    () => parseNLQuery(dExpSearch, { catNames: Object.keys(CATS), payMethods: PAY_METHODS }),
+    [dExpSearch]
+  )
 
   // ── Filters — income ─────────────────────────────────
   const [incSearch,   setIncSearch]   = useState('')
@@ -2393,19 +2398,29 @@ export default function Tracker({ session }) {
   }, [showMonthPicker])
 
   // ── Filtered lists ───────────────────────────────────
-  const filteredExp = useMemo(() => expenses.filter(e => {
-    if (!matchesSearch(e, dExpSearch)) return false
-    if (expCategories.length && !expCategories.includes(e.category)) return false
-    if (expPayment  !== 'All' && (e.paymentMethod || 'Cash') !== expPayment)  return false
-    if (expCurrency !== 'All' && (e.currency       || 'INR') !== expCurrency) return false
-    if (expMonth && !(e.date || '').startsWith(expMonth)) return false
-    if (expDateFrom && (e.date || '') < expDateFrom) return false
-    if (expDateTo   && (e.date || '') > expDateTo)   return false
-    const amt = toINR(e)
-    if (expAmtMin !== '' && amt < parseFloat(expAmtMin)) return false
-    if (expAmtMax !== '' && amt > parseFloat(expAmtMax)) return false
-    return true
-  }), [expenses, dExpSearch, expCategories, expPayment, expCurrency, expMonth, expDateFrom, expDateTo, expAmtMin, expAmtMax])
+  const filteredExp = useMemo(() => {
+    // Merge NL-parsed filters with explicit filter UI (UI wins when both set)
+    const effCats     = [...new Set([...expCategories, ...nlQuery.categories])]
+    const effPay      = expPayment !== 'All' ? expPayment : (nlQuery.payment || 'All')
+    const effDateFrom = expDateFrom || nlQuery.dateFrom
+    const effDateTo   = expDateTo   || nlQuery.dateTo
+    const effAmtMin   = expAmtMin !== '' ? expAmtMin : nlQuery.amtMin
+    const effAmtMax   = expAmtMax !== '' ? expAmtMax : nlQuery.amtMax
+
+    return expenses.filter(e => {
+      if (!matchesSearch(e, nlQuery.text)) return false
+      if (effCats.length && !effCats.includes(e.category)) return false
+      if (effPay  !== 'All' && (e.paymentMethod || 'Cash') !== effPay)  return false
+      if (expCurrency !== 'All' && (e.currency   || 'INR') !== expCurrency) return false
+      if (expMonth && !(e.date || '').startsWith(expMonth)) return false
+      if (effDateFrom && (e.date || '') < effDateFrom) return false
+      if (effDateTo   && (e.date || '') > effDateTo)   return false
+      const amt = toINR(e)
+      if (effAmtMin !== '' && amt < parseFloat(effAmtMin)) return false
+      if (effAmtMax !== '' && amt > parseFloat(effAmtMax)) return false
+      return true
+    })
+  }, [expenses, nlQuery, expCategories, expPayment, expCurrency, expMonth, expDateFrom, expDateTo, expAmtMin, expAmtMax])
 
   const filteredInc = useMemo(() => income.filter(i => {
     if (!matchesSearch(i, dIncSearch)) return false
@@ -3771,7 +3786,7 @@ export default function Tracker({ session }) {
 
           {/* Filter bar */}
           <div className="filter-bar">
-            <input className="search-input" placeholder="🔍 Search… or amount:>500 category:food date:2026-03"
+            <input className="search-input" placeholder="🔍 Search or try: food last week, over 500, credit card…"
               value={expSearch} onChange={e => setExpSearch(e.target.value)} />
             <input type="month" className="month-picker" value={expMonth} onChange={e => setExpMonth(e.target.value)} />
             <select value={expPayment} onChange={e => setExpPayment(e.target.value)}>
@@ -3784,6 +3799,17 @@ export default function Tracker({ session }) {
             {hasExpFilters && <button className="btn-ghost btn-sm" onClick={clearExpFilters}>✕ Clear</button>}
             {filteredExp.length > 0 && <button className="btn-ghost btn-sm" onClick={() => { if (bulkMode) exitBulk(); else setBulkMode(true) }}>{bulkMode ? '✕ Exit bulk' : '☑ Bulk'}</button>}
           </div>
+
+          {/* NL parsed chips */}
+          {nlQuery.tokens.length > 0 && (
+            <div className="nl-chips">
+              <span className="nl-chips-label">Parsed</span>
+              {nlQuery.tokens.map((t, i) => (
+                <span key={i} className="nl-chip">{t.label}</span>
+              ))}
+              {nlQuery.text && <span className="nl-chip nl-chip-text">"{nlQuery.text}"</span>}
+            </div>
+          )}
 
           {showAdvExp && (
             <div className="adv-filters">
