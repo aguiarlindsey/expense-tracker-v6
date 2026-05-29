@@ -51,7 +51,7 @@ const HP = { top:4, bottom:4, left:5, right:5 }   // head padding
 const BP = { top:4, bottom:4, left:5, right:5 }   // body padding
 const ROW_H = 11                                   // min cell height (mm)
 
-function tbl(headColor, altStripe = STRIPE) {
+function tbl(doc, headColor, altStripe = STRIPE) {
   return {
     theme: 'plain',
     tableWidth: TW,
@@ -238,7 +238,7 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
   // Category cols: 82 + 46 + 26 + 16 = 170 ✓
   // Col 0 left-padding = 9 (5 base + 4 to clear the 3mm colour bar + 1 gap)
   autoTable(doc, {
-    ...tbl(PRIMARY),
+    ...tbl(doc, PRIMARY),
     startY: afterSummary + 7,
     head: [['Category', 'Amount', '% of Total', 'Txns']],
     body: catRows.length ? catRows : [['No expenses this month', '—', '—', '0']],
@@ -292,7 +292,7 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
 
   // Expense cols: 25 + 60 + 34 + 24 + 27 = 170 ✓
   autoTable(doc, {
-    ...tbl(EXP_CLR),
+    ...tbl(doc, EXP_CLR),
     startY: 33,
     head: [['Date', 'Description', 'Category', 'Payment', 'Amount']],
     body: expRows.length ? expRows : [['—', 'No expenses this month', '—', '—', '—']],
@@ -328,7 +328,7 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
 
     // Income cols: 25 + 82 + 36 + 27 = 170 ✓
     autoTable(doc, {
-      ...tbl(INC_CLR, INC_STRIPE),
+      ...tbl(doc, INC_CLR, INC_STRIPE),
       startY: 33,
       head: [['Date', 'Description', 'Source', 'Amount']],
       body: incRows,
