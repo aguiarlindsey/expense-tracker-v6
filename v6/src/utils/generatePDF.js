@@ -235,7 +235,7 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
       String(d.count),
     ])
 
-  // Category cols: 82 + 46 + 26 + 16 = 170 ✓
+  // Category cols: 75 + 45 + 34 + 16 = 170 ✓
   // Col 0 left-padding = 9 (5 base + 4 to clear the 3mm colour bar + 1 gap)
   autoTable(doc, {
     ...tbl(doc, PRIMARY),
@@ -243,9 +243,9 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
     head: [['Category', 'Amount', '% of Total', 'Txns']],
     body: catRows.length ? catRows : [['No expenses this month', '—', '—', '0']],
     columnStyles: {
-      0: { cellWidth: 82, cellPadding: { ...BP, left: 9 } },
-      1: { cellWidth: 46, halign: 'right' },
-      2: { cellWidth: 26, halign: 'right' },
+      0: { cellWidth: 75, cellPadding: { ...BP, left: 9 } },
+      1: { cellWidth: 45, halign: 'right', overflow: 'hidden' },
+      2: { cellWidth: 34, halign: 'right' },
       3: { cellWidth: 16, halign: 'center' },
     },
     didDrawCell(data) {
@@ -290,7 +290,7 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
       fmt(toBase(e)),
     ])
 
-  // Expense cols: 25 + 60 + 34 + 24 + 27 = 170 ✓
+  // Expense cols: 25 + 50 + 34 + 22 + 39 = 170 ✓
   autoTable(doc, {
     ...tbl(doc, EXP_CLR),
     startY: 33,
@@ -298,10 +298,10 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
     body: expRows.length ? expRows : [['—', 'No expenses this month', '—', '—', '—']],
     columnStyles: {
       0: { cellWidth: 25 },
-      1: { cellWidth: 60 },
+      1: { cellWidth: 50 },
       2: { cellWidth: 34 },
-      3: { cellWidth: 24 },
-      4: { cellWidth: 27, halign: 'right' },
+      3: { cellWidth: 22 },
+      4: { cellWidth: 39, halign: 'right', overflow: 'hidden' },
     },
   })
 
@@ -326,7 +326,7 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
         fmt(toBase(i)),
       ])
 
-    // Income cols: 25 + 82 + 36 + 27 = 170 ✓
+    // Income cols: 25 + 69 + 37 + 39 = 170 ✓
     autoTable(doc, {
       ...tbl(doc, INC_CLR, INC_STRIPE),
       startY: 33,
@@ -334,9 +334,9 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
       body: incRows,
       columnStyles: {
         0: { cellWidth: 25 },
-        1: { cellWidth: 82 },
-        2: { cellWidth: 36 },
-        3: { cellWidth: 27, halign: 'right' },
+        1: { cellWidth: 69 },
+        2: { cellWidth: 37 },
+        3: { cellWidth: 39, halign: 'right', overflow: 'hidden' },
       },
     })
   }
