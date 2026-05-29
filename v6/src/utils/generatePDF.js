@@ -47,7 +47,7 @@ function hexToRgb(hex) {
 }
 
 // ── Shared cell padding ───────────────────────────────────────────────────────
-const HP = { top:4, bottom:4, left:5, right:5 }   // head padding
+const HP = { top:4, bottom:4, left:3, right:3 }   // head padding (tighter to prevent label wrap)
 const BP = { top:4, bottom:4, left:5, right:5 }   // body padding
 const ROW_H = 11                                   // min cell height (mm)
 
@@ -70,6 +70,7 @@ function tbl(doc, headColor, altStripe = STRIPE) {
       textColor: BODY_TXT,
       cellPadding: BP,
       valign: 'middle',
+      halign: 'center',
       overflow: 'linebreak',
       minCellHeight: ROW_H,
     },
@@ -235,18 +236,18 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
       String(d.count),
     ])
 
-  // Category cols: 75 + 45 + 34 + 16 = 170 ✓
-  // Col 0 left-padding = 9 (5 base + 4 to clear the 3mm colour bar + 1 gap)
+  // Category cols: 68 + 44 + 36 + 22 = 170 ✓
+  // Col 0 left-padding = 9 (5 base + 4 to clear the 3.5mm colour bar + 1 gap)
   autoTable(doc, {
     ...tbl(doc, PRIMARY),
     startY: afterSummary + 7,
     head: [['Category', 'Amount', '% of Total', 'Txns']],
     body: catRows.length ? catRows : [['No expenses this month', '—', '—', '0']],
     columnStyles: {
-      0: { cellWidth: 75, cellPadding: { ...BP, left: 9 } },
-      1: { cellWidth: 45, halign: 'right', overflow: 'hidden' },
-      2: { cellWidth: 34, halign: 'right' },
-      3: { cellWidth: 16, halign: 'center' },
+      0: { cellWidth: 68, halign: 'left', cellPadding: { ...BP, left: 9 } },
+      1: { cellWidth: 44, halign: 'right', overflow: 'hidden' },
+      2: { cellWidth: 36, halign: 'right' },
+      3: { cellWidth: 22, halign: 'center' },
     },
     didDrawCell(data) {
       // Row dividers (from shared tbl helper — redeclare here since we override didDrawCell)
@@ -290,17 +291,17 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
       fmt(toBase(e)),
     ])
 
-  // Expense cols: 25 + 50 + 34 + 22 + 39 = 170 ✓
+  // Expense cols: 25 + 43 + 34 + 29 + 39 = 170 ✓
   autoTable(doc, {
     ...tbl(doc, EXP_CLR),
     startY: 33,
     head: [['Date', 'Description', 'Category', 'Payment', 'Amount']],
     body: expRows.length ? expRows : [['—', 'No expenses this month', '—', '—', '—']],
     columnStyles: {
-      0: { cellWidth: 25 },
-      1: { cellWidth: 50 },
-      2: { cellWidth: 34 },
-      3: { cellWidth: 22 },
+      0: { cellWidth: 25, halign: 'center' },
+      1: { cellWidth: 43, halign: 'left' },
+      2: { cellWidth: 34, halign: 'center' },
+      3: { cellWidth: 29, halign: 'center' },
       4: { cellWidth: 39, halign: 'right', overflow: 'hidden' },
     },
   })
@@ -333,9 +334,9 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
       head: [['Date', 'Description', 'Source', 'Amount']],
       body: incRows,
       columnStyles: {
-        0: { cellWidth: 25 },
-        1: { cellWidth: 69 },
-        2: { cellWidth: 37 },
+        0: { cellWidth: 25, halign: 'center' },
+        1: { cellWidth: 69, halign: 'left' },
+        2: { cellWidth: 37, halign: 'center' },
         3: { cellWidth: 39, halign: 'right', overflow: 'hidden' },
       },
     })
