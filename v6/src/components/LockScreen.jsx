@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Zap, Fingerprint, Mail } from 'lucide-react'
 import { useBiometric } from '../hooks/useBiometric'
 import { supabase } from '../utils/supabase'
 
@@ -116,7 +117,7 @@ export default function LockScreen({ onUnlocked }) {
   return (
     <div className="lock-screen">
       <div className="lock-card">
-        <div className="lock-icon">💸</div>
+        <div className="lock-icon"><Zap size={48} strokeWidth={1.5} /></div>
         <h1 className="lock-title">LA Expense Tracker</h1>
         <p className="lock-subtitle">Verify your identity to continue</p>
 
@@ -128,7 +129,7 @@ export default function LockScreen({ onUnlocked }) {
             <button className="lock-btn" onClick={handleUnlock} disabled={authenticating}>
               {authenticating
                 ? <><span className="lock-spinner" /> Verifying…</>
-                : '🔐 Unlock with Biometrics / PIN'}
+                : <><Fingerprint size={16} style={{marginRight:6,verticalAlign:'middle'}} />Unlock with Biometrics / PIN</>}
             </button>
 
             <p className="lock-hint">Use your device fingerprint, face, or PIN</p>
@@ -166,7 +167,7 @@ export default function LockScreen({ onUnlocked }) {
             <button className="lock-btn" onClick={handleConfirmEmail} disabled={otpLoading || !confirmInput.trim()}>
               {otpLoading
                 ? <><span className="lock-spinner" /> Sending…</>
-                : '📧 Send One-Time Code'}
+                : <><Mail size={16} style={{marginRight:6,verticalAlign:'middle'}} />Send One-Time Code</>}
             </button>
 
             <button className="lock-fallback-link"
