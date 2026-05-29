@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef, memo, Fragment } from 'react'
-import { Zap } from 'lucide-react'
+import { Zap, LayoutDashboard, DollarSign, TrendingUp, ClipboardList, RefreshCw, Settings, Home, Menu, Plane, ArrowLeftRight } from 'lucide-react'
 import { useStorage } from '../hooks/useStorage'
 import { useDebounce } from '../hooks/useDebounce'
 import { CATS, CM, CG, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS, FALLBACK_RATES } from '../utils/constants'
@@ -3215,14 +3215,14 @@ export default function Tracker({ session }) {
   if (loading) return <div className="tracker-loading"><div className="spinner" /><p>Loading your data…</p></div>
 
   const TABS = [
-    { id: 'overview',   label: '📊 Overview' },
-    { id: 'income',     label: '💵 Income' },
-    { id: 'analytics',  label: '📈 Analytics' },
-    { id: 'planning',   label: '📋 Planning' },
-    { id: 'recurring',  label: '📋 Subs' },
-    { id: 'trips',      label: '✈️ Trips' },
-    { id: 'exchange',   label: '💱 FX' },
-    { id: 'settings',   label: '⚙️ Settings' },
+    { id: 'overview',   label: 'Overview',  Icon: LayoutDashboard },
+    { id: 'income',     label: 'Income',    Icon: DollarSign },
+    { id: 'analytics',  label: 'Analytics', Icon: TrendingUp },
+    { id: 'planning',   label: 'Planning',  Icon: ClipboardList },
+    { id: 'recurring',  label: 'Subs',      Icon: RefreshCw },
+    { id: 'trips',      label: 'Trips',     Icon: Plane },
+    { id: 'exchange',   label: 'FX',        Icon: ArrowLeftRight },
+    { id: 'settings',   label: 'Settings',  Icon: Settings },
   ]
 
   return (
@@ -3305,7 +3305,10 @@ export default function Tracker({ session }) {
           {TABS.map((t, i) => (
             <button key={t.id} role="tab" aria-selected={tab === t.id}
               className={`tab${tab === t.id ? ' active' : ''}`}
-              onClick={() => setTab(t.id)} title={`Key ${i + 1}`}>{t.label}</button>
+              onClick={() => setTab(t.id)} title={`Key ${i + 1}`}>
+              <t.Icon size={13} style={{marginRight:'0.3rem',verticalAlign:'middle',flexShrink:0}} />
+              {t.label}
+            </button>
           ))}
         </nav>
       </div>
@@ -5620,24 +5623,24 @@ export default function Tracker({ session }) {
       {/* ── Bottom nav — mobile only ── */}
       <nav className="bnav" aria-label="Bottom navigation">
         {[
-          { id: 'overview',  icon: '🏠', label: 'Home' },
-          { id: 'income',    icon: '💵', label: 'Income' },
+          { id: 'overview', Icon: Home,       label: 'Home' },
+          { id: 'income',   Icon: DollarSign, label: 'Income' },
         ].map(t => (
           <button key={t.id} className={'bnav-btn' + (tab === t.id ? ' active' : '')}
             onClick={() => setTab(t.id)}>
-            <span className="bnav-icon">{t.icon}</span>
+            <span className="bnav-icon"><t.Icon size={20} /></span>
             <span className="bnav-label">{t.label}</span>
           </button>
         ))}
         <button className="bnav-fab" onClick={() => setShowEF(true)} aria-label="Add expense">＋</button>
         <button className={'bnav-btn' + (tab === 'analytics' ? ' active' : '')}
           onClick={() => setTab('analytics')}>
-          <span className="bnav-icon">📈</span>
+          <span className="bnav-icon"><TrendingUp size={20} /></span>
           <span className="bnav-label">Analytics</span>
         </button>
         <button className={'bnav-btn' + (['planning','recurring','trips','exchange','settings'].includes(tab) ? ' active' : '')}
           onClick={() => setShowMore(true)}>
-          <span className="bnav-icon">☰</span>
+          <span className="bnav-icon"><Menu size={20} /></span>
           <span className="bnav-label">More</span>
         </button>
       </nav>
@@ -5650,15 +5653,15 @@ export default function Tracker({ session }) {
             <div className="bsheet-handle" />
             <div className="bsheet-grid">
               {[
-                ['planning',  '📋', 'Planning'],
-                ['recurring', '🔄', 'Recurring'],
-                ['trips',     '✈️', 'Trips'],
-                ['exchange',  '💱', 'FX'],
-                ['settings',  '⚙️', 'Settings'],
-              ].map(([id, icon, label]) => (
+                { id: 'planning',  Icon: ClipboardList,  label: 'Planning' },
+                { id: 'recurring', Icon: RefreshCw,      label: 'Recurring' },
+                { id: 'trips',     Icon: Plane,          label: 'Trips' },
+                { id: 'exchange',  Icon: ArrowLeftRight, label: 'FX' },
+                { id: 'settings',  Icon: Settings,       label: 'Settings' },
+              ].map(({ id, Icon, label }) => (
                 <button key={id} className={'bsheet-btn' + (tab === id ? ' active' : '')}
                   onClick={() => { setTab(id); setShowMore(false) }}>
-                  <span className="bsheet-icon">{icon}</span>
+                  <span className="bsheet-icon"><Icon size={22} /></span>
                   <span className="bsheet-label">{label}</span>
                 </button>
               ))}
