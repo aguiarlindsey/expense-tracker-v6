@@ -2276,6 +2276,12 @@ export default function Tracker({ session }) {
     localStorage.setItem('et_v6_incognito', incognito ? '1' : '0')
   }, [incognito])
 
+  // ── Income icon (derived from baseCurrency) ──────────
+  const _curSym2 = (CM[baseCurrency] || CM['INR']).symbol
+  const IncomeIcon = CURRENCY_ICON_MAP[baseCurrency] ||
+    // eslint-disable-next-line react/display-name
+    (({ size, style }) => <span style={{ fontSize: (size||13)*0.9, fontWeight: 700, lineHeight: 1, ...style }}>{_curSym2}</span>)
+
   // ── Command palette commands ──────────────────────────
   const cmdCommands = useMemo(() => [
     { id: 'nav-overview',   group: 'Go to',   icon: <LayoutDashboard size={15} />, label: 'Overview',              keywords: ['home','dashboard','bento','spend'],       action: () => setTab('overview') },
@@ -3227,11 +3233,6 @@ export default function Tracker({ session }) {
   }, [expenses, todayStr])
 
   if (loading) return <div className="tracker-loading"><div className="spinner" /><p>Loading your data…</p></div>
-
-  const _curSym = (CM[baseCurrency] || CM['INR']).symbol
-  const IncomeIcon = CURRENCY_ICON_MAP[baseCurrency] ||
-    // eslint-disable-next-line react/display-name
-    (({ size, style }) => <span style={{ fontSize: (size||13)*0.9, fontWeight: 700, lineHeight: 1, ...style }}>{_curSym}</span>)
 
   const TABS = [
     { id: 'overview',   label: 'Overview',  Icon: LayoutDashboard },
