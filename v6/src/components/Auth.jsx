@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Zap, Mail } from 'lucide-react'
 import { supabase } from '../utils/supabase'
 
 export default function Auth() {
@@ -29,7 +30,7 @@ export default function Auth() {
     return (
       <div className="auth-container">
         <div className="auth-card">
-          <div className="auth-icon">✉️</div>
+          <div className="auth-icon"><Mail size={40} /></div>
           <h2>Check your email</h2>
           <p>We sent a magic link to <strong>{email}</strong>.<br />Click it to sign in.</p>
           <button className="auth-btn-secondary" onClick={() => setSent(false)}>
@@ -43,7 +44,7 @@ export default function Auth() {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <div className="auth-icon">💸</div>
+        <div className="auth-icon"><Zap size={40} /></div>
         <h1>Expense Tracker</h1>
         <p className="auth-subtitle">Sign in with a magic link — no password needed.</p>
 

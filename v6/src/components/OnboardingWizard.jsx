@@ -1,4 +1,8 @@
 import { useState } from 'react'
+import {
+  Zap, User, ArrowLeftRight, Calendar, Bell, BellOff, CheckCircle2,
+  BarChart2, Wallet, Target, Plane, Mail, AlertTriangle, SkipForward,
+} from 'lucide-react'
 import { supabase } from '../utils/supabase'
 import { CURRENCIES } from '../utils/constants'
 import { useNotifications } from '../hooks/useNotifications'
@@ -33,16 +37,13 @@ export default function OnboardingWizard({ session, onComplete }) {
   async function handleFinish() {
     setSaving(true)
 
-    // User metadata
     const meta = { onboarded: true }
     if (form.displayName.trim()) meta.display_name = form.displayName.trim()
     meta.base_currency = form.baseCurrency
     await supabase.auth.updateUser({ data: meta })
 
-    // Base currency in localStorage (picked up by Tracker on mount)
     localStorage.setItem('et_v6_base', form.baseCurrency)
 
-    // Monthly budget
     const budget = parseFloat(form.monthlyBudget)
     if (budget > 0) {
       await supabase.from('budgets').upsert({
@@ -62,11 +63,16 @@ export default function OnboardingWizard({ session, onComplete }) {
   const currencyObj = CURRENCIES.find(c => c.code === form.baseCurrency) || CURRENCIES[0]
   const progressPct = step === 0 ? 0 : step >= STEPS ? 100 : Math.round(((step) / (STEPS - 1)) * 100)
 
+  function notifStatusDisplay() {
+    if (notifStatus === 'granted')  return <><BellOff size={14} style={{display:'inline',verticalAlign:'middle',marginRight:4}} />Enabled</>
+    if (notifStatus === 'denied')   return <><BellOff size={14} style={{display:'inline',verticalAlign:'middle',marginRight:4}} />Blocked by browser</>
+    return <><SkipForward size={14} style={{display:'inline',verticalAlign:'middle',marginRight:4}} />Skipped</>
+  }
+
   return (
     <div className="onb-shell">
       <div className="onb-card">
 
-        {/* Progress bar — hidden on welcome + done */}
         {step > 0 && step < STEPS && (
           <div className="onb-progress">
             <div className="onb-progress-fill" style={{ width: `${progressPct}%` }} />
@@ -76,16 +82,28 @@ export default function OnboardingWizard({ session, onComplete }) {
         {/* ── Step 0: Welcome ── */}
         {step === 0 && (
           <div className="onb-step">
-            <div className="onb-logo">💸</div>
+            <div className="onb-logo"><Zap size={48} strokeWidth={1.5} /></div>
             <h1 className="onb-title">Welcome to Expense Tracker</h1>
             <p className="onb-sub">
               Hi <strong>{session.user.email.split('@')[0]}</strong> — let's get you set up in under 2 minutes.
             </p>
             <div className="onb-feature-list">
-              <div className="onb-feature">📊 Track every expense with smart categories</div>
-              <div className="onb-feature">💰 Set budgets and get alerted before you overspend</div>
-              <div className="onb-feature">🎯 Create savings goals and track progress</div>
-              <div className="onb-feature">✈️ Organise expenses by trips</div>
+              <div className="onb-feature">
+                <BarChart2 size={16} className="onb-feature-icon" />
+                Track every expense with smart categories
+              </div>
+              <div className="onb-feature">
+                <Wallet size={16} className="onb-feature-icon" />
+                Set budgets and get alerted before you overspend
+              </div>
+              <div className="onb-feature">
+                <Target size={16} className="onb-feature-icon" />
+                Create savings goals and track progress
+              </div>
+              <div className="onb-feature">
+                <Plane size={16} className="onb-feature-icon" />
+                Organise expenses by trips
+              </div>
             </div>
             <button className="onb-btn-primary" onClick={next}>Get Started →</button>
             <button className="onb-btn-skip" onClick={onComplete}>Skip setup, take me to the app</button>
@@ -95,7 +113,7 @@ export default function OnboardingWizard({ session, onComplete }) {
         {/* ── Step 1: Name ── */}
         {step === 1 && (
           <div className="onb-step">
-            <div className="onb-step-icon">👋</div>
+            <div className="onb-step-icon"><User size={36} strokeWidth={1.5} /></div>
             <h2 className="onb-step-title">What should we call you?</h2>
             <p className="onb-step-sub">Used for your personal greeting. Optional.</p>
             <input
@@ -118,7 +136,7 @@ export default function OnboardingWizard({ session, onComplete }) {
         {/* ── Step 2: Base Currency ── */}
         {step === 2 && (
           <div className="onb-step">
-            <div className="onb-step-icon">💱</div>
+            <div className="onb-step-icon"><ArrowLeftRight size={36} strokeWidth={1.5} /></div>
             <h2 className="onb-step-title">Your primary currency</h2>
             <p className="onb-step-sub">All amounts will be displayed in this currency.</p>
             <select
@@ -143,7 +161,7 @@ export default function OnboardingWizard({ session, onComplete }) {
         {/* ── Step 3: Monthly Budget ── */}
         {step === 3 && (
           <div className="onb-step">
-            <div className="onb-step-icon">📅</div>
+            <div className="onb-step-icon"><Calendar size={36} strokeWidth={1.5} /></div>
             <h2 className="onb-step-title">Set a monthly budget</h2>
             <p className="onb-step-sub">We'll alert you at 50%, 80%, and 100% of your limit.</p>
             <div className="onb-amount-wrap">
@@ -169,20 +187,29 @@ export default function OnboardingWizard({ session, onComplete }) {
         {/* ── Step 4: Notifications ── */}
         {step === 4 && (
           <div className="onb-step">
-            <div className="onb-step-icon">🔔</div>
+            <div className="onb-step-icon"><Bell size={36} strokeWidth={1.5} /></div>
             <h2 className="onb-step-title">Stay on top of your spending</h2>
             <p className="onb-step-sub">Get a daily summary at 7 AM and budget alerts when you're close to your limit.</p>
             <div className="onb-notif-features">
-              <div className="onb-feature">📬 Daily spending summary</div>
-              <div className="onb-feature">⚡ Budget alert at 50% + 80%</div>
-              <div className="onb-feature">🚨 Over-budget warning</div>
+              <div className="onb-feature">
+                <Mail size={16} className="onb-feature-icon" />
+                Daily spending summary
+              </div>
+              <div className="onb-feature">
+                <AlertTriangle size={16} className="onb-feature-icon" />
+                Budget alert at 50% + 80%
+              </div>
+              <div className="onb-feature">
+                <Bell size={16} className="onb-feature-icon" />
+                Over-budget warning
+              </div>
             </div>
             <button
               className="onb-btn-primary"
               onClick={handleEnableNotifications}
               disabled={notifLoading}
             >
-              {notifLoading ? 'Requesting…' : '🔔 Enable Notifications'}
+              {notifLoading ? 'Requesting…' : 'Enable Notifications'}
             </button>
             <button className="onb-btn-secondary" onClick={() => { setNotifStatus('skipped'); next() }}>
               Maybe later
@@ -194,7 +221,7 @@ export default function OnboardingWizard({ session, onComplete }) {
         {/* ── Step 5: Done ── */}
         {step === STEPS && (
           <div className="onb-step onb-done">
-            <div className="onb-done-icon">🎉</div>
+            <div className="onb-done-icon"><CheckCircle2 size={48} strokeWidth={1.5} /></div>
             <h2 className="onb-step-title">You're all set!</h2>
             <p className="onb-step-sub">Here's what we configured for you:</p>
             <div className="onb-summary">
@@ -218,9 +245,7 @@ export default function OnboardingWizard({ session, onComplete }) {
               </div>
               <div className="onb-summary-row">
                 <span className="onb-summary-label">Notifications</span>
-                <span className="onb-summary-value">
-                  {notifStatus === 'granted' ? '🔔 Enabled' : notifStatus === 'denied' ? '🔕 Blocked by browser' : '⏭ Skipped'}
-                </span>
+                <span className="onb-summary-value">{notifStatusDisplay()}</span>
               </div>
             </div>
             <button className="onb-btn-primary" onClick={handleFinish} disabled={saving}>
