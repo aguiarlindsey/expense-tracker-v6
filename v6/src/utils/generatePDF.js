@@ -134,36 +134,36 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
   doc.setFillColor(...PRIMARY)
   doc.rect(0, 55, W, 3, 'F')
 
-  // Left — app title · report type · generated date (tight stack)
+  // Left — app title · report type · generated date (compact stack)
   doc.setTextColor(255, 255, 255)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(22)
-  doc.text('Expense Tracker', M, 19)
+  doc.text('Expense Tracker', M, 17)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(11)
   doc.setTextColor(160, 160, 200)
-  doc.text('Monthly Report', M, 28)
+  doc.text('Monthly Report', M, 25)
   const now = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })
   doc.setFontSize(7.5)
   doc.setTextColor(120, 118, 160)
-  doc.text(`Generated: ${now}`, M, 37)
+  doc.text(`Generated: ${now}`, M, 32)
 
-  // Right — name · email · month pill (tight stack, right-aligned)
+  // Right — name · email · month pill (compact stack, right-aligned)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(10)
   doc.setTextColor(255, 255, 255)
-  if (userName) doc.text(userName, W - M, 15, { align: 'right' })
+  if (userName) doc.text(userName, W - M, 14, { align: 'right' })
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8)
   doc.setTextColor(180, 175, 210)
-  if (userEmail) doc.text(userEmail, W - M, 23, { align: 'right' })
+  if (userEmail) doc.text(userEmail, W - M, 21, { align: 'right' })
 
   // Month pill — text baseline = pillMidY + half cap-height (9pt Helvetica ≈ 1.15mm)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(9)
   const pillH = 10
-  const pillY = 30
+  const pillY = 27
   const pillW = doc.getTextWidth(monthLabel) + 20
   const pillX = W - M - pillW
   doc.setFillColor(...PRIMARY)
@@ -363,7 +363,7 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(7)
     doc.setTextColor(...MUTED_RGB)
-    doc.text(`Expense Tracker · ${monthLabel}`, M, H - 7)
+    doc.text(monthLabel, M, H - 7)
     doc.text(`Page ${p} of ${totalPages}`, W - M, H - 7, { align: 'right' })
   }
 
