@@ -134,44 +134,42 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
   doc.setFillColor(...PRIMARY)
   doc.rect(0, 55, W, 3, 'F')
 
-  // Left — app title + report type
+  // Left — app title · report type · generated date (tight stack)
   doc.setTextColor(255, 255, 255)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(22)
-  doc.text('Expense Tracker', M, 24)
+  doc.text('Expense Tracker', M, 19)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(11)
   doc.setTextColor(160, 160, 200)
-  doc.text('Monthly Report', M, 35)
+  doc.text('Monthly Report', M, 28)
+  const now = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })
+  doc.setFontSize(7.5)
+  doc.setTextColor(120, 118, 160)
+  doc.text(`Generated: ${now}`, M, 37)
 
-  // Right — user name (line 1), email (line 2), month label (line 3)
+  // Right — name · email · month pill (tight stack, right-aligned)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(10)
   doc.setTextColor(255, 255, 255)
-  if (userName) doc.text(userName, W - M, 17, { align: 'right' })
+  if (userName) doc.text(userName, W - M, 15, { align: 'right' })
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8)
   doc.setTextColor(180, 175, 210)
-  if (userEmail) doc.text(userEmail, W - M, 26, { align: 'right' })
+  if (userEmail) doc.text(userEmail, W - M, 23, { align: 'right' })
 
-  // Month pill — text baseline = pill_midY + half cap-height (9pt Helvetica ≈ 1.15mm)
+  // Month pill — text baseline = pillMidY + half cap-height (9pt Helvetica ≈ 1.15mm)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(9)
-  const pillH = 11
-  const pillY = 34
-  const pillW = doc.getTextWidth(monthLabel) + 20  // 10mm padding each side
+  const pillH = 10
+  const pillY = 30
+  const pillW = doc.getTextWidth(monthLabel) + 20
   const pillX = W - M - pillW
   doc.setFillColor(...PRIMARY)
   doc.roundedRect(pillX, pillY, pillW, pillH, 3, 3, 'F')
   doc.setTextColor(255, 255, 255)
   doc.text(monthLabel, pillX + pillW / 2, pillY + pillH / 2 + 1.15, { align: 'center' })
-
-  const now = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(7.5)
-  doc.setTextColor(140, 140, 170)
-  doc.text(`Generated: ${now}`, M, 49)
 
   // ── Summary metrics ──────────────────────────────────
   // Each metric in its own column, header = label, body = value
