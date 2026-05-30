@@ -129,55 +129,57 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
   // ══════════════════════════════════════════════════════
   // PAGE 1 — Cover + Summary + Category
   // ══════════════════════════════════════════════════════
-  doc.setFillColor(...DARK)
-  doc.rect(0, 0, W, 55, 'F')
-  doc.setFillColor(...PRIMARY)
-  doc.rect(0, 55, W, 3, 'F')
+  const BAND_H   = 42   // dark header band height (mm)
+  const BAND_ACC = 2    // accent stripe thickness
+  const BODY_Y   = BAND_H + BAND_ACC + 6  // first content below header
 
-  // Left — app title · report type · generated date (compact stack)
+  doc.setFillColor(...DARK)
+  doc.rect(0, 0, W, BAND_H, 'F')
+  doc.setFillColor(...PRIMARY)
+  doc.rect(0, BAND_H, W, BAND_ACC, 'F')
+
+  // Left — app title · report type · generated date
   doc.setTextColor(255, 255, 255)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(22)
-  doc.text('Expense Tracker', M, 17)
+  doc.setFontSize(20)
+  doc.text('Expense Tracker', M, 15)
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(11)
+  doc.setFontSize(10)
   doc.setTextColor(160, 160, 200)
-  doc.text('Monthly Report', M, 25)
+  doc.text('Monthly Report', M, 22)
   const now = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })
-  doc.setFontSize(7.5)
+  doc.setFontSize(7)
   doc.setTextColor(120, 118, 160)
-  doc.text(`Generated: ${now}`, M, 32)
+  doc.text(`Generated: ${now}`, M, 29)
 
-  // Right — name · email · month pill (compact stack, right-aligned)
+  // Right — name · email · month pill
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(10)
   doc.setTextColor(255, 255, 255)
-  if (userName) doc.text(userName, W - M, 14, { align: 'right' })
+  if (userName) doc.text(userName, W - M, 13, { align: 'right' })
 
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
+  doc.setFontSize(7.5)
   doc.setTextColor(180, 175, 210)
-  if (userEmail) doc.text(userEmail, W - M, 21, { align: 'right' })
+  if (userEmail) doc.text(userEmail, W - M, 20, { align: 'right' })
 
   // Month pill — text baseline = pillMidY + half cap-height (9pt Helvetica ≈ 1.15mm)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(9)
-  const pillH = 10
-  const pillY = 27
-  const pillW = doc.getTextWidth(monthLabel) + 20
+  const pillH = 9
+  const pillY = 26
+  const pillW = doc.getTextWidth(monthLabel) + 18
   const pillX = W - M - pillW
   doc.setFillColor(...PRIMARY)
-  doc.roundedRect(pillX, pillY, pillW, pillH, 3, 3, 'F')
+  doc.roundedRect(pillX, pillY, pillW, pillH, 2.5, 2.5, 'F')
   doc.setTextColor(255, 255, 255)
   doc.text(monthLabel, pillX + pillW / 2, pillY + pillH / 2 + 1.15, { align: 'center' })
 
   // ── Summary metrics ──────────────────────────────────
-  // Each metric in its own column, header = label, body = value
-  // TW/4 = 42.5mm per column — enough for formatted amounts
   const netStr = (net < 0 ? '-' : '+') + fmt(Math.abs(net))
 
   autoTable(doc, {
-    startY: 63,
+    startY: BODY_Y,
     tableWidth: TW,
     margin: { left: M, right: M },
     theme: 'plain',
@@ -221,7 +223,7 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
   })
 
   // ── Category breakdown ───────────────────────────────
-  const afterSummary = doc.lastAutoTable.finalY + 10
+  const afterSummary = doc.lastAutoTable.finalY + 7
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(11)
