@@ -106,7 +106,7 @@ function pageHeader(doc, W, title, subtitle, bandColor, accentColor) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, toBase, CATS, userEmail }) {
+export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, toBase, CATS, userName, userEmail }) {
   const fmt = makeFmt(baseCurrency)
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
@@ -134,6 +134,7 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
   doc.setFillColor(...PRIMARY)
   doc.rect(0, 55, W, 3, 'F')
 
+  // Left — app title + report type
   doc.setTextColor(255, 255, 255)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(22)
@@ -143,22 +144,32 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
   doc.setTextColor(160, 160, 200)
   doc.text('Monthly Report', M, 35)
 
+  // Right — user name (line 1), email (line 2), month label (line 3)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(10)
+  doc.setTextColor(255, 255, 255)
+  if (userName) doc.text(userName, W - M, 17, { align: 'right' })
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8)
+  doc.setTextColor(180, 175, 210)
+  if (userEmail) doc.text(userEmail, W - M, 26, { align: 'right' })
+
   // Month pill
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(9)
   const pillW = doc.getTextWidth(monthLabel) + 16
   const pillX = W - M - pillW
   doc.setFillColor(...PRIMARY)
-  doc.roundedRect(pillX, 18, pillW, 13, 3, 3, 'F')
+  doc.roundedRect(pillX, 33, pillW, 12, 3, 3, 'F')
   doc.setTextColor(255, 255, 255)
-  doc.text(monthLabel, pillX + pillW / 2, 27, { align: 'center' })
+  doc.text(monthLabel, pillX + pillW / 2, 41.5, { align: 'center' })
 
   const now = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(7.5)
   doc.setTextColor(140, 140, 170)
   doc.text(`Generated: ${now}`, M, 49)
-  if (userEmail) doc.text(userEmail, W - M, 49, { align: 'right' })
 
   // ── Summary metrics ──────────────────────────────────
   // Each metric in its own column, header = label, body = value

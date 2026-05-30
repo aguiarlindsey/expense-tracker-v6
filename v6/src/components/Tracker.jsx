@@ -1903,6 +1903,7 @@ export default function Tracker({ session }) {
       baseCurrency,
       toBase: toINR,
       CATS,
+      userName:  session.user.user_metadata?.display_name || '',
       userEmail: session.user.email,
     })
   }
