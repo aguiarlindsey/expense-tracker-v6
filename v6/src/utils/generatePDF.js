@@ -155,15 +155,17 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
   doc.setTextColor(180, 175, 210)
   if (userEmail) doc.text(userEmail, W - M, 26, { align: 'right' })
 
-  // Month pill
+  // Month pill — text baseline = pill_midY + half cap-height (9pt Helvetica ≈ 1.15mm)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(9)
-  const pillW = doc.getTextWidth(monthLabel) + 16
+  const pillH = 11
+  const pillY = 34
+  const pillW = doc.getTextWidth(monthLabel) + 20  // 10mm padding each side
   const pillX = W - M - pillW
   doc.setFillColor(...PRIMARY)
-  doc.roundedRect(pillX, 33, pillW, 12, 3, 3, 'F')
+  doc.roundedRect(pillX, pillY, pillW, pillH, 3, 3, 'F')
   doc.setTextColor(255, 255, 255)
-  doc.text(monthLabel, pillX + pillW / 2, 41.5, { align: 'center' })
+  doc.text(monthLabel, pillX + pillW / 2, pillY + pillH / 2 + 1.15, { align: 'center' })
 
   const now = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })
   doc.setFont('helvetica', 'normal')
