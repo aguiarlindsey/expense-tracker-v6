@@ -345,9 +345,9 @@ export default function ReceiptScanner({ onResult, onClose }) {
           nextServiceType: vehicleSvc.nextServiceType,
         }
       : parsed;
-    onResult(result);
+    onResult({ ...result, _receiptImageB64: processedSrc || null });
     onClose();
-  }, [parsed, vehicleSvc, onResult, onClose]);
+  }, [parsed, vehicleSvc, processedSrc, onResult, onClose]);
 
   const reset = () => {
     revokeAll();

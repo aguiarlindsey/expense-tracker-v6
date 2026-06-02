@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef, memo, Fragment } from 'react'
-import { Zap, LayoutDashboard, DollarSign, TrendingUp, ClipboardList, RefreshCw, Settings, Home, Menu, Plane, ArrowLeftRight, Euro, PoundSterling, JapaneseYen, IndianRupee, RussianRuble, SwissFranc, PhilippinePeso, Bitcoin, Lightbulb, Store, Calendar, Wallet, Target, PlusCircle, Sun, Moon, EyeOff, Eye, Command, Search, FileDown } from 'lucide-react'
+import { Zap, LayoutDashboard, DollarSign, TrendingUp, ClipboardList, RefreshCw, Settings, Home, Menu, Plane, ArrowLeftRight, Euro, PoundSterling, JapaneseYen, IndianRupee, RussianRuble, SwissFranc, PhilippinePeso, Bitcoin, Lightbulb, Store, Calendar, Wallet, Target, PlusCircle, Sun, Moon, EyeOff, Eye, Command, Search, FileDown, Mail } from 'lucide-react'
 import { useStorage } from '../hooks/useStorage'
 import { useDebounce } from '../hooks/useDebounce'
 import { CATS, CM, CG, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS, FALLBACK_RATES } from '../utils/constants'
@@ -692,8 +692,15 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
   const [templates, setTemplates] = useState(() => { try { return JSON.parse(localStorage.getItem('et_v6_templates')) || [] } catch { return [] } })
   const [savingTpl, setSavingTpl] = useState(false)
   const [tplName, setTplName] = useState('')
+  const [receiptImageB64, setReceiptImageB64] = useState(null)
+  const [emailReceipt, setEmailReceipt] = useState(
+    () => localStorage.getItem('et_v6_email_receipt_pref') === '1'
+  )
   const { sheetStyle, onTouchStart, onTouchMove, onTouchEnd } = useBottomSheet(onClose)
   const s = (k, v) => setForm(p => ({ ...p, [k]: v }))
+  useEffect(() => {
+    localStorage.setItem('et_v6_email_receipt_pref', emailReceipt ? '1' : '0')
+  }, [emailReceipt])
 
   function applyTemplate(t) {
     setForm(p => ({ ...p,
@@ -728,6 +735,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
   }
 
   const applyOcr = (parsed) => {
+    if (parsed._receiptImageB64) setReceiptImageB64(parsed._receiptImageB64)
     if (parsed.amount)      s('amount', parsed.amount)
     if (parsed.date)        s('date', parsed.date)
     // Use merchant name, or fall back to subcategory/category so description is never blank
@@ -819,7 +827,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
     if (rate) s('conversionRate', parseFloat(rate.toFixed(6)))
   }
 
-  const sub = e => {
+  const sub = async e => {
     e.preventDefault()
     if (!form.description.trim()) { setFormError('Description is required — type the merchant name'); return }
     if (!form.amount || parseFloat(form.amount) <= 0) { setFormError('Enter a valid amount greater than 0'); return }
@@ -847,6 +855,25 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
       tripB:        form.tripB    ? parseFloat(form.tripB)    || null : null,
       tripSelected: form.tripSelected || null,
     })
+    if (!initialData && emailReceipt && receiptImageB64) {
+      try {
+        const { data: { session: sess } } = await supabase.auth.getSession()
+        if (sess?.access_token) {
+          const desc = form.description.trim() || 'Expense'
+          fetch('/api/email-share', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sess.access_token}` },
+            body: JSON.stringify({
+              type: 'receipt',
+              subject: `Receipt — ${desc}${form.date ? ' · ' + form.date : ''}`,
+              attachment: receiptImageB64,
+              filename: `receipt-${form.date || 'unknown'}.png`,
+              mimeType: 'image/png',
+            }),
+          }).catch(() => {})
+        }
+      } catch (_) {}
+    }
     onClose()
   }
 
@@ -1269,6 +1296,15 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
                   ☆ Save as template{templates.length >= 10 ? ' (max 10)' : ''}
                 </button>
               )}
+            </div>
+          )}
+          {receiptImageB64 && !initialData && (
+            <div className="form-check" style={{ marginTop: 8, marginBottom: 4 }}>
+              <input type="checkbox" id="email-receipt" checked={emailReceipt}
+                onChange={e => setEmailReceipt(e.target.checked)} />
+              <label htmlFor="email-receipt" style={{ fontSize: '0.85rem' }}>
+                📧 Email a digital copy of this receipt to me
+              </label>
             </div>
           )}
           <div className="modal-footer">
@@ -1897,7 +1933,7 @@ export default function Tracker({ session }) {
 
   const handleExportPDF = (ms = monthStr) => {
     generateMonthlyPDF({
-      monthStr,
+      monthStr: ms,
       expenses,
       income,
       baseCurrency,
@@ -1906,6 +1942,36 @@ export default function Tracker({ session }) {
       userName:  session.user.user_metadata?.display_name || '',
       userEmail: session.user.email,
     })
+  }
+
+  const handleEmailPDF = async (ms = monthStr) => {
+    const b64 = generateMonthlyPDF({
+      monthStr: ms, expenses, income, baseCurrency,
+      toBase: toINR, CATS,
+      userName:  session.user.user_metadata?.display_name || '',
+      userEmail: session.user.email,
+      returnBase64: true,
+    })
+    const [y, m] = ms.split('-')
+    const monthLabel = new Date(+y, +m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    try {
+      const { data: { session: sess } } = await supabase.auth.getSession()
+      if (!sess?.access_token) { addToast({ title: 'Not signed in', type: 'danger' }); return }
+      await fetch('/api/email-share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sess.access_token}` },
+        body: JSON.stringify({
+          type: 'pdf',
+          subject: `Expense Report — ${monthLabel}`,
+          attachment: b64,
+          filename: `expense-report-${ms}.pdf`,
+          mimeType: 'application/pdf',
+        }),
+      })
+      addToast({ title: 'Report sent!', message: `Delivered to ${session.user.email}`, type: 'success' })
+    } catch (_) {
+      addToast({ title: 'Email failed', message: 'Could not send the report. Try again.', type: 'danger' })
+    }
   }
 
   const handleExportJSON = () => {
@@ -3440,6 +3506,9 @@ export default function Tracker({ session }) {
                   )}
                   <button className="strip-pdf-btn" onClick={() => handleExportPDF(monthStr)} title={`Download PDF report for ${monthLabel}`}>
                     <FileDown size={14} />
+                  </button>
+                  <button className="strip-pdf-btn" onClick={() => handleEmailPDF(monthStr)} title={`Email PDF report for ${monthLabel} to ${session.user.email}`}>
+                    <Mail size={14} />
                   </button>
                 </div>
                 {showMonthPicker && (
@@ -5316,9 +5385,14 @@ export default function Tracker({ session }) {
                 <strong>Monthly PDF Report</strong>
                 <span>Formatted report for {(() => { const [y,m] = monthStr.split('-'); return new Date(+y,+m-1,1).toLocaleDateString('en-US',{month:'long',year:'numeric'}) })()} — cover, category breakdown, all transactions.</span>
               </div>
-              <button className="btn-primary btn-sm" onClick={() => handleExportPDF(monthStr)} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <FileDown size={14} />PDF Report
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button className="btn-primary btn-sm" onClick={() => handleExportPDF(monthStr)} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <FileDown size={14} />Download
+                </button>
+                <button className="btn-secondary btn-sm" onClick={() => handleEmailPDF(monthStr)} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Mail size={14} />Email to me
+                </button>
+              </div>
             </div>
             <div className="settings-row">
               <div className="settings-row-label">

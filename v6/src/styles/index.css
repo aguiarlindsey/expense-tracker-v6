@@ -383,7 +383,7 @@ body {
 }
 
 /* Tabs */
-.tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
 .tabs::-webkit-scrollbar { display: none; }
 .tab { background: none; border: none; padding: 0.5rem 0.75rem; cursor: pointer; font-size: 0.82rem; color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; border-radius: 6px 6px 0 0; transition: color 0.15s, background 0.15s; white-space: nowrap; flex-shrink: 0; }
 .tab:hover { color: var(--text); background: rgba(0,0,0,0.04); }
@@ -1765,7 +1765,6 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 .fx-tbl-scroll {
   overflow-x: auto; overflow-y: auto;
   max-height: 560px;
-  -webkit-overflow-scrolling: touch;
 }
 .fx-tbl-hdr {
   display: grid; grid-template-columns: 64px 1fr 150px 150px;
@@ -2079,7 +2078,7 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 /* ─── Responsive: tablet (≤768px) ─────────────────────── */
 @media (max-width: 768px) {
   /* Tabs: scroll horizontally, never wrap */
-  .tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .tabs { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
   .tabs::-webkit-scrollbar { display: none; }
   .tab { white-space: nowrap; flex-shrink: 0; font-size: 0.82rem; padding: 0.5rem 0.75rem; }
 
@@ -2369,5 +2368,108 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
   .fcst-rate-bar-track { width: 50px; }
   .fcst-upcoming-row { grid-template-columns: 24px 1fr auto auto; }
   .fcst-upcoming-date { display: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Phase 8.1 — Mobile Layout Audit
+   iOS Safari (Chrome/Firefox/Safari) · Android (all browsers)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 1. Suppress tap-highlight flash on all interactive elements
+      (iOS shows a blue rectangle; Android shows a grey ripple) */
+button, a, input, select, textarea, label,
+[tabindex], [role="button"], [role="tab"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 2. Overscroll containment */
+.app-shell           { overscroll-behavior-y: none; }    /* no accidental pull-to-refresh */
+.tabs                { overscroll-behavior-x: contain; } /* tab strip stays put */
+.cmd-list,
+.fx-tbl-scroll,
+.strip-month-dropdown,
+.color-palette,
+.emoji-grid          { overscroll-behavior: contain; }
+
+/* 3. Fix 100vh on iOS Safari — the collapsing address bar makes 100vh
+      larger than the visible area, cutting off bottom content.
+      100dvh uses the dynamic viewport (shrinks when bar is visible). */
+.auth-container,
+.onb-shell,
+.app-loading,
+.lock-screen         { min-height: 100dvh; }
+body                 { min-height: 100dvh; }
+
+/* 4. iOS input zoom — Safari auto-zooms when an input/select has
+      font-size < 16px on focus. Fix: enforce 16px (1rem) on mobile. */
+@media (max-width: 768px) {
+  .search-input,
+  .month-picker,
+  .filter-bar select,
+  .adv-row input,
+  .bulk-edit-select,
+  .bulk-edit-date,
+  .input-sm,
+  .pct-input,
+  .template-save-input input,
+  .fx-conv-select,
+  .onb-select,
+  .onb-input { font-size: 1rem; } /* 16px — iOS will not zoom at or above this */
+}
+
+/* 5. Touch targets — Apple HIG: ≥ 44pt. Material: ≥ 48dp.
+      We use 36–44px for density-constrained inline controls. */
+@media (max-width: 768px) {
+  .item-btn {
+    padding: 6px 8px;
+    min-width: 36px; min-height: 36px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .modal-close {
+    min-width: 40px; min-height: 40px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .bnav-btn { min-height: 44px; }
+  .goal-btn {
+    min-height: 36px; min-width: 36px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .contrib-del {
+    min-width: 32px; min-height: 32px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .color-dot   { width: 28px; height: 28px; } /* was 20px */
+  .tag-btn,
+  .cat-chip,
+  .nl-chip     { min-height: 32px; display: inline-flex; align-items: center; }
+  .strip-month-btn { min-height: 36px; padding-top: 4px; padding-bottom: 4px; }
+}
+
+/* 6. Toast stack — lift above the 68px bottom nav + safe-area inset.
+      Previously sat at bottom: 1.25rem, physically behind the nav bar. */
+@media (max-width: 768px) {
+  .toast-stack {
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px) + 0.75rem);
+    right: 0.75rem; left: 0.75rem;
+  }
+  .toast { min-width: unset; max-width: 100%; width: 100%; }
+}
+
+/* 7. Tracker bottom padding — extend safe-area env() to the 601–768px range.
+      At ≤600px this is already set correctly; this closes the gap. */
+@media (max-width: 768px) {
+  .tracker { padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* 8. Hover → :active on touch-only devices.
+      Hover states get "stuck" on Android after a tap (no pointer to clear them).
+      @media (hover: none) matches touch screens; pointer devices are unaffected. */
+@media (hover: none) {
+  .bento-tile:hover   { box-shadow: var(--shadow-sm); transform: none; }
+  .heatmap-cell:hover { transform: none; z-index: auto; }
+  .mch-card:hover     { background: var(--surface); border-color: var(--border); }
+  .trip-card:hover    { box-shadow: none; border-color: var(--border); }
+  .bento-tile:active  { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  .heatmap-cell:active { transform: scale(1.3); z-index: 1; }
 }
 

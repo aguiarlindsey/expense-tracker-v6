@@ -106,7 +106,7 @@ function pageHeader(doc, W, title, subtitle, bandColor, accentColor) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, toBase, CATS, userName, userEmail }) {
+export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, toBase, CATS, userName, userEmail, returnBase64 = false }) {
   const fmt = makeFmt(baseCurrency)
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
@@ -369,5 +369,6 @@ export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, t
     doc.text(`Page ${p} of ${totalPages}`, W - M, H - 7, { align: 'right' })
   }
 
+  if (returnBase64) return doc.output('datauristring')
   doc.save(`expense-report-${monthStr || 'all-time'}.pdf`)
 }
