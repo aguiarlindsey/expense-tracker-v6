@@ -8,15 +8,15 @@
 ## Overall Progress
 
 ```
-███████████████████████████████░  84%   27 / 32 phases complete
+████████████████████████████████  100%   32 / 32 phases complete
 ```
 
 | | Count | Hours |
 |---|---|---|
-| ✅ Complete | 27 phases | ~99h |
+| ✅ Complete | 32 phases | ~200h |
 | 🔨 In Progress | 0 phases | — |
-| 📋 Planned | 5 phases | ~18h est. |
-| **Total** | **32 phases** | **~193h · ~49 days** |
+| 📋 Planned | 0 phases | — |
+| **Total** | **32 phases** | **~200h · ~52 days** |
 
 ---
 
@@ -31,7 +31,7 @@
 | [5 — Analytics Tab](#epic-5--analytics-tab) | Insights + Trends merged | `██████████` 100% | 3/3 | ~18h |
 | [6 — Planning Tab](#epic-6--planning-tab) | Budgets + Goals merged | `██████████` 100% | 3/3 | ~18h |
 | [7 — New Features](#epic-7--new-features) | Templates, forecast, PDF | `██████████` 100% | 8/8 | ~40h |
-| [8 — Launch](#epic-8--launch--polish) | Mobile polish, docs | `░░░░░░░░░░` 0% | 0/4 | ~9h |
+| [8 — Launch](#epic-8--launch--polish) | Mobile polish, docs | `██████████` 100% | 4/4 | ~9h |
 
 ---
 
@@ -160,15 +160,15 @@
 > Cross-device testing, performance, and documentation.
 
 ```
-░░░░░░░░░░  0%   0 / 4 phases
+██████████  100%   4 / 4 phases
 ```
 
 | Status | Phase | Description | Complexity | Est. |
 |--------|-------|-------------|-----------|------|
-| 📋 | **8.1 — Mobile Layout Audit** | Full review on iPhone, Android · touch targets · scroll behaviour · iOS Safari edge cases | Low | 2–3h |
-| 📋 | **8.2 — Share Sheet** | Share receipt image from camera roll directly into OCR scanner · Web Share API (browser native) | Medium | 3–4h |
-| 📋 | **8.3 — Performance Audit** | Bundle size check · render count review · memo/useMemo audit · Lighthouse score | Low | 2h |
-| 📋 | **8.4 — V7 Overhaul Docs** | CHANGELOG sessions 37–50+ logged · EXPTRAV7 updated for all new features · version bumped to final · ROADMAP marked complete | Low | 2h |
+| ✅ | **8.1 — Mobile Layout Audit** | viewport-fit=cover; iOS input zoom fix (16px min); touch targets; toast above bnav; 100dvh; -webkit-tap-highlight-color; overscroll-behavior; @media(hover:none) active states | Low | 2–3h |
+| ✅ | **8.2 — Email Share** | Monthly PDF + receipt image emailed to logged-in user; api/email-share.js (Supabase JWT, Gmail SMTP); receipt checkbox in expense form with persisted preference | Medium | 3–4h |
+| ✅ | **8.3 — Performance Audit** | motion removed (-160 kB); jsPDF dynamic import (defers 421 kB); manualChunks vendor split; initial JS 53% smaller (1600→747 kB) | Low | 2h |
+| ✅ | **8.4 — V7 Overhaul Docs** | CHANGELOG session 48 · ROADMAP 100% · v7.33.0 final | Low | 2h |
 
 ---
 
@@ -211,8 +211,8 @@
 | v7.29.0 | Phase 7.4 — Spend Streak + Gamification | ✅ |
 | v7.30.0 | Phase 7.5 — Merchant Analytics | ✅ |
 | v7.31.0 | Phase 7.6 — Cash Flow Forecast | ✅ |
-| v7.32.0 | Phase 7.7 — PDF Monthly Report + Phase 7.8 — Natural Language Search | ✅ Current |
-| v7.33.0 | Epic 8 — Launch & Polish | 📋 |
+| v7.32.0 | Phase 7.7 — PDF Monthly Report + Phase 7.8 — Natural Language Search | ✅ |
+| v7.33.0 | Epic 8 — Mobile Audit · Email Share · Performance · Docs — ALL 32 phases complete | ✅ Current |
 
 ---
 
@@ -228,4 +228,4 @@
 
 ---
 
-*Last updated: 31-05-2026 · Session 47 · v7.32.0 shipped · Epic 7 complete (8/8)*
+*Last updated: 03-06-2026 · Session 48 · v7.33.0 shipped · ALL 32 phases complete 🎉*
