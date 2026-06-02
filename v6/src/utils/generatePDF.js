@@ -1,7 +1,6 @@
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
-
 // A4: 210 × 297mm — 20mm margins → 170mm usable
+// jsPDF + jspdf-autotable are dynamically imported inside generateMonthlyPDF
+// so they don't add to the initial bundle (saves ~660 kB on first load)
 const M  = 20
 const TW = 170
 
@@ -106,7 +105,11 @@ function pageHeader(doc, W, title, subtitle, bandColor, accentColor) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, toBase, CATS, userName, userEmail, returnBase64 = false }) {
+export async function generateMonthlyPDF({ monthStr, expenses, income, baseCurrency, toBase, CATS, userName, userEmail, returnBase64 = false }) {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ])
   const fmt = makeFmt(baseCurrency)
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })

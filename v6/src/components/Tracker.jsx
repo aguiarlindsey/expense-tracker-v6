@@ -1931,8 +1931,8 @@ export default function Tracker({ session }) {
   const [savingsGoal, setSavingsGoal] = useState(() => parseFloat(localStorage.getItem('et_v6_sts_goal') || '0') || 0)
   useEffect(() => { try { localStorage.setItem('et_v6_sts_goal', String(savingsGoal)) } catch {} }, [savingsGoal])
 
-  const handleExportPDF = (ms = monthStr) => {
-    generateMonthlyPDF({
+  const handleExportPDF = async (ms = monthStr) => {
+    await generateMonthlyPDF({
       monthStr: ms,
       expenses,
       income,
@@ -1945,7 +1945,7 @@ export default function Tracker({ session }) {
   }
 
   const handleEmailPDF = async (ms = monthStr) => {
-    const b64 = generateMonthlyPDF({
+    const b64 = await generateMonthlyPDF({
       monthStr: ms, expenses, income, baseCurrency,
       toBase: toINR, CATS,
       userName:  session.user.user_metadata?.display_name || '',

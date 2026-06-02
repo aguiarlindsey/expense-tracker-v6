@@ -6,6 +6,17 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['tesseract.js'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react':    ['react', 'react-dom'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-lucide':   ['lucide-react'],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({
