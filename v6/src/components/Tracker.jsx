@@ -3504,12 +3504,14 @@ export default function Tracker({ session }) {
                       {pct.toFixed(0)}%
                     </span>
                   )}
-                  <button className="strip-pdf-btn" onClick={() => handleExportPDF(monthStr)} title={`Download PDF report for ${monthLabel}`}>
-                    <FileDown size={14} />
-                  </button>
-                  <button className="strip-pdf-btn" onClick={() => handleEmailPDF(monthStr)} title={`Email PDF report for ${monthLabel} to ${session.user.email}`}>
-                    <Mail size={14} />
-                  </button>
+                  <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto' }}>
+                    <button className="strip-pdf-btn" style={{ marginLeft: 0 }} onClick={() => handleExportPDF(monthStr)} title={`Download PDF report for ${monthLabel}`}>
+                      <FileDown size={14} />
+                    </button>
+                    <button className="strip-pdf-btn" style={{ marginLeft: 0 }} onClick={() => handleEmailPDF(monthStr)} title={`Email PDF report for ${monthLabel} to ${session.user.email}`}>
+                      <Mail size={14} />
+                    </button>
+                  </div>
                 </div>
                 {showMonthPicker && (
                   <div className="strip-month-dropdown" role="listbox">
