@@ -2383,7 +2383,6 @@ button, a, input, select, textarea, label,
 }
 
 /* 2. Overscroll containment */
-.app-shell           { overscroll-behavior-y: none; }    /* no accidental pull-to-refresh */
 .tabs                { overscroll-behavior-x: contain; } /* tab strip stays put */
 .cmd-list,
 .fx-tbl-scroll,
