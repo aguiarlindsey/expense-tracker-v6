@@ -11,6 +11,7 @@ const admin = createClient(
 
 export default async function handler(req, res) {
   try {
+    if (req.method === 'GET') return res.status(200).json({ ok: 'warm' })
     if (req.method !== 'POST') return res.status(405).end()
 
     const { userId, credentialId } = req.body

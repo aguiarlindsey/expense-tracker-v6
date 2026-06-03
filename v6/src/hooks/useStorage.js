@@ -208,7 +208,7 @@ export function useStorage(userId) {
     })
   }
 
-  // ── Initial load ──────────────────────────────────────
+  // ── Initial load — all 6 tables in one round-trip ────
   useEffect(() => {
     if (!userId) return
     let mounted = true
@@ -218,7 +218,10 @@ export function useStorage(userId) {
       supabase.from('expenses').select('*').eq('user_id', userId).order('date', { ascending: false }),
       supabase.from('income').select('*').eq('user_id', userId).order('date', { ascending: false }),
       supabase.from('budgets').select('*').eq('user_id', userId).maybeSingle(),
-    ]).then(([expRes, incRes, budRes]) => {
+      supabase.from('goals').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+      supabase.from('goal_contributions').select('*').eq('user_id', userId).order('date', { ascending: false }),
+      supabase.from('trips').select('*').eq('user_id', userId).order('start_date', { ascending: false }),
+    ]).then(([expRes, incRes, budRes, gRes, cRes, tRes]) => {
       if (!mounted) return
       if (expRes.error) setError(expRes.error.message)
       if (incRes.error) setError(incRes.error.message)
@@ -226,25 +229,13 @@ export function useStorage(userId) {
       setIncome((incRes.data || []).map(incomeFromDb))
       if (budRes.data) {
         setBudgets({
-          daily:          parseFloat(budRes.data.daily)   || 0,
-          weekly:         parseFloat(budRes.data.weekly)  || 0,
-          monthly:        parseFloat(budRes.data.monthly) || 0,
-          categories:     budRes.data.categories     || {},
+          daily:           parseFloat(budRes.data.daily)   || 0,
+          weekly:          parseFloat(budRes.data.weekly)  || 0,
+          monthly:         parseFloat(budRes.data.monthly) || 0,
+          categories:      budRes.data.categories      || {},
           rolloverEnabled: budRes.data.rollover_enabled || {},
         })
       }
-      setLoading(false)
-    })
-    return () => { mounted = false }
-  }, [userId])
-
-  useEffect(() => {
-    if (!userId) return
-    Promise.all([
-      supabase.from('goals').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-      supabase.from('goal_contributions').select('*').eq('user_id', userId).order('date', { ascending: false }),
-      supabase.from('trips').select('*').eq('user_id', userId).order('start_date', { ascending: false }),
-    ]).then(([gRes, cRes, tRes]) => {
       if (gRes.error) setError(gRes.error.message)
       if (cRes.error) setError(cRes.error.message)
       setGoals((gRes.data || []).map(g => ({
@@ -257,7 +248,9 @@ export function useStorage(userId) {
         amount: parseFloat(c.amount), note: c.note || '',
       })))
       setTrips((tRes.data || []).map(tripFromDb))
+      setLoading(false)
     })
+    return () => { mounted = false }
   }, [userId])
 
   // ── Realtime event handlers ───────────────────────────────

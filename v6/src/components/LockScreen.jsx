@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Zap, Fingerprint, Mail } from 'lucide-react'
 import { useBiometric } from '../hooks/useBiometric'
 import { supabase } from '../utils/supabase'
@@ -18,6 +18,13 @@ function maskEmail(email) {
 
 export default function LockScreen({ onUnlocked }) {
   const { authenticate, authenticating, error, setError } = useBiometric()
+
+  useEffect(() => {
+    // Ping both Lambda functions immediately on mount so they're warm
+    // by the time the user taps unlock — eliminates cold-start delay
+    fetch('/api/biometric-auth-options').catch(() => {})
+    fetch('/api/biometric-verify').catch(() => {})
+  }, [])
 
   const [backupEmail] = useState(() => localStorage.getItem(BACKUP_EMAIL_KEY) || localStorage.getItem(EMAIL_KEY) || '')
   const [userId]      = useState(() => localStorage.getItem(USER_ID_KEY) || '')
