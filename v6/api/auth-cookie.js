@@ -32,7 +32,7 @@ function setCookieHeader(map, maxAge) {
     'Path=/',
     'HttpOnly',
     'Secure',
-    'SameSite=Lax',
+    'SameSite=Strict',
   ].join('; ')
 }
 
