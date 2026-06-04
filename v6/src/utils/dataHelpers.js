@@ -1,4 +1,4 @@
-import { VALID_CATS, PAY_METHODS, INC_SOURCES } from './constants'
+import { VALID_CATS, PAY_METHODS, INC_SOURCES, CM } from './constants'
 
 // ── Date utilities ────────────────────────────────────────
 // All dates stored as YYYY-MM-DD; always append T12:00:00 to avoid timezone day shifts
@@ -202,10 +202,19 @@ export function matchesSearch(item, q) {
     return (item.tags || []).some(t => t.toLowerCase().includes(tagMatch[1]))
   }
 
-  // free-text fallback
+  // free-text fallback — search all meaningful fields
   const fields = [
-    item.description, item.category, item.subcategory,
-    item.paymentMethod, item.notes, item.source,
+    item.description,
+    item.category,
+    item.subcategory,
+    item.paymentMethod,
+    item.paymentDescription,
+    item.diningApp,
+    item.notes,
+    item.source,
+    item.currency,
+    CM[item.currency]?.name, // e.g. "Bahraini Dinar" for BHD
+    item.splitWith,
     ...(item.tags || []),
   ].filter(Boolean).map(f => f.toLowerCase())
   return fields.some(f => f.includes(query))
