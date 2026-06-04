@@ -1198,6 +1198,21 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 .cat-chip:hover { border-color: var(--primary); color: var(--primary); }
 .cat-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
+.date-preset-chip {
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  transition: all 0.1s;
+  white-space: nowrap;
+}
+.date-preset-chip:hover { border-color: var(--primary); color: var(--primary); }
+.date-preset-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
 /* ─── Budget bars ─────────────────────────────────────── */
 .bbar-wrap { margin-bottom: 0.75rem; }
 .bbar-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; font-size: 0.85rem; }

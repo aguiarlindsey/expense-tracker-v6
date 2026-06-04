@@ -2394,6 +2394,7 @@ export default function Tracker({ session }) {
   const [expAmtMin,    setExpAmtMin]    = useState('')
   const [expAmtMax,    setExpAmtMax]    = useState('')
   const [showAdvExp,   setShowAdvExp]   = useState(false)
+  const [activePreset, setActivePreset] = useState('')
   const dExpSearch = useDebounce(expSearch)
   const nlQuery    = useMemo(
     () => parseNLQuery(dExpSearch, { catNames: Object.keys(CATS), payMethods: PAY_METHODS }),
@@ -3186,7 +3187,7 @@ export default function Tracker({ session }) {
 
   // ── Filter helpers ────────────────────────────────────
   const hasExpFilters = expSearch || expMonth || expPayment !== 'All' || expCurrency !== 'All' || expCategories.length || expDateFrom || expDateTo || expAmtMin !== '' || expAmtMax !== ''
-  const clearExpFilters = () => { setExpSearch(''); setExpMonth(''); setExpPayment('All'); setExpCurrency('All'); setExpCategories([]); setExpDateFrom(''); setExpDateTo(''); setExpAmtMin(''); setExpAmtMax('') }
+  const clearExpFilters = () => { setExpSearch(''); setExpMonth(''); setExpPayment('All'); setExpCurrency('All'); setExpCategories([]); setExpDateFrom(''); setExpDateTo(''); setExpAmtMin(''); setExpAmtMax(''); setActivePreset('') }
   const hasIncFilters = incSearch || incMonth || incSource !== 'All' || incDateFrom || incDateTo || incAmtMin !== '' || incAmtMax !== ''
   const clearIncFilters = () => { setIncSearch(''); setIncMonth(''); setIncSource('All'); setIncDateFrom(''); setIncDateTo(''); setIncAmtMin(''); setIncAmtMax('') }
   const usedExpCurrs   = useMemo(() => [...new Set(expenses.map(e => e.currency || 'INR'))], [expenses])
@@ -3860,7 +3861,7 @@ export default function Tracker({ session }) {
           <div className="filter-bar">
             <input className="search-input" placeholder="🔍 Search or try: food last week, over 500, credit card…"
               value={expSearch} onChange={e => setExpSearch(e.target.value)} />
-            <input type="month" className="month-picker" value={expMonth} onChange={e => setExpMonth(e.target.value)} />
+            <input type="month" className="month-picker" value={expMonth} onChange={e => { setExpMonth(e.target.value); setExpDateFrom(''); setExpDateTo(''); setActivePreset('') }} />
             <select value={expPayment} onChange={e => setExpPayment(e.target.value)}>
               <option value="All">All payments</option>{PAY_METHODS.map(p => <option key={p}>{p}</option>)}
             </select>
@@ -3885,9 +3886,40 @@ export default function Tracker({ session }) {
 
           {showAdvExp && (
             <div className="adv-filters">
+              {/* Date presets */}
+              <div className="adv-row" style={{ flexWrap: 'wrap', gap: '0.35rem' }}>
+                {(() => {
+                  const now = new Date()
+                  const pad = n => String(n).padStart(2, '0')
+                  const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
+                  const presets = [
+                    { label: 'This month', from: fmt(new Date(now.getFullYear(), now.getMonth(), 1)),     to: today },
+                    { label: 'Last month', from: fmt(new Date(now.getFullYear(), now.getMonth()-1, 1)),   to: fmt(new Date(now.getFullYear(), now.getMonth(), 0)) },
+                    { label: 'Last 3m',    from: fmt(new Date(now.getFullYear(), now.getMonth()-2, 1)),   to: today },
+                    { label: 'Last 6m',    from: fmt(new Date(now.getFullYear(), now.getMonth()-5, 1)),   to: today },
+                    { label: 'This year',  from: `${now.getFullYear()}-01-01`,                            to: today },
+                    { label: 'Last year',  from: `${now.getFullYear()-1}-01-01`,                          to: `${now.getFullYear()-1}-12-31` },
+                  ]
+                  return presets.map(p => (
+                    <button key={p.label}
+                      className={`date-preset-chip${activePreset === p.label ? ' active' : ''}`}
+                      onClick={() => {
+                        if (activePreset === p.label) {
+                          setExpDateFrom(''); setExpDateTo(''); setActivePreset('')
+                        } else {
+                          setExpDateFrom(p.from); setExpDateTo(p.to)
+                          setExpMonth(''); setActivePreset(p.label)
+                        }
+                      }}>
+                      {p.label}
+                    </button>
+                  ))
+                })()}
+              </div>
+              {/* Custom date range */}
               <div className="adv-row">
-                <label>Date from</label><input type="date" value={expDateFrom} onChange={e => setExpDateFrom(e.target.value)} />
-                <label>to</label><input type="date" value={expDateTo} onChange={e => setExpDateTo(e.target.value)} />
+                <label>Date from</label><input type="date" value={expDateFrom} onChange={e => { setExpDateFrom(e.target.value); setExpMonth(''); setActivePreset('') }} />
+                <label>to</label><input type="date" value={expDateTo} onChange={e => { setExpDateTo(e.target.value); setExpMonth(''); setActivePreset('') }} />
                 <label>Amount ≥</label><input type="number" placeholder="Min" value={expAmtMin} onChange={e => setExpAmtMin(e.target.value)} style={{ width: 80 }} />
                 <label>≤</label><input type="number" placeholder="Max" value={expAmtMax} onChange={e => setExpAmtMax(e.target.value)} style={{ width: 80 }} />
               </div>
