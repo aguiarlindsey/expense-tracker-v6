@@ -1033,9 +1033,10 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 }
 
 /* ─── Analytics / Planning sub-nav pill ──────────────── */
-.sub-nav-wrap { margin-bottom: 0; }
+.sub-nav-wrap { margin-bottom: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.sub-nav-wrap::-webkit-scrollbar { display: none; }
 .sub-nav { display: inline-flex; gap: 2px; background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius-full); padding: 3px; margin-bottom: 1.25rem; }
-.sub-nav-btn { background: none; border: none; padding: 0.3rem 1.1rem; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: var(--fw-medium); color: var(--text-muted); cursor: pointer; transition: background 0.15s, color 0.15s; white-space: nowrap; font-family: var(--font-sans); }
+.sub-nav-btn { background: none; border: none; padding: 0.3rem 0.85rem; border-radius: var(--radius-full); font-size: var(--text-sm); font-weight: var(--fw-medium); color: var(--text-muted); cursor: pointer; transition: background 0.15s, color 0.15s; white-space: nowrap; font-family: var(--font-sans); }
 .sub-nav-btn:hover { color: var(--text); }
 .sub-nav-btn.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); font-weight: var(--fw-semibold); }
 .dark .sub-nav-btn.active { background: rgba(255,255,255,0.08); box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
