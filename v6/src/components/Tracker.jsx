@@ -263,23 +263,37 @@ function PieChart({ data, size = 190, incognito = false }) {
     const r = d => (d * Math.PI) / 180
     const x1 = 50 + 40 * Math.cos(r(start)), y1 = 50 + 40 * Math.sin(r(start))
     const x2 = 50 + 40 * Math.cos(r(start + deg)), y2 = 50 + 40 * Math.sin(r(start + deg))
-    return { ...it, x1, y1, x2, y2, deg, pct, color: CATS[it.label]?.color || `hsl(${i * 37},65%,55%)` }
+    const midRad = r(start + deg / 2)
+    const tx = (4.5 * Math.cos(midRad)).toFixed(2)
+    const ty = (4.5 * Math.sin(midRad)).toFixed(2)
+    return { ...it, x1, y1, x2, y2, deg, pct, tx, ty, color: CATS[it.label]?.color || `hsl(${i * 37},65%,55%)` }
   })
   return (
     <div className="pie-wrap">
-      <svg viewBox="0 0 100 100" width={size} height={size}>
+      <svg viewBox="0 0 100 100" width={size} height={size} style={{ overflow: 'visible' }}>
         {slices.map((sl, i) => sl.deg < 360 ? (
           <path key={i}
             d={`M50,50 L${sl.x1},${sl.y1} A40,40 0 ${sl.deg > 180 ? 1 : 0},1 ${sl.x2},${sl.y2} Z`}
-            fill={sl.color} opacity={hovered === null || hovered === i ? 1 : 0.4}
-            onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)} />
+            fill={sl.color}
+            opacity={hovered === null || hovered === i ? 1 : 0.45}
+            style={{
+              transform: hovered === i ? `translate(${sl.tx}px, ${sl.ty}px)` : 'translate(0,0)',
+              transition: 'transform 0.22s cubic-bezier(0.16,1,0.3,1), opacity 0.15s',
+              cursor: 'pointer',
+              filter: hovered === i ? 'drop-shadow(0 2px 6px rgba(0,0,0,0.25))' : 'none',
+            }}
+            onMouseEnter={() => setHovered(i)}
+            onMouseLeave={() => setHovered(null)}
+            onTouchStart={() => setHovered(i)}
+            onTouchEnd={() => setTimeout(() => setHovered(null), 600)}
+          />
         ) : (
           <circle key={i} cx="50" cy="50" r="40" fill={sl.color} />
         ))}
       </svg>
       <div className="pie-legend">
         {slices.map((sl, i) => (
-          <div key={i} className="pie-legend-row"
+          <div key={i} className={'pie-legend-row' + (hovered === i ? ' pie-legend-row-active' : '')}
             onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}>
             <span className="pie-dot" style={{ background: sl.color }} />
             <span>{sl.label}</span>
@@ -331,7 +345,7 @@ function BarChart({ data, incognito = false }) {
           <div key={i} className="bar-row">
             <div className="bar-label">{CATS[d.label]?.icon || ''} {d.label}</div>
             <div className="bar-track">
-              <div className="bar-fill" style={{ '--fill': pct / 100, background: color }} />
+              <div className="bar-fill" style={{ '--fill': pct / 100, background: color, animationDelay: `${i * 55}ms` }} />
             </div>
             <div className="bar-val">{fmt(d.value)}</div>
           </div>
@@ -388,10 +402,12 @@ function GroupedBarChart({ data, budget = 0, incognito = false }) {
             const expH = Math.max(H - PAD_B - expY, 1), incH = Math.max(H - PAD_B - incY, 1)
             return (
               <g key={i}>
-                <rect x={expX} y={expY} width={barW} height={expH} fill="var(--color-exp)" rx="2" opacity="0.85">
+                <rect x={expX} y={expY} width={barW} height={expH} fill="var(--color-exp)" rx="2" opacity="0.85"
+                  style={{ animationDelay: `${i * 70}ms` }}>
                   <title>{GBC_MON[parseInt(d.label)-1]}: {fmt(d.exp)} spent</title>
                 </rect>
-                {d.inc > 0 && <rect x={incX} y={incY} width={barW} height={incH} fill="var(--color-inc)" rx="2" opacity="0.85">
+                {d.inc > 0 && <rect x={incX} y={incY} width={barW} height={incH} fill="var(--color-inc)" rx="2" opacity="0.85"
+                  style={{ animationDelay: `${i * 70 + 35}ms` }}>
                   <title>{GBC_MON[parseInt(d.label)-1]}: {fmt(d.inc)} income</title>
                 </rect>}
               </g>
