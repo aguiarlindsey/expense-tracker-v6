@@ -49,7 +49,9 @@ export default function Auth() {
         <p className="auth-subtitle">Sign in with a magic link — no password needed.</p>
 
         <form onSubmit={handleSubmit}>
+          <label htmlFor="auth-email" className="sr-only">Email address</label>
           <input
+            id="auth-email"
             className="auth-input"
             type="email"
             placeholder="you@example.com"
@@ -58,7 +60,7 @@ export default function Auth() {
             required
             autoFocus
           />
-          {error && <p className="auth-error">{error}</p>}
+          {error && <p className="auth-error" role="alert">{error}</p>}
           <button className="auth-btn" type="submit" disabled={loading}>
             {loading ? 'Sending…' : 'Send magic link'}
           </button>

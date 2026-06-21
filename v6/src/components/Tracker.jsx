@@ -331,7 +331,7 @@ function BarChart({ data, incognito = false }) {
           <div key={i} className="bar-row">
             <div className="bar-label">{CATS[d.label]?.icon || ''} {d.label}</div>
             <div className="bar-track">
-              <div className="bar-fill" style={{ width: pct + '%', background: color }} />
+              <div className="bar-fill" style={{ '--fill': pct / 100, background: color }} />
             </div>
             <div className="bar-val">{fmt(d.value)}</div>
           </div>
@@ -586,7 +586,7 @@ function HealthScoreCard({ score, breakdown, incognito }) {
                 </span>
               </div>
               <div className="hs-sub-bar">
-                <div className="hs-sub-fill" style={{ width: `${(s.pts / 25) * 100}%`, background: s.pts >= 20 ? 'var(--color-inc)' : s.pts >= 12 ? 'var(--color-warning)' : 'var(--color-exp)' }} />
+                <div className="hs-sub-fill" style={{ '--fill': s.pts / 25, background: s.pts >= 20 ? 'var(--color-inc)' : s.pts >= 12 ? 'var(--color-warning)' : 'var(--color-exp)' }} />
               </div>
               <div className="hs-sub-note">{s.note}</div>
             </div>
@@ -626,7 +626,7 @@ const BudgetBar = memo(function BudgetBar({ icon, label, spent, budget, incognit
         <span>{icon && <span>{icon} </span>}{label}</span>
         <span className={`bbar-amounts bbar-${level}`}>{fmtINR(spent)} / {fmtINR(budget)}</span>
       </div>
-      <div className="bbar-track"><div className={`bbar-fill bbar-fill-${level}`} style={{ width: pct + '%' }} /></div>
+      <div className="bbar-track"><div className={`bbar-fill bbar-fill-${level}`} style={{ '--fill': pct / 100 }} /></div>
       {over && <div className="bbar-over">⚠️ Over by {fmtINR(spent - budget)}</div>}
     </div>
   )
@@ -1903,6 +1903,7 @@ export default function Tracker({ session }) {
   const [showEF, setShowEF]               = useState(false)
   const [showIF, setShowIF]               = useState(false)
   const [showMore, setShowMore]           = useState(false)
+  const [closingSheet, setClosingSheet]   = useState(false)
   const [showCmd,  setShowCmd]            = useState(false)
   const [editExpTarget, setEditExpTarget] = useState(null)
   const [editIncTarget, setEditIncTarget] = useState(null)
@@ -2430,6 +2431,12 @@ export default function Tracker({ session }) {
     return () => window.removeEventListener('et-storage-quota-exceeded', h)
   }, [])
 
+  // ── Bottom sheet exit animation ──────────────────────
+  function closeSheet() {
+    setClosingSheet(true)
+    setTimeout(() => { setShowMore(false); setClosingSheet(false) }, 180)
+  }
+
   // ── Keyboard shortcuts ───────────────────────────────
   useEffect(() => {
     const TABS = ['overview', 'income', 'analytics', 'planning', 'recurring', 'trips', 'exchange', 'settings']
@@ -2450,7 +2457,7 @@ export default function Tracker({ session }) {
         setEditExpTarget(null); setEditIncTarget(null)
         setBulkMode(false); setSelectedIds({})
         setShowGoalForm(false); setContribGoal(null)
-        setShowMore(false); setShowCmd(false)
+        closeSheet(); setShowCmd(false)
         setShowMonthPicker(false)
       }
     }
@@ -3431,7 +3438,7 @@ export default function Tracker({ session }) {
 
       {/* ══════════ OVERVIEW ══════════ */}
       {tab === 'overview' && (
-        <main>
+        <main className="tab-content-active">
           {expenses.length === 0 && (
             <div className="empty-overview">
               <div className="empty-overview-icon"><Zap size={56} color="var(--primary)" strokeWidth={1.5} /></div>
@@ -3538,7 +3545,7 @@ export default function Tracker({ session }) {
                 )}
                 {hasBudget && (
                   <div className="strip-track">
-                    <div className="strip-fill" style={{ width: `${pct}%`, background: barColor }} />
+                    <div className="strip-fill" style={{ '--fill': pct / 100, background: barColor }} />
                   </div>
                 )}
                 <div className="strip-meta">
@@ -3592,7 +3599,7 @@ export default function Tracker({ session }) {
                         <span>{incognito ? '••••' : fmtINR(budgets.monthly)}</span>
                       </div>
                       <div className="bento-progress-track">
-                        <div className="bento-progress-bar" style={{ width: `${pct}%`, background: barColor }} />
+                        <div className="bento-progress-bar" style={{ '--fill': pct / 100, background: barColor }} />
                       </div>
                     </div>
                   )}
@@ -3818,7 +3825,7 @@ export default function Tracker({ session }) {
                         </div>
                         <div className="cat-amt">{incognito ? '••••' : fmtINR(spent)}</div>
                         <div className="cat-bar">
-                          <div className="cat-fill" style={{ background: barColor, width: fillPct + '%' }} />
+                          <div className="cat-fill" style={{ background: barColor, '--fill': fillPct / 100 }} />
                         </div>
                         <div className="cat-meta">
                           <span>{catBgt > 0 ? pct.toFixed(0) + '% of budget' : ((spent / Math.max(spentMonth, 1)) * 100).toFixed(0) + '% of total'}</span>
@@ -4016,7 +4023,7 @@ export default function Tracker({ session }) {
 
       {/* ══════════ INCOME ══════════ */}
       {tab === 'income' && (
-        <main>
+        <main className="tab-content-active">
           <div className="summary-grid">
             <div className="summary-card"><div className="summary-label">Total Income</div><div className="summary-amount" style={{ color: 'var(--color-inc)' }}>{fmtINR(allIncINR)}</div></div>
             <div className="summary-card"><div className="summary-label">Total Expenses</div><div className="summary-amount" style={{ color: 'var(--color-exp)' }}>{fmtINR(allExpINR)}</div></div>
@@ -4105,7 +4112,7 @@ export default function Tracker({ session }) {
 
       {/* ══════════ TRENDS ══════════ */}
       {tab === 'analytics' && analyticsTab === 'trends' && (
-        <main>
+        <main className="tab-content-active">
           {/* ── Grouped Monthly Bar Chart ── */}
           <div className="chart-card" style={{ marginBottom: '1rem' }}>
             <div className="chart-title-row">
@@ -4154,7 +4161,7 @@ export default function Tracker({ session }) {
                                 {incognito ? (v > 0 ? '•' : '') : compact(v)}
                               </div>
                               <div className="cat-trend-bar-track">
-                                <div className="cat-trend-bar-fill" style={{ height: `${pct}%`, background: color, opacity: isMax ? 1 : 0.55 }} />
+                                <div className="cat-trend-bar-fill" style={{ '--fill': pct / 100, background: color, opacity: isMax ? 1 : 0.55 }} />
                               </div>
                               <div className="cat-trend-bar-month">{moName}</div>
                             </div>
@@ -4264,10 +4271,10 @@ export default function Tracker({ session }) {
             <div className="mch-mini-bars">
               {last6.map(mo => {
                 const amt = months[mo] || 0
-                const h = maxVal > 0 ? Math.max((amt / maxVal) * 28, amt > 0 ? 2 : 0) : 0
+                const fill = maxVal > 0 ? (amt / maxVal) : 0
                 return (
                   <div key={mo} className="mch-mini-bar-wrap" title={mo + ': ' + (amt > 0 ? fmtINR(amt) : 'no spend')}>
-                    <div className="mch-mini-bar" style={{ height: h + 'px' }} />
+                    <div className="mch-mini-bar" style={{ '--fill': fill }} />
                   </div>
                 )
               })}
@@ -4278,7 +4285,7 @@ export default function Tracker({ session }) {
         const globalMax = merchantData[0]?.total || 1
 
         return (
-          <main>
+          <main className="tab-content-active">
             {merchantData.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">🏪</div>
@@ -4369,13 +4376,13 @@ export default function Tracker({ session }) {
                             <div className="mch-detail-bars">
                               {last6.map(mo => {
                                 const amt = m.months[mo] || 0
-                                const h = maxMoAmt > 0 ? Math.max((amt / maxMoAmt) * 60, amt > 0 ? 4 : 0) : 0
+                                const fill = maxMoAmt > 0 ? (amt / maxMoAmt) : 0
                                 const label = new Date(mo + '-01T12:00:00').toLocaleString('default', { month: 'short' })
                                 return (
                                   <div key={mo} className="mch-detail-bar-col">
                                     <div className="mch-detail-bar-amt">{amt > 0 ? (incognito ? '••' : fmtINR(amt)) : ''}</div>
                                     <div className="mch-detail-bar-track">
-                                      <div className="mch-detail-bar-fill" style={{ height: h + 'px' }} />
+                                      <div className="mch-detail-bar-fill" style={{ '--fill': fill }} />
                                     </div>
                                     <div className="mch-detail-bar-lbl">{label}</div>
                                   </div>
@@ -4409,7 +4416,7 @@ export default function Tracker({ session }) {
         const projY = sy(totalDailyRate)
 
         return (
-          <main>
+          <main className="tab-content-active">
             {/* 30 / 60 / 90-day projection tiles */}
             <div className="fcst-tiles">
               {proj.map(p => (
@@ -4433,7 +4440,7 @@ export default function Tracker({ session }) {
                 <div className="fcst-rate-row">
                   <span className="fcst-rate-lbl">Variable (30d avg)</span>
                   <div className="fcst-rate-bar-track">
-                    <div className="fcst-rate-bar-fill exp" style={{ width: totalDailyRate > 0 ? (varDailyRate / totalDailyRate * 100) + '%' : '50%' }} />
+                    <div className="fcst-rate-bar-fill exp" style={{ '--fill': totalDailyRate > 0 ? varDailyRate / totalDailyRate : 0.5 }} />
                   </div>
                   <span className="fcst-rate-val">{incognito ? '••' : fmtINR(Math.round(varDailyRate))}/d</span>
                 </div>
@@ -4441,7 +4448,7 @@ export default function Tracker({ session }) {
                   <div className="fcst-rate-row">
                     <span className="fcst-rate-lbl">Recurring ({incognito ? '••' : fmtINR(Math.round(recExpMonthly))}/mo)</span>
                     <div className="fcst-rate-bar-track">
-                      <div className="fcst-rate-bar-fill rec" style={{ width: totalDailyRate > 0 ? (recDailyRate / totalDailyRate * 100) + '%' : '50%' }} />
+                      <div className="fcst-rate-bar-fill rec" style={{ '--fill': totalDailyRate > 0 ? recDailyRate / totalDailyRate : 0.5 }} />
                     </div>
                     <span className="fcst-rate-val">{incognito ? '••' : fmtINR(Math.round(recDailyRate))}/d</span>
                   </div>
@@ -4589,7 +4596,7 @@ export default function Tracker({ session }) {
 
       {/* ══════════ BUDGETS ══════════ */}
       {tab === 'planning' && planningTab === 'budgets' && (
-        <main>
+        <main className="tab-content-active">
           <div className="summary-grid">
             {[
               { val: fmtINR(spentToday), lbl: 'Today', color: budgets.daily > 0 ? (spentToday / budgets.daily >= 1 ? 'var(--color-exp)' : spentToday / budgets.daily >= 0.5 ? 'var(--color-warning)' : 'var(--color-inc)') : 'var(--text)' },
@@ -4698,7 +4705,7 @@ export default function Tracker({ session }) {
         const overallPct       = totalTarget > 0 ? Math.min((totalContributed / totalTarget) * 100, 100) : 0
         const completedGoals   = goalsWithContribs.filter(g => g.contributions.reduce((s, c) => s + c.amount, 0) >= g.target).length
         return (
-          <main>
+          <main className="tab-content-active">
             <div className="summary-grid">
               {[
                 { val: goalsWithContribs.length, lbl: 'Total Goals', color: 'var(--color-brand)' },
@@ -4717,7 +4724,7 @@ export default function Tracker({ session }) {
                 const barColor    = done ? 'var(--color-inc)' : pct >= 75 ? 'var(--color-warning)' : 'var(--color-brand)'
                 const daysLeft    = goal.targetDate ? Math.ceil((new Date(goal.targetDate + 'T12:00:00') - new Date(todayStr + 'T12:00:00')) / 864e5) : null
                 return (
-                  <div key={goal.id} className="goal-card">
+                  <div key={goal.id} className={done ? 'goal-card goal-card-complete' : 'goal-card'}>
                     {/* ── Ring + meta ── */}
                     <div className="goal-card-top">
                       <div className="goal-ring-wrap">
@@ -4805,7 +4812,7 @@ export default function Tracker({ session }) {
 
       {/* ══════════ INSIGHTS ══════════ */}
       {tab === 'analytics' && analyticsTab === 'insights' && (
-        <main>
+        <main className="tab-content-active">
           {/* Financial Health Score */}
           <HealthScoreCard score={healthScore.score} breakdown={healthScore.breakdown} incognito={incognito} />
 
@@ -4945,7 +4952,7 @@ export default function Tracker({ session }) {
 
       {/* ── Trips tab ── */}
       {tab === 'trips' && (
-        <main>
+        <main className="tab-content-active">
           {/* Header row */}
           <div className="trips-header">
             <div>
@@ -5115,7 +5122,7 @@ export default function Tracker({ session }) {
 
       {/* ── Exchange tab ── */}
       {tab === 'exchange' && (
-        <main>
+        <main className="tab-content-active">
 
           {/* ── Base currency info ── */}
           <div className="fx-info-tile">
@@ -5242,7 +5249,7 @@ export default function Tracker({ session }) {
 
       {/* ── Settings tab ── */}
       {tab === 'settings' && (
-        <main>
+        <main className="tab-content-active">
           {/* Security */}
           <BiometricSettings session={session} />
 
@@ -5678,7 +5685,7 @@ export default function Tracker({ session }) {
         const cancelRisks = subZombieData.zombies
 
         return (
-          <main>
+          <main className="tab-content-active">
             {recurExp.length === 0 && recurInc.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">📋</div>
@@ -5831,10 +5838,10 @@ export default function Tracker({ session }) {
       </nav>
 
       {/* ── More bottom sheet ── */}
-      {showMore && (
+      {(showMore || closingSheet) && (
         <>
-          <div className="bsheet-overlay" onClick={() => setShowMore(false)} />
-          <div className="bsheet" role="dialog" aria-label="More navigation">
+          <div className={'bsheet-overlay' + (closingSheet ? ' exiting' : '')} onClick={closeSheet} />
+          <div className={'bsheet' + (closingSheet ? ' exiting' : '')} role="dialog" aria-label="More navigation">
             <div className="bsheet-handle" />
             <div className="bsheet-grid">
               {[
@@ -5845,7 +5852,7 @@ export default function Tracker({ session }) {
                 { id: 'settings',  Icon: Settings,       label: 'Settings' },
               ].map(({ id, Icon, label }) => (
                 <button key={id} className={'bsheet-btn' + (tab === id ? ' active' : '')}
-                  onClick={() => { setTab(id); setShowMore(false) }}>
+                  onClick={() => { setTab(id); closeSheet() }}>
                   <span className="bsheet-icon"><Icon size={22} /></span>
                   <span className="bsheet-label">{label}</span>
                 </button>

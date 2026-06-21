@@ -125,13 +125,13 @@ export default function LockScreen({ onUnlocked }) {
     <div className="lock-screen">
       <div className="lock-card">
         <div className="lock-icon"><Zap size={48} strokeWidth={1.5} /></div>
-        <h1 className="lock-title">LA Expense Tracker</h1>
+        <h1 className="lock-title">Expense Tracker</h1>
         <p className="lock-subtitle">Verify your identity to continue</p>
 
         {/* ── Biometric mode ── */}
         {mode === 'biometric' && (
           <>
-            {error && <div className="lock-error">{error}</div>}
+            {error && <div className="lock-error" role="alert">{error}</div>}
 
             <button className="lock-btn" onClick={handleUnlock} disabled={authenticating}>
               {authenticating
@@ -159,12 +159,13 @@ export default function LockScreen({ onUnlocked }) {
               {maskEmail(backupEmail)}
             </div>
 
-            {confirmError && <div className="lock-error">{confirmError}</div>}
+            {confirmError && <div className="lock-error" role="alert">{confirmError}</div>}
 
             <input
               className="lock-otp-confirm-input"
               type="email"
               placeholder="Enter your backup email"
+              aria-label="Backup email address"
               value={confirmInput}
               onChange={e => { setConfirmInput(e.target.value); setConfirmError(null) }}
               autoFocus
@@ -192,7 +193,7 @@ export default function LockScreen({ onUnlocked }) {
               Check your inbox and enter it below.
             </p>
 
-            {otpError && <div className="lock-error">{otpError}</div>}
+            {otpError && <div className="lock-error" role="alert">{otpError}</div>}
 
             <input
               className="lock-otp-input"
@@ -201,6 +202,7 @@ export default function LockScreen({ onUnlocked }) {
               autoCapitalize="characters"
               maxLength={8}
               placeholder="XXXXXXXX"
+              aria-label="One-time verification code"
               value={otp}
               onChange={e => setOtp(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
               autoFocus

@@ -75,7 +75,7 @@ export default function OnboardingWizard({ session, onComplete }) {
 
         {step > 0 && step < STEPS && (
           <div className="onb-progress">
-            <div className="onb-progress-fill" style={{ width: `${progressPct}%` }} />
+            <div className="onb-progress-fill" style={{ '--fill': progressPct / 100 }} />
           </div>
         )}
 

@@ -100,14 +100,14 @@ export default function ConflictModal({ conflicts, onResolve, onDismiss }) {
   }
 
   return (
-    <div className="modal-overlay conflict-overlay" role="dialog" aria-modal="true" aria-label="Sync conflict">
-      <div className="modal-box conflict-modal">
+    <div className="modal-overlay conflict-overlay">
+      <div className="modal-box conflict-modal" role="dialog" aria-modal="true" aria-labelledby="conflict-title-id">
 
         {/* Header */}
         <div className="conflict-header">
           <span className="conflict-icon">⚠️</span>
           <div>
-            <div className="conflict-title">Sync Conflict</div>
+            <div id="conflict-title-id" className="conflict-title">Sync Conflict</div>
             <div className="conflict-subtitle">{title} was edited on another device</div>
           </div>
           {conflicts.length > 1 && (
