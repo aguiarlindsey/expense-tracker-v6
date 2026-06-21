@@ -668,6 +668,13 @@ body {
   transform-origin: 50% 100%;
   animation: svg-bar-grow 0.5s var(--ease-out-expo) backwards;
 }
+@keyframes cat-bar-grow {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(var(--fill, 0)); }
+}
+.cat-trend-bar-fill {
+  animation: cat-bar-grow 0.5s var(--ease-out-expo) backwards;
+}
 
 /* Date groups */
 .date-group { margin-bottom: 1rem; }
@@ -1164,6 +1171,7 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
   .tab-content-active { animation: none; }
   .bar-chart .bar-fill { animation: none; }
   .grouped-bar-svg rect { animation: none; }
+  .cat-trend-bar-fill { animation: none; }
   @keyframes dot-appear { from { opacity: 1; transform: scale(1); } to { opacity: 1; transform: scale(1); } }
   /* Retain functional transitions at reduced speed */
   *, *::before, *::after {

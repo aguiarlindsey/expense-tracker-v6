@@ -4177,7 +4177,7 @@ export default function Tracker({ session }) {
                                 {incognito ? (v > 0 ? '•' : '') : compact(v)}
                               </div>
                               <div className="cat-trend-bar-track">
-                                <div className="cat-trend-bar-fill" style={{ '--fill': pct / 100, background: color, opacity: isMax ? 1 : 0.55 }} />
+                                <div className="cat-trend-bar-fill" style={{ '--fill': pct / 100, background: color, opacity: isMax ? 1 : 0.55, animationDelay: `${i * 65}ms` }} />
                               </div>
                               <div className="cat-trend-bar-month">{moName}</div>
                             </div>
