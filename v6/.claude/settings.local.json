@@ -65,7 +65,21 @@
       "PowerShell(New-Item -ItemType Directory -Force \"d:\\\\CLAUDE\\\\EXPENSE_TRACKER\\\\v6\\\\docs\\\\archive\")",
       "PowerShell(New-Item -ItemType Directory -Force \"d:\\\\CLAUDE\\\\EXPENSE_TRACKER\\\\v6\\\\docs\\\\reference\")",
       "PowerShell(New-Item -ItemType Directory -Force \"d:\\\\CLAUDE\\\\EXPENSE_TRACKER\\\\v6\\\\docs\\\\previews\")",
-      "PowerShell(Get-ChildItem \"d:\\\\CLAUDE\\\\EXPENSE_TRACKER\\\\v6\" -Name | Where-Object { $_ -notmatch '^node_modules$' -and $_ -notmatch '^dist$' })"
+      "PowerShell(Get-ChildItem \"d:\\\\CLAUDE\\\\EXPENSE_TRACKER\\\\v6\" -Name | Where-Object { $_ -notmatch '^node_modules$' -and $_ -notmatch '^dist$' })",
+      "PowerShell(Get-ChildItem \"$env:APPDATA\\\\Code\\\\User\" -Name | Select-Object -First 20)",
+      "PowerShell(code --list-extensions)",
+      "PowerShell(code --list-extensions --show-versions)",
+      "PowerShell(winget search VSCodium)",
+      "PowerShell(codium --install-extension anthropic.claude-code 2>&1)",
+      "PowerShell(Get-Content \"$env:USERPROFILE\\\\.claude\\\\settings.json\" -ErrorAction SilentlyContinue)",
+      "PowerShell(winget uninstall Microsoft.VisualStudioCode --accept-source-agreements)",
+      "Bash(ls \"C:\\\\Users\\\\aguia\\\\.claude\\\\projects\\\\d--CLAUDE-EXPENSE-TRACKER\\\\memory\\\\\")",
+      "Read(//c/Users/aguia/.claude/projects/d--CLAUDE-EXPENSE-TRACKER/**)",
+      "PowerShell(\\(Get-ChildItem \"C:\\\\Users\\\\aguia\\\\AppData\\\\Roaming\\\\Code\" -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum\\).Sum / 1MB)",
+      "Bash(gh repo *)",
+      "PowerShell(gh repo view anthropics/launch-your-agent --json name,description,isPrivate,createdAt,pushedAt,stargazerCount,forkCount,licenseInfo 2>&1)",
+      "PowerShell(gh api repos/anthropics/launch-your-agent/contents 2>&1)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }
