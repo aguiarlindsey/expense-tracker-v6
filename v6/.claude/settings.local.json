@@ -79,7 +79,14 @@
       "Bash(gh repo *)",
       "PowerShell(gh repo view anthropics/launch-your-agent --json name,description,isPrivate,createdAt,pushedAt,stargazerCount,forkCount,licenseInfo 2>&1)",
       "PowerShell(gh api repos/anthropics/launch-your-agent/contents 2>&1)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(magick --version)",
+      "Bash(convert --version)",
+      "Bash(npx skills *)",
+      "Bash(ls \"C:\\\\Users\\\\aguia\\\\.claude\\\\skills\\\\impeccable\\\\scripts\\\\\" 2>/dev/null || ls \"C:\\\\Users\\\\aguia\\\\.agents\\\\skills\\\\impeccable\\\\\" 2>/dev/null)",
+      "Read(//c/Users/aguia/.claude/skills/impeccable/scripts\" 2>/dev/**)",
+      "Read(//c/Users/aguia/.claude/skills/impeccable/**)",
+      "Read(//c/Users/aguia/.claude/skills/impeccable/scripts/**)"
     ]
   }
 }
