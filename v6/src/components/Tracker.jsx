@@ -3641,7 +3641,7 @@ export default function Tracker({ session }) {
             {(() => {
               const savRate = allIncINR > 0 ? Math.round((netSavings / allIncINR) * 100) : null
               return (
-                <div className="bento-tile bento-savings">
+                <div className="bento-tile bento-savings" style={{ borderTopColor: netSavings >= 0 ? 'var(--color-inc)' : 'var(--color-exp)' }}>
                   <div className="bento-label">Net Savings</div>
                   <div className="bento-amount" style={{ color: netSavings >= 0 ? 'var(--color-inc)' : 'var(--color-exp)' }}>
                     {incognito ? '••••••' : (netSavings >= 0 ? '+' : '') + fmtINR(netSavings)}
