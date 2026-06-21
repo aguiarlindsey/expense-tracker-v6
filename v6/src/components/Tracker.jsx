@@ -172,7 +172,7 @@ function BiometricSettings({ session }) {
 
   return (
     <div className="settings-section">
-      <h3>🔐 Security</h3>
+      <h3><span aria-hidden="true">🔐</span> Security</h3>
       {msg && <div className="settings-msg">{msg}</div>}
       {error && <div className="settings-msg settings-msg-err">{error}</div>}
       {enrolled ? (
@@ -242,7 +242,7 @@ function ToastStack({ toasts, onDismiss }) {
             <div className="toast-title">{t.title}</div>
             <div className="toast-msg">{t.msg}</div>
           </div>
-          <button className="toast-close" onClick={e => { e.stopPropagation(); onDismiss(t.id) }}>✕</button>
+          <button className="toast-close" aria-label="Dismiss" onClick={e => { e.stopPropagation(); onDismiss(t.id) }}>✕</button>
         </div>
       ))}
     </div>
@@ -5248,7 +5248,7 @@ export default function Tracker({ session }) {
 
           {/* App Update */}
           <div className="settings-section">
-            <h3>🔄 App Update</h3>
+            <h3><span aria-hidden="true">🔄</span> App Update</h3>
             <div className="settings-row">
               <div className="settings-row-label">
                 <strong>Force Update</strong>
@@ -5260,7 +5260,7 @@ export default function Tracker({ session }) {
 
           {/* Appearance */}
           <div className="settings-section">
-            <h3>🎨 Appearance</h3>
+            <h3><span aria-hidden="true">🎨</span> Appearance</h3>
             <div className="settings-row">
               <div className="settings-row-label">
                 <strong>Theme</strong>
@@ -5286,7 +5286,7 @@ export default function Tracker({ session }) {
 
           {/* Base Currency */}
           <div className="settings-section" style={{ marginTop: 16 }}>
-            <h3>💱 Base Currency</h3>
+            <h3><span aria-hidden="true">💱</span> Base Currency</h3>
             <div className="settings-row">
               <div className="settings-row-label">
                 <strong>Display Currency</strong>
@@ -5319,7 +5319,7 @@ export default function Tracker({ session }) {
 
           {/* Data stats */}
           <div className="settings-section" style={{ marginTop: 16 }}>
-            <h3>📊 Data Summary</h3>
+            <h3><span aria-hidden="true">📊</span> Data Summary</h3>
             <div className="settings-stat-bar">
               {[
                 { val: expenses.length, lbl: 'Expenses' },
@@ -5337,7 +5337,7 @@ export default function Tracker({ session }) {
 
           {/* Safe-to-Spend */}
           <div className="settings-section" style={{ marginTop: 16 }}>
-            <h3>💡 Safe-to-Spend</h3>
+            <h3><span aria-hidden="true">💡</span> Safe-to-Spend</h3>
             <p className="settings-desc">
               Calculates a daily spending allowance: <em>(this month's income − fixed expenses − savings goal) ÷ days in month</em>.
               Shows on the Overview Daily Allowance card.
@@ -5364,7 +5364,7 @@ export default function Tracker({ session }) {
 
           {/* Exchange rate status */}
           <div className="settings-section" style={{ marginTop: 16 }}>
-            <h3>🔄 Exchange Rates</h3>
+            <h3><span aria-hidden="true">🔄</span> Exchange Rates</h3>
             <div className="settings-row">
               <div className="settings-row-label">
                 <strong>Rate Status</strong>
@@ -5378,7 +5378,7 @@ export default function Tracker({ session }) {
 
           {/* Push Notifications */}
           <div className="settings-section" style={{ marginTop: 16 }}>
-            <h3>🔔 Recurring Reminders</h3>
+            <h3><span aria-hidden="true">🔔</span> Recurring Reminders</h3>
             <p className="settings-desc">
               Get a daily push notification when a recurring expense is due within 3 days. Works even when the app is closed.
             </p>
@@ -5412,7 +5412,7 @@ export default function Tracker({ session }) {
 
           {/* Export */}
           <div className="settings-section" style={{ marginTop: 16 }}>
-            <h3>📤 Export Data</h3>
+            <h3><span aria-hidden="true">📤</span> Export Data</h3>
             <p className="settings-desc">Download a copy of all your data. JSON is a full backup; CSV is for spreadsheets (expenses only).</p>
             <div className="settings-row">
               <div className="settings-row-label">
@@ -5446,7 +5446,7 @@ export default function Tracker({ session }) {
 
           {/* Import */}
           <div className="settings-section" style={{ marginTop: 16 }}>
-            <h3>📥 Import Data</h3>
+            <h3><span aria-hidden="true">📥</span> Import Data</h3>
             <p className="settings-desc">Import from a V6 JSON backup. Duplicates are detected by content fingerprint and skipped automatically.</p>
             <div className="settings-row">
               <div className="settings-row-label">
@@ -5470,7 +5470,7 @@ export default function Tracker({ session }) {
 
           {/* V5 Migration */}
           <div className="settings-section" style={{ marginTop: 16 }}>
-            <h3>🔀 Migrate from V5</h3>
+            <h3><span aria-hidden="true">🔀</span> Migrate from V5</h3>
             <p className="settings-desc">Import your historical data from the old single-file app. Export your data from V5 Settings → Export Data → Download JSON, then upload it here. Duplicates are detected by fingerprint and skipped automatically — safe to run multiple times.</p>
             <div className="settings-row">
               <div className="settings-row-label">
@@ -5496,7 +5496,7 @@ export default function Tracker({ session }) {
 
           {/* Danger Zone */}
           <div className="danger-zone" style={{ marginTop: 16 }}>
-            <h3>🚨 Danger Zone</h3>
+            <h3><span aria-hidden="true">🚨</span> Danger Zone</h3>
             <p className="settings-desc">These actions are permanent and cannot be undone. Each requires a confirmation step.</p>
             <div className="settings-row">
               <div className="settings-row-label">
