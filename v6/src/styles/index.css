@@ -666,6 +666,218 @@ body {
 .filter-bar select { padding: 0.45rem 0.5rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 0.85rem; }
 .results-info { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.5rem; }
 
+/* ─── Poda search bar (Uiverse-adapted) ───────────────── */
+.esp-poda {
+  position: relative;
+  flex: 1;
+  min-width: 180px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 0; /* creates stacking context so layers stay contained */
+}
+
+/* Shared layer base */
+.esp-dark, .esp-white, .esp-border, .esp-glow {
+  position: absolute;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+/* darkBorderBg — outermost dark conic border */
+.esp-dark {
+  inset: -2px;
+  filter: blur(1px);
+  border-radius: 12px;
+}
+.esp-dark::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) rotate(82deg);
+  width: 600px; height: 600px;
+  background-image: conic-gradient(
+    rgba(0,0,0,0),
+    #18116a,
+    rgba(0,0,0,0) 10%,
+    rgba(0,0,0,0) 50%,
+    #6e1b60,
+    rgba(0,0,0,0) 60%
+  );
+  transition: transform 2s;
+}
+
+/* white — inner glow ring */
+.esp-white {
+  inset: 0;
+  border-radius: 10px;
+  filter: blur(2px);
+}
+.esp-white::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) rotate(83deg);
+  width: 600px; height: 600px;
+  filter: brightness(1.4);
+  background-image: conic-gradient(
+    rgba(0,0,0,0) 0%,
+    #a099d8,
+    rgba(0,0,0,0) 8%,
+    rgba(0,0,0,0) 50%,
+    #dfa2da,
+    rgba(0,0,0,0) 58%
+  );
+  transition: transform 2s;
+}
+
+/* border — crisp inner edge */
+.esp-border {
+  inset: 1px;
+  border-radius: 11px;
+  filter: blur(0.5px);
+}
+.esp-border::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) rotate(70deg);
+  width: 600px; height: 600px;
+  filter: brightness(1.3);
+  background-image: conic-gradient(
+    #1c191c,
+    #402fb5 5%,
+    #1c191c 14%,
+    #1c191c 50%,
+    #cf30aa 60%,
+    #1c191c 64%
+  );
+  transition: transform 2s;
+}
+
+/* glow — outer atmospheric halo */
+.esp-glow {
+  inset: -18px -22px;
+  filter: blur(28px);
+  opacity: 0.4;
+  border-radius: 12px;
+}
+.esp-glow::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) rotate(60deg);
+  width: 999px; height: 999px;
+  background-image: conic-gradient(
+    #000,
+    #402fb5 5%,
+    #000 38%,
+    #000 50%,
+    #cf30aa 60%,
+    #000 87%
+  );
+  transition: transform 2s;
+}
+
+/* Hover — conic flips to opposite angle */
+.esp-poda:hover > .esp-dark::before  { transform: translate(-50%, -50%) rotate(-98deg); }
+.esp-poda:hover > .esp-white::before { transform: translate(-50%, -50%) rotate(-97deg); }
+.esp-poda:hover > .esp-border::before { transform: translate(-50%, -50%) rotate(-110deg); }
+.esp-poda:hover > .esp-glow::before  { transform: translate(-50%, -50%) rotate(-120deg); }
+
+/* Focus-within — continues the rotation arc */
+.esp-poda:focus-within > .esp-dark::before  { transform: translate(-50%, -50%) rotate(442deg); transition: transform 4s; }
+.esp-poda:focus-within > .esp-white::before { transform: translate(-50%, -50%) rotate(443deg); transition: transform 4s; }
+.esp-poda:focus-within > .esp-border::before { transform: translate(-50%, -50%) rotate(430deg); transition: transform 4s; }
+.esp-poda:focus-within > .esp-glow::before  { transform: translate(-50%, -50%) rotate(420deg); transition: transform 4s; }
+
+/* Input wrapper */
+.esp-main {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.esp-input {
+  width: 100%;
+  height: 38px;
+  border: none;
+  border-radius: 10px;
+  padding-inline: 36px 12px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  outline: none;
+  position: relative;
+  z-index: 0;
+}
+
+/* Input mask — fades text near search icon (hides on focus) */
+.esp-input-mask {
+  pointer-events: none;
+  width: 70px;
+  height: 16px;
+  position: absolute;
+  top: calc(50% - 8px);
+  left: 36px;
+  z-index: 2;
+  border-radius: 0;
+}
+.esp-main:focus-within > .esp-input-mask { display: none; }
+
+/* Pink accent glow — fades on hover */
+.esp-pink-mask {
+  pointer-events: none;
+  width: 28px;
+  height: 18px;
+  position: absolute;
+  top: calc(50% - 9px);
+  left: 4px;
+  filter: blur(18px);
+  opacity: 0.8;
+  transition: opacity 2s;
+  z-index: 2;
+}
+.esp-poda:hover .esp-pink-mask { opacity: 0; }
+
+/* Search icon */
+.esp-search-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ── Light mode: plain input, no conic layers ─────────── */
+.esp-dark, .esp-white, .esp-border, .esp-glow,
+.esp-pink-mask, .esp-input-mask { display: none; }
+
+.esp-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.esp-input::placeholder { color: var(--text-faint); }
+.esp-input:focus { border-color: var(--primary); }
+.esp-search-icon { color: var(--text-muted); }
+
+/* ── Dark mode: full conic effect ─────────────────────── */
+.dark .esp-dark, .dark .esp-white, .dark .esp-border, .dark .esp-glow { display: block; }
+.dark .esp-pink-mask, .dark .esp-input-mask { display: block; }
+
+.dark .esp-input {
+  background: #0b0b0d;
+  border: none;
+  color: #fff;
+}
+.dark .esp-input::placeholder { color: #7c7488; }
+.dark .esp-input:focus { outline: none; }
+.dark .esp-search-icon { color: #a099d8; }
+.dark .esp-input-mask { background: linear-gradient(90deg, transparent, #0b0b0d); }
+.dark .esp-pink-mask  { background: #cf30aa; }
+
 /* NL parsed chips */
 .nl-chips { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; margin: -0.3rem 0 0.6rem; }
 .nl-chips-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; margin-right: 0.15rem; }
@@ -2392,6 +2604,7 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
   /* Filter bar: stack vertically */
   .filter-bar { flex-direction: column; align-items: stretch; }
   .search-input { width: 100%; min-width: unset; }
+  .esp-poda { width: 100%; min-width: unset; }
   .month-picker { width: 100%; }
   .filter-bar select { width: 100%; }
 
@@ -2672,6 +2885,7 @@ body                 { min-height: 100dvh; }
       font-size < 16px on focus. Fix: enforce 16px (1rem) on mobile. */
 @media (max-width: 768px) {
   .search-input,
+  .esp-input,
   .month-picker,
   .filter-bar select,
   .adv-row input,

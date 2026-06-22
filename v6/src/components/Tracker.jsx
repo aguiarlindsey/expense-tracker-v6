@@ -3912,8 +3912,19 @@ export default function Tracker({ session }) {
 
           {/* Filter bar */}
           <div className="filter-bar">
-            <input className="search-input" placeholder="🔍 Search or try: food last week, over 500, credit card…"
-              value={expSearch} onChange={e => setExpSearch(e.target.value)} />
+            <div className="esp-poda">
+              <div className="esp-glow" />
+              <div className="esp-dark" />
+              <div className="esp-white" />
+              <div className="esp-border" />
+              <div className="esp-main">
+                <input className="esp-input" placeholder="Search or try: food last week, over 500, credit card…"
+                  value={expSearch} onChange={e => setExpSearch(e.target.value)} />
+                <div className="esp-input-mask" />
+                <div className="esp-pink-mask" />
+                <Search size={15} className="esp-search-icon" />
+              </div>
+            </div>
             <input type="month" className="month-picker" value={expMonth} onChange={e => { setExpMonth(e.target.value); setExpDateFrom(''); setExpDateTo(''); setActivePreset('') }} />
             <select value={expPayment} onChange={e => setExpPayment(e.target.value)}>
               <option value="All">All payments</option>{PAY_METHODS.map(p => <option key={p}>{p}</option>)}
