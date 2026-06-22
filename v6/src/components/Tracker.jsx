@@ -1706,7 +1706,7 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
       }}
       onTouchStart={handleTS} onTouchMove={handleTM} onTouchEnd={handleTE}>
       {bulkMode && <input type="checkbox" className="item-checkbox" checked={isSelected} onChange={() => onToggleSelect(item.id)} />}
-      <div className="item-icon" style={{ background: `color-mix(in srgb, ${cat.color} 16%, transparent)` }}>
+      <div className="item-icon" data-cat={item.category} style={{ background: `color-mix(in srgb, ${cat.color} 16%, transparent)` }}>
         {PhIcon ? <PhIcon size={17} weight="duotone" color={cat.color} /> : icon}
       </div>
       <div className="item-body">
