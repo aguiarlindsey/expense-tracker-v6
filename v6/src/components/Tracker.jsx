@@ -329,27 +329,87 @@ function PieChart({ data, size = 190, incognito = false }) {
 }
 
 function LineChart({ data, incognito = false }) {
+  const [hovered, setHovered] = useState(null)
   if (!data || data.length < 2) return <div className="chart-empty">Not enough data</div>
   const fmt = n => incognito ? '••••' : _fmtINR(n)
   const vals = data.map(d => d.value)
   const maxV = Math.max(...vals, 1), minV = Math.min(...vals, 0), rng = maxV - minV || 1
-  const W = 500, H = 140, pl = 10, pr = 10, pt = 10, pb = 28
+  const W = 500, H = 150, pl = 10, pr = 10, pt = 18, pb = 28
   const gW = W - pl - pr, gH = H - pt - pb
   const pts = data.map((d, i) => ({
     x: pl + (i / (data.length - 1)) * gW,
     y: pt + gH - ((d.value - minV) / rng) * gH, ...d
   }))
   const pathD = pts.map((p, i) => `${i ? 'L' : 'M'}${p.x},${p.y}`).join(' ')
+  const TW = 96, TH = 36
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%' }}>
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', cursor: 'crosshair' }}
+      onMouseLeave={() => setHovered(null)}>
+      {/* area fill */}
+      <defs>
+        <linearGradient id="lc-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={`${pathD} L${pts[pts.length-1].x},${pt+gH} L${pts[0].x},${pt+gH} Z`}
+        fill="url(#lc-fill)" />
       <path d={pathD} fill="none" stroke="var(--primary)" strokeWidth="2" />
+
+      {/* vertical hover indicator */}
+      {hovered !== null && (
+        <line x1={pts[hovered].x} y1={pt} x2={pts[hovered].x} y2={pt + gH}
+          stroke="var(--text-muted)" strokeWidth="1" strokeDasharray="3,3" opacity="0.5" />
+      )}
+
+      {/* invisible hit columns — full height, span between midpoints */}
+      {pts.map((p, i) => {
+        const left  = i === 0 ? 0 : (pts[i-1].x + p.x) / 2
+        const right = i === pts.length - 1 ? W : (p.x + pts[i+1].x) / 2
+        return (
+          <rect key={i} x={left} width={right - left} y={0} height={H - pb}
+            fill="transparent" onMouseEnter={() => setHovered(i)} />
+        )
+      })}
+
+      {/* dots */}
       {pts.map((p, i) => (
-        <g key={i}>
-          <circle cx={p.x} cy={p.y} r="3" fill="var(--primary)" />
-          <title>{fmt(p.value)}</title>
-          <text x={p.x} y={H - 4} textAnchor="middle" fontSize="9" fill="var(--text-muted)">{p.label}</text>
-        </g>
+        <circle key={i} cx={p.x} cy={p.y}
+          r={hovered === i ? 5 : 3}
+          fill="var(--primary)"
+          stroke={hovered === i ? 'var(--surface)' : 'none'}
+          strokeWidth="2"
+          style={{ transition: 'r 0.12s, stroke 0.12s' }}
+        />
       ))}
+
+      {/* month labels */}
+      {pts.map((p, i) => (
+        <text key={i} x={p.x} y={H - 4} textAnchor="middle" fontSize="9"
+          fill={hovered === i ? 'var(--primary)' : 'var(--text-muted)'}
+          fontWeight={hovered === i ? '700' : '400'}>
+          {p.label}
+        </text>
+      ))}
+
+      {/* tooltip box */}
+      {hovered !== null && (() => {
+        const p = pts[hovered]
+        const tx = Math.max(0, Math.min(p.x - TW / 2, W - TW))
+        const ty = Math.max(2, p.y - TH - 8)
+        return (
+          <g style={{ pointerEvents: 'none' }}>
+            <rect x={tx} y={ty} width={TW} height={TH} rx="6"
+              fill="var(--surface)" stroke="var(--border)" strokeWidth="1"
+              filter="drop-shadow(0 2px 4px rgba(0,0,0,0.15))" />
+            <text x={tx + TW / 2} y={ty + 13} textAnchor="middle"
+              fontSize="9" fontWeight="600" fill="var(--text-muted)">{p.label}</text>
+            <text x={tx + TW / 2} y={ty + 28} textAnchor="middle"
+              fontSize="12" fontWeight="700" fill="var(--primary)">{fmt(p.value)}</text>
+          </g>
+        )
+      })()}
     </svg>
   )
 }

@@ -889,7 +889,7 @@ body {
 
 /* ── Dark mode: full conic effect ─────────────────────── */
 .dark .esp-dark, .dark .esp-white, .dark .esp-border, .dark .esp-glow { display: block; }
-.dark .esp-pink-mask, .dark .esp-input-mask { display: block; }
+.dark .esp-pink-mask { display: block; }
 
 .dark .esp-input {
   background: #0b0b0d;
