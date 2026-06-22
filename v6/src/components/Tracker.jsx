@@ -1121,7 +1121,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
               <div className="form-row">
                 <div className="form-group">
                   <label>ODO Reading (km)</label>
-                  <input type="number" min="0" step="1" placeholder="e.g. 45230"
+                  <input type="number" min="0" step="0.1" placeholder="e.g. 45230.5"
                     value={form.odoReading || ''}
                     onChange={e => s('odoReading', e.target.value)} />
                 </div>
@@ -1817,7 +1817,7 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
             {item.fuelRate ? `⛽ ₹${Number(item.fuelRate).toFixed(2)}/L` : '⛽'}
             {item.fuelQuantity ? ` · ${Number(item.fuelQuantity).toFixed(3)} L` : ''}
             {item.fuelType    ? ` · ${item.fuelType}` : ''}
-            {item.odoReading  ? ` · ODO ${Number(item.odoReading).toLocaleString(_localeFor(_appCurrency))} km` : ''}
+            {item.odoReading  ? ` · ODO ${Number(item.odoReading).toLocaleString(_localeFor(_appCurrency), { minimumFractionDigits: 0, maximumFractionDigits: 1 })} km` : ''}
             {item.tripA ? ` · A ${Number(item.tripA).toFixed(1)} km` : ''}
             {item.tripB ? ` · B ${Number(item.tripB).toFixed(1)} km` : ''}
             {(() => {
