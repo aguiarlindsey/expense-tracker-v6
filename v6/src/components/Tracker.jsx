@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef, memo, Fragment } fro
 import { Zap, LayoutDashboard, DollarSign, TrendingUp, ClipboardList, RefreshCw, Settings, Home, Menu, Plane, ArrowLeftRight, Euro, PoundSterling, JapaneseYen, IndianRupee, RussianRuble, SwissFranc, PhilippinePeso, Bitcoin, Lightbulb, Store, Calendar, Wallet, Target, PlusCircle, Sun, Moon, EyeOff, Eye, Command, Search, FileDown, Mail } from 'lucide-react'
 import { useStorage } from '../hooks/useStorage'
 import { useDebounce } from '../hooks/useDebounce'
-import { CATS, CM, CG, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS, FALLBACK_RATES } from '../utils/constants'
+import { CATS, CM, CG, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS, FALLBACK_RATES, IncomePhIcon } from '../utils/constants'
 import { makeExpense, makeIncome, makeDedupContext, matchesSearch, stableId, detectAnomaly } from '../utils/dataHelpers'
 import { migrateV5Data, validateV5File } from '../utils/migrateV5'
 import { useNotifications } from '../hooks/useNotifications'
@@ -1292,9 +1292,12 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
                 <div className="cat-alloc-grid">
                   {Object.keys(CATS).map(cat => {
                     const v = allocs[cat] || ''
+                    const CatPh = CATS[cat].PhIcon
                     return (
                       <div key={cat} className={`cat-alloc-row${v ? ' has-value' : ''}`}>
-                        <span className="cat-alloc-icon">{CATS[cat].icon}</span>
+                        <span className="cat-alloc-icon">
+                          {CatPh ? <CatPh size={14} weight="duotone" color={CATS[cat].color} /> : CATS[cat].icon}
+                        </span>
                         <span className="cat-alloc-name">{cat}</span>
                         <input type="number" min="0" max="100" step="1" className="pct-input"
                           value={v} onChange={e => updateAlloc(cat, e.target.value)} placeholder="0" />
@@ -1638,8 +1641,9 @@ function AddContributionModal({ goal, goalContribs, onSave, onClose }) {
 // ─── Expense / Income Items ───────────────────────────────
 
 const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSelected, onToggleSelect }) {
-  const cat  = CATS[item.category] || CATS['Other']
-  const icon = (cat.subIcons && item.subcategory && cat.subIcons[item.subcategory]) || cat.icon
+  const cat    = CATS[item.category] || CATS['Other']
+  const icon   = (cat.subIcons && item.subcategory && cat.subIcons[item.subcategory]) || cat.icon
+  const PhIcon = (cat.subPhIcons && item.subcategory && cat.subPhIcons[item.subcategory]) || cat.PhIcon
 
   const REVEAL = 55, CONFIRM = 160
   const [swipeX, setSwipeX] = useState(0)
@@ -1702,7 +1706,9 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
       }}
       onTouchStart={handleTS} onTouchMove={handleTM} onTouchEnd={handleTE}>
       {bulkMode && <input type="checkbox" className="item-checkbox" checked={isSelected} onChange={() => onToggleSelect(item.id)} />}
-      <div className="item-icon">{icon}</div>
+      <div className="item-icon" style={{ background: `color-mix(in srgb, ${cat.color} 16%, transparent)` }}>
+        {PhIcon ? <PhIcon size={17} weight="duotone" color={cat.color} /> : icon}
+      </div>
       <div className="item-body">
         <div className="item-desc">{item.description}</div>
         <div className="item-meta">
@@ -1759,7 +1765,9 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
 const IncItem = memo(function IncItem({ item, onDelete, onEdit }) {
   return (
     <div className="item" style={{ background: 'color-mix(in srgb, var(--color-inc) 5%, var(--surface))' }}>
-      <div className="item-icon">💵</div>
+      <div className="item-icon" style={{ background: 'color-mix(in srgb, var(--color-inc) 16%, transparent)' }}>
+        <IncomePhIcon size={17} weight="duotone" color="var(--color-inc)" />
+      </div>
       <div className="item-body">
         <div className="item-desc">{item.description}</div>
         <div className="item-meta">
@@ -3856,7 +3864,9 @@ export default function Tracker({ session }) {
                     return (
                       <div key={cat} className="bento-tile cat-tile">
                         <div className="cat-top">
-                          <div className="cat-ico" style={{ background: catInfo.color + '22' }}>{catInfo.icon}</div>
+                          <div className="cat-ico" style={{ background: `color-mix(in srgb, ${catInfo.color} 16%, transparent)` }}>
+                            {catInfo.PhIcon ? <catInfo.PhIcon size={15} weight="duotone" color={catInfo.color} /> : catInfo.icon}
+                          </div>
                           <div className="cat-name">{cat}</div>
                         </div>
                         <div className="cat-amt">{incognito ? '••••' : fmtINR(spent)}</div>

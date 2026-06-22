@@ -1,3 +1,10 @@
+import {
+  ForkKnife, Car, ShoppingBag, Heartbeat, FilmSlate,
+  Lightning, House, GraduationCap, Sparkle, Airplane,
+  Bank, UsersThree, Buildings, Package,
+  Hospital, MaskHappy, Money,
+} from '@phosphor-icons/react'
+
 export const CURRENCIES = [
   // ── Major (8) ──────────────────────────────────────────────────────────────
   {code:'INR',flag:'🇮🇳',symbol:'₹',    name:'Indian Rupee',              group:'Major'},
@@ -141,21 +148,25 @@ export const CG = CURRENCIES.reduce((acc, c) => {
 }, {})
 
 export const CATS = {
-  'Food':          { icon: '🍽️', color: '#f97316', subs: ['Groceries','Restaurants','Snacks','Beverages','Sweets','Takeaway'] },
-  'Transport':     { icon: '🚗', color: '#3b82f6', subs: ['Fuel','Auto/Cab','Bus/Train','Flight','Parking','Vehicle Maintenance'] },
-  'Shopping':      { icon: '🛍️', color: '#8b5cf6', subs: ['Clothes','Electronics','Furniture','Books','Accessories','Appliances','Luggage & Bags'] },
-  'Health':        { icon: '💊', color: '#ef4444', subs: ['Medicine','Doctor','Lab Tests','Hospital','Wellness','Dental'], subIcons: { 'Hospital': '🏥' } },
-  'Entertainment': { icon: '🎬', color: '#ec4899', subs: ['Movies','OTT/Streaming','Gaming','Events','Hobbies','Sports','Theatre'], subIcons: { 'Theatre': '🎭' } },
-  'Utilities':     { icon: '⚡', color: '#f59e0b', subs: ['Electricity','Water','Gas','Internet','Phone','Cable'] },
-  'Housing':       { icon: '🏠', color: '#10b981', subs: ['Rent','EMI','Maintenance','Repairs','Housekeeping','House Maid','Pest Control','Security','Interior'] },
-  'Education':     { icon: '📚', color: '#06b6d4', subs: ['Fees','Books','Courses','Stationery','Coaching','Exams'] },
-  'Personal':      { icon: '🪞', color: '#84cc16', subs: ['Haircut','Skincare','Gym','Spa','Personal Care','Laundry','Dry Cleaning','Ironing','Fashion'] },
-  'Travel':        { icon: '✈️', color: '#6366f1', subs: ['Hotel','Sightseeing','Visa','Insurance','Souvenirs','Transport'] },
-  'Finance':       { icon: '💳', color: '#14b8a6', subs: ['Insurance','Tax','Loan Payment','Investment','Bank Fees','Savings'] },
-  'Social':        { icon: '🤝', color: '#f43f5e', subs: ['Gifts','Parties','Donations','Subscriptions','Events','Dining Out'] },
-  'Administrative':{ icon: '🏛️', color: '#0ea5e9', subs: ['License Renewal','Passport Renewal','Government Fees','Notary/Legal','Other Govt Fees'] },
-  'Other':         { icon: '📦', color: '#94a3b8', subs: ['Miscellaneous','Uncategorized','Refund','Transfer'] },
+  'Food':          { icon: '🍽️', PhIcon: ForkKnife,    color: '#f97316', subs: ['Groceries','Restaurants','Snacks','Beverages','Sweets','Takeaway'] },
+  'Transport':     { icon: '🚗', PhIcon: Car,           color: '#3b82f6', subs: ['Fuel','Auto/Cab','Bus/Train','Flight','Parking','Vehicle Maintenance'] },
+  'Shopping':      { icon: '🛍️', PhIcon: ShoppingBag,  color: '#8b5cf6', subs: ['Clothes','Electronics','Furniture','Books','Accessories','Appliances','Luggage & Bags'] },
+  'Health':        { icon: '💊', PhIcon: Heartbeat,     color: '#ef4444', subs: ['Medicine','Doctor','Lab Tests','Hospital','Wellness','Dental'],
+                     subIcons: { 'Hospital': '🏥' }, subPhIcons: { 'Hospital': Hospital } },
+  'Entertainment': { icon: '🎬', PhIcon: FilmSlate,     color: '#ec4899', subs: ['Movies','OTT/Streaming','Gaming','Events','Hobbies','Sports','Theatre'],
+                     subIcons: { 'Theatre': '🎭' }, subPhIcons: { 'Theatre': MaskHappy } },
+  'Utilities':     { icon: '⚡', PhIcon: Lightning,     color: '#f59e0b', subs: ['Electricity','Water','Gas','Internet','Phone','Cable'] },
+  'Housing':       { icon: '🏠', PhIcon: House,         color: '#10b981', subs: ['Rent','EMI','Maintenance','Repairs','Housekeeping','House Maid','Pest Control','Security','Interior'] },
+  'Education':     { icon: '📚', PhIcon: GraduationCap, color: '#06b6d4', subs: ['Fees','Books','Courses','Stationery','Coaching','Exams'] },
+  'Personal':      { icon: '🪞', PhIcon: Sparkle,       color: '#84cc16', subs: ['Haircut','Skincare','Gym','Spa','Personal Care','Laundry','Dry Cleaning','Ironing','Fashion'] },
+  'Travel':        { icon: '✈️', PhIcon: Airplane,      color: '#6366f1', subs: ['Hotel','Sightseeing','Visa','Insurance','Souvenirs','Transport'] },
+  'Finance':       { icon: '💳', PhIcon: Bank,          color: '#14b8a6', subs: ['Insurance','Tax','Loan Payment','Investment','Bank Fees','Savings'] },
+  'Social':        { icon: '🤝', PhIcon: UsersThree,    color: '#f43f5e', subs: ['Gifts','Parties','Donations','Subscriptions','Events','Dining Out'] },
+  'Administrative':{ icon: '🏛️', PhIcon: Buildings,    color: '#0ea5e9', subs: ['License Renewal','Passport Renewal','Government Fees','Notary/Legal','Other Govt Fees'] },
+  'Other':         { icon: '📦', PhIcon: Package,       color: '#94a3b8', subs: ['Miscellaneous','Uncategorized','Refund','Transfer'] },
 }
+
+export const IncomePhIcon = Money
 
 export const VALID_CATS     = Object.keys(CATS)
 
