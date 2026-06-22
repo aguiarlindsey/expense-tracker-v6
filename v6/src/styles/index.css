@@ -872,7 +872,7 @@ body {
   border: none;
   color: #fff;
 }
-.dark .esp-input::placeholder { color: #7c7488; }
+.dark .esp-input::placeholder { color: #a8a2b8; }
 .dark .esp-input:focus { outline: none; }
 .dark .esp-search-icon { color: #a099d8; }
 .dark .esp-input-mask { background: linear-gradient(90deg, transparent, #0b0b0d); }
