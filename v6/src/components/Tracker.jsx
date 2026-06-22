@@ -3,6 +3,7 @@ import { Zap, LayoutDashboard, DollarSign, TrendingUp, ClipboardList, RefreshCw,
 import { useStorage } from '../hooks/useStorage'
 import { useDebounce } from '../hooks/useDebounce'
 import { CATS, CM, CG, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS, FALLBACK_RATES, IncomePhIcon } from '../utils/constants'
+import GlowingEffect from './GlowingEffect'
 import { makeExpense, makeIncome, makeDedupContext, matchesSearch, stableId, detectAnomaly } from '../utils/dataHelpers'
 import { migrateV5Data, validateV5File } from '../utils/migrateV5'
 import { useNotifications } from '../hooks/useNotifications'
@@ -3627,6 +3628,7 @@ export default function Tracker({ session }) {
               const trendVal  = monthForecast.trend !== null ? parseInt(monthForecast.trend) : null
               return (
                 <div className="bento-tile bento-hero">
+                  <GlowingEffect />
                   <div className="bento-label">Total Spent — {monthStr}</div>
                   <div className="bento-amount bento-exp">{incognito ? '••••••' : fmtINR(spentMonth)}</div>
                   {expenses.length > 0 && (
@@ -3667,6 +3669,7 @@ export default function Tracker({ session }) {
               const incDiff = currentMonthInc > 0 && prevInc > 0 ? currentMonthInc - prevInc : null
               return (
                 <div className="bento-tile bento-income">
+                  <GlowingEffect />
                   <div className="bento-label">Income</div>
                   <div className="bento-amount bento-inc">{incognito ? '••••••' : fmtINR(currentMonthInc > 0 ? currentMonthInc : allIncINR)}</div>
                   <div className="bento-sub">{currentMonthInc > 0 ? 'this month' : allIncINR > 0 ? 'all time' : 'none recorded'}</div>
@@ -3686,6 +3689,7 @@ export default function Tracker({ session }) {
               const savRate = allIncINR > 0 ? Math.round((netSavings / allIncINR) * 100) : null
               return (
                 <div className="bento-tile bento-savings" style={{ borderTopColor: netSavings >= 0 ? 'var(--color-inc)' : 'var(--color-exp)' }}>
+                  <GlowingEffect />
                   <div className="bento-label">Net Savings</div>
                   <div className="bento-amount" style={{ color: netSavings >= 0 ? 'var(--color-inc)' : 'var(--color-exp)' }}>
                     {incognito ? '••••••' : (netSavings >= 0 ? '+' : '') + fmtINR(netSavings)}
@@ -3702,6 +3706,7 @@ export default function Tracker({ session }) {
 
             {/* Safe to Spend */}
             <div className="bento-tile bento-safe">
+              <GlowingEffect />
               {budgets.monthly > 0 ? (
                 <>
                   <div className="bento-label">Safe to Spend</div>
@@ -3735,6 +3740,7 @@ export default function Tracker({ session }) {
                 : '~flat vs last week'
               return (
                 <div className="bento-tile bento-burn">
+                  <GlowingEffect />
                   <div className="bento-label">Burn Rate</div>
                   <div className="bento-amount">
                     {incognito ? '••••••' : fmtINR(burnRate.last7Rate)}<span className="bento-unit">/day</span>
@@ -3778,6 +3784,7 @@ export default function Tracker({ session }) {
                 : 'translateX(-50%)'
               return (
                 <div className="bento-tile bento-spark">
+                  <GlowingEffect />
                   <div className="spark-header">
                     <div className="bento-label">30-Day Spend Trend</div>
                     {sparkHover !== null ? (
@@ -3863,6 +3870,7 @@ export default function Tracker({ session }) {
                     const leftAmt  = catBgt > 0 ? catBgt - spent : null
                     return (
                       <div key={cat} className="bento-tile cat-tile">
+                        <GlowingEffect />
                         <div className="cat-top">
                           <div className="cat-ico" style={{ background: `color-mix(in srgb, ${catInfo.color} 16%, transparent)` }}>
                             {catInfo.PhIcon ? <catInfo.PhIcon size={15} weight="duotone" color={catInfo.color} /> : catInfo.icon}

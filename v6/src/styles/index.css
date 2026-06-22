@@ -539,6 +539,7 @@ body {
   margin-bottom: 1.25rem;
 }
 .bento-tile {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -548,6 +549,29 @@ body {
   gap: 3px;
   animation: bento-enter 0.28s var(--ease-out-quart) both;
   transition: border-color 0.18s;
+}
+
+/* ─── Glowing border effect ───────────────────────────── */
+.glowing-effect {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: var(--border-w, 1.5px);
+  background: conic-gradient(
+    from calc((var(--start, 0) - var(--spread, 40)) * 1deg),
+    transparent 0deg,
+    #a099d8 calc(var(--spread, 40) * 0.5deg),
+    #6d7cff calc(var(--spread, 40) * 1deg),
+    #cf30aa calc(var(--spread, 40) * 1.5deg),
+    transparent calc(var(--spread, 40) * 2deg)
+  );
+  opacity: var(--active, 0);
+  transition: opacity 0.4s ease;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  z-index: 1;
 }
 .dark .bento-tile { box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
 .dark .bento-tile:hover { border-color: rgba(255,255,255,0.12); }
