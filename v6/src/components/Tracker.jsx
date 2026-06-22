@@ -6,6 +6,7 @@ import { CATS, CM, CG, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPE
 import GlowingEffect from './GlowingEffect'
 import AirplaneIcon from './AirplaneIcon'
 import ZapIcon from './ZapIcon'
+import SparklesIcon from './SparklesIcon'
 import { makeExpense, makeIncome, makeDedupContext, matchesSearch, stableId, detectAnomaly } from '../utils/dataHelpers'
 import { migrateV5Data, validateV5File } from '../utils/migrateV5'
 import { useNotifications } from '../hooks/useNotifications'
@@ -999,20 +1000,38 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
             <label htmlFor="ef-desc">Description *</label>
             <input id="ef-desc" value={form.description} onChange={e => s('description', e.target.value)} required placeholder="What did you spend on?" />
           </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="ef-cat">Category</label>
-              <select id="ef-cat" value={form.category} onChange={e => { s('category', e.target.value); s('subcategory', ''); s('diningApp', '') }}>
-                {Object.keys(CATS).map(c => <option key={c} value={c}>{CATS[c].icon} {c}</option>)}
-              </select>
+          <div className="form-group">
+            <label>Category</label>
+            <div className="cat-icon-grid" role="radiogroup" aria-label="Category">
+              {Object.keys(CATS).map(c => {
+                const CatPh  = CATS[c].PhIcon
+                const active = form.category === c
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    className={`cat-icon-btn${active ? ' active' : ''}`}
+                    style={active ? { borderColor: CATS[c].color, background: `color-mix(in srgb, ${CATS[c].color} 14%, var(--surface))` } : {}}
+                    onClick={() => { s('category', c); s('subcategory', ''); s('diningApp', '') }}
+                    title={c}
+                  >
+                    <span className="cat-icon-btn-ico" style={{ background: `color-mix(in srgb, ${CATS[c].color} 16%, transparent)` }}>
+                      {CatPh ? <CatPh size={16} weight="duotone" color={active ? CATS[c].color : 'var(--text-muted)'} /> : CATS[c].icon}
+                    </span>
+                    <span className="cat-icon-btn-lbl">{c}</span>
+                  </button>
+                )
+              })}
             </div>
-            <div className="form-group">
-              <label htmlFor="ef-subcat">Subcategory</label>
-              <select id="ef-subcat" value={form.subcategory} onChange={e => s('subcategory', e.target.value)}>
-                <option value="">—</option>
-                {catSubs.map(sub => <option key={sub}>{sub}</option>)}
-              </select>
-            </div>
+          </div>
+          <div className="form-group">
+            <label htmlFor="ef-subcat">Subcategory</label>
+            <select id="ef-subcat" value={form.subcategory} onChange={e => s('subcategory', e.target.value)}>
+              <option value="">—</option>
+              {catSubs.map(sub => <option key={sub}>{sub}</option>)}
+            </select>
           </div>
           {/* Fuel details — only for Transport / Fuel */}
           {form.category === 'Transport' && form.subcategory === 'Fuel' && (
@@ -1650,9 +1669,10 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
 
   const REVEAL = 55, CONFIRM = 160
   const [swipeX, setSwipeX] = useState(0)
-  const airRef    = useRef(null)
-  const zapRef    = useRef(null)
-  const startRef  = useRef(null)
+  const airRef      = useRef(null)
+  const zapRef      = useRef(null)
+  const sparkRef    = useRef(null)
+  const startRef    = useRef(null)
   const swipeRef  = useRef(0)
   const vibRef    = useRef(false)
 
@@ -1710,14 +1730,16 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
         position: 'relative', zIndex: 1,
       }}
       onTouchStart={handleTS} onTouchMove={handleTM} onTouchEnd={handleTE}
-      onMouseEnter={() => { airRef.current?.startAnimation(); zapRef.current?.startAnimation() }}
-      onMouseLeave={() => { airRef.current?.stopAnimation(); zapRef.current?.stopAnimation() }}>
+      onMouseEnter={() => { airRef.current?.startAnimation(); zapRef.current?.startAnimation(); sparkRef.current?.startAnimation() }}
+      onMouseLeave={() => { airRef.current?.stopAnimation(); zapRef.current?.stopAnimation(); sparkRef.current?.stopAnimation() }}>
       {bulkMode && <input type="checkbox" className="item-checkbox" checked={isSelected} onChange={() => onToggleSelect(item.id)} />}
       <div className="item-icon" data-cat={item.category} style={{ background: `color-mix(in srgb, ${cat.color} 16%, transparent)` }}>
         {item.category === 'Travel'
           ? <AirplaneIcon ref={airRef} size={17} color={cat.color} />
           : item.category === 'Utilities'
           ? <ZapIcon ref={zapRef} size={17} color={cat.color} />
+          : item.category === 'Personal'
+          ? <SparklesIcon ref={sparkRef} size={17} color={cat.color} />
           : PhIcon ? <PhIcon size={17} weight="duotone" color={cat.color} /> : icon}
       </div>
       <div className="item-body">

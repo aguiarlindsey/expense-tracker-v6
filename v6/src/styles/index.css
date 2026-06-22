@@ -1038,11 +1038,6 @@ body {
   35%      { transform: rotate(-9deg); }
   70%      { transform: rotate(6deg); }
 }
-@keyframes icon-twirl {
-  0%   { transform: rotate(0deg) scale(1); }
-  50%  { transform: rotate(180deg) scale(1.12); }
-  100% { transform: rotate(360deg) scale(1); }
-}
 @keyframes icon-coin {
   0%, 45%, 100% { transform: scaleX(1); }
   20%           { transform: scaleX(0.25) scaleY(1.04); }
@@ -1075,7 +1070,7 @@ body {
 .item:hover .item-icon[data-cat="Utilities"] svg      { /* handled by ZapIcon (motion/react) */ }
 .item:hover .item-icon[data-cat="Housing"] svg        { animation: icon-bob        0.65s ease-in-out infinite; }
 .item:hover .item-icon[data-cat="Education"] svg      { animation: icon-read       0.7s  ease-in-out infinite; }
-.item:hover .item-icon[data-cat="Personal"] svg       { animation: icon-twirl      0.9s  linear infinite; }
+.item:hover .item-icon[data-cat="Personal"] svg       { /* handled by SparklesIcon (motion/react) */ }
 .item:hover .item-icon[data-cat="Travel"] svg         { /* handled by AirplaneIcon (motion/react) */ }
 .item:hover .item-icon[data-cat="Finance"] svg        { animation: icon-coin      0.7s  ease-in-out infinite; }
 .item:hover .item-icon[data-cat="Social"] svg         { animation: icon-bounce    0.5s  cubic-bezier(0.22,1,0.36,1) infinite; }
@@ -1301,6 +1296,29 @@ kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px
 .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem; }
 .form-check { display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; }
 .form-check label { cursor: pointer; }
+.cat-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 0.4rem;
+}
+.cat-icon-btn {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 4px; padding: 0.45rem 0.25rem;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface); cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.12s;
+}
+.cat-icon-btn:hover { transform: translateY(-1px); border-color: var(--text-muted); }
+.cat-icon-btn.active { font-weight: 600; }
+.cat-icon-btn-ico {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+}
+.cat-icon-btn-lbl {
+  font-size: 0.62rem; color: var(--text); text-align: center;
+  line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
+}
 
 @media (max-width: 600px) {
   .tracker { padding: 1rem; padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
