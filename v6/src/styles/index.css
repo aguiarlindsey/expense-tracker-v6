@@ -1054,16 +1054,6 @@ body {
   50%  { transform: rotate(180deg) scale(1.12); }
   100% { transform: rotate(360deg) scale(1); }
 }
-@keyframes icon-cloudpass {
-  /* plane thrusts forward → blurs into cloud → reappears tiny on the other side → swoops back */
-  0%   { transform: translate(0, 0)      scale(1);    opacity: 1;   filter: blur(0px); }
-  30%  { transform: translate(3px, -3px) scale(1.22); opacity: 0.75; filter: blur(0px); }
-  44%  { transform: translate(5px, -5px) scale(1.4);  opacity: 0;   filter: blur(2px); }
-  45%  { transform: translate(-5px, 5px) scale(0.65); opacity: 0;   filter: blur(2px); }
-  60%  { transform: translate(-2px, 2px) scale(0.82); opacity: 0.65; filter: blur(0px); }
-  80%  { transform: translate(0, 0)      scale(1);    opacity: 1;   filter: blur(0px); }
-  100% { transform: translate(0, 0)      scale(1);    opacity: 1;   filter: blur(0px); }
-}
 @keyframes icon-coin {
   0%, 45%, 100% { transform: scaleX(1); }
   20%           { transform: scaleX(0.25) scaleY(1.04); }
@@ -1097,7 +1087,7 @@ body {
 .item:hover .item-icon[data-cat="Housing"] svg        { animation: icon-bob        0.65s ease-in-out infinite; }
 .item:hover .item-icon[data-cat="Education"] svg      { animation: icon-read       0.7s  ease-in-out infinite; }
 .item:hover .item-icon[data-cat="Personal"] svg       { animation: icon-twirl      0.9s  linear infinite; }
-.item:hover .item-icon[data-cat="Travel"] svg         { animation: icon-cloudpass  2.2s  ease-in-out infinite; }
+.item:hover .item-icon[data-cat="Travel"] svg         { /* handled by AirplaneIcon (motion/react) */ }
 .item:hover .item-icon[data-cat="Finance"] svg        { animation: icon-coin      0.7s  ease-in-out infinite; }
 .item:hover .item-icon[data-cat="Social"] svg         { animation: icon-bounce    0.5s  cubic-bezier(0.22,1,0.36,1) infinite; }
 .item:hover .item-icon[data-cat="Administrative"] svg { animation: icon-stamp     0.5s  cubic-bezier(0.22,1,0.36,1) infinite; }

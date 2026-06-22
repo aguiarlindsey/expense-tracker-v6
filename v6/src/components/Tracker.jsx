@@ -4,6 +4,7 @@ import { useStorage } from '../hooks/useStorage'
 import { useDebounce } from '../hooks/useDebounce'
 import { CATS, CM, CG, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS, FALLBACK_RATES, IncomePhIcon } from '../utils/constants'
 import GlowingEffect from './GlowingEffect'
+import AirplaneIcon from './AirplaneIcon'
 import { makeExpense, makeIncome, makeDedupContext, matchesSearch, stableId, detectAnomaly } from '../utils/dataHelpers'
 import { migrateV5Data, validateV5File } from '../utils/migrateV5'
 import { useNotifications } from '../hooks/useNotifications'
@@ -1648,6 +1649,7 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
 
   const REVEAL = 55, CONFIRM = 160
   const [swipeX, setSwipeX] = useState(0)
+  const airRef    = useRef(null)
   const startRef  = useRef(null)
   const swipeRef  = useRef(0)
   const vibRef    = useRef(false)
@@ -1705,10 +1707,14 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
         transition: sliding ? 'none' : 'transform 0.2s ease',
         position: 'relative', zIndex: 1,
       }}
-      onTouchStart={handleTS} onTouchMove={handleTM} onTouchEnd={handleTE}>
+      onTouchStart={handleTS} onTouchMove={handleTM} onTouchEnd={handleTE}
+      onMouseEnter={() => airRef.current?.startAnimation()}
+      onMouseLeave={() => airRef.current?.stopAnimation()}>
       {bulkMode && <input type="checkbox" className="item-checkbox" checked={isSelected} onChange={() => onToggleSelect(item.id)} />}
       <div className="item-icon" data-cat={item.category} style={{ background: `color-mix(in srgb, ${cat.color} 16%, transparent)` }}>
-        {PhIcon ? <PhIcon size={17} weight="duotone" color={cat.color} /> : icon}
+        {item.category === 'Travel'
+          ? <AirplaneIcon ref={airRef} size={16} color={cat.color} />
+          : PhIcon ? <PhIcon size={17} weight="duotone" color={cat.color} /> : icon}
       </div>
       <div className="item-body">
         <div className="item-desc">{item.description}</div>
