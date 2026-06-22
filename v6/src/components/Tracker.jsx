@@ -1715,9 +1715,9 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
       {bulkMode && <input type="checkbox" className="item-checkbox" checked={isSelected} onChange={() => onToggleSelect(item.id)} />}
       <div className="item-icon" data-cat={item.category} style={{ background: `color-mix(in srgb, ${cat.color} 16%, transparent)` }}>
         {item.category === 'Travel'
-          ? <AirplaneIcon ref={airRef} size={16} color={cat.color} />
+          ? <AirplaneIcon ref={airRef} size={17} color={cat.color} />
           : item.category === 'Utilities'
-          ? <ZapIcon ref={zapRef} size={16} color={cat.color} />
+          ? <ZapIcon ref={zapRef} size={17} color={cat.color} />
           : PhIcon ? <PhIcon size={17} weight="duotone" color={cat.color} /> : icon}
       </div>
       <div className="item-body">
