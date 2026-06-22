@@ -1029,17 +1029,6 @@ body {
   30%       { transform: scale(1.08) rotate(0deg); }
   65%       { transform: scale(1); }
 }
-@keyframes icon-zap {
-  /* electricity: rapid side-to-side jitter → blinding flash → settle */
-  0%, 100% { transform: translate(0, 0)      scale(1);    opacity: 1; }
-  8%       { transform: translate(-3px, 1px) scale(0.9);  opacity: 0.7; }
-  16%      { transform: translate(3px, -1px) scale(1.05); opacity: 1; }
-  24%      { transform: translate(-2px, 1px) scale(0.95); opacity: 0.75; }
-  32%      { transform: translate(2px, -1px) scale(1.08); opacity: 1; }
-  42%      { transform: translate(0, 0)      scale(1.4);  opacity: 0.45; }
-  52%      { transform: translate(0, 0)      scale(0.85); opacity: 1; }
-  62%      { transform: translate(0, 0)      scale(1);    opacity: 1; }
-}
 @keyframes icon-bob {
   0%, 100% { transform: translateY(0); }
   45%      { transform: translateY(-3px); }
@@ -1083,7 +1072,7 @@ body {
 .item:hover .item-icon[data-cat="Health"] svg         { animation: icon-heartbeat  0.8s  ease-in-out infinite; }
 .item:hover .item-icon[data-cat="Shopping"] svg       { animation: icon-swing      0.5s  ease-in-out infinite; transform-origin: top center; }
 .item:hover .item-icon[data-cat="Entertainment"] svg  { animation: icon-clap       0.6s  ease-in-out infinite; }
-.item:hover .item-icon[data-cat="Utilities"] svg      { animation: icon-zap        0.9s  ease-in-out infinite; }
+.item:hover .item-icon[data-cat="Utilities"] svg      { /* handled by ZapIcon (motion/react) */ }
 .item:hover .item-icon[data-cat="Housing"] svg        { animation: icon-bob        0.65s ease-in-out infinite; }
 .item:hover .item-icon[data-cat="Education"] svg      { animation: icon-read       0.7s  ease-in-out infinite; }
 .item:hover .item-icon[data-cat="Personal"] svg       { animation: icon-twirl      0.9s  linear infinite; }
