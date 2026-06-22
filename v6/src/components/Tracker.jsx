@@ -547,25 +547,27 @@ function HeatmapCalendar({ expenses, income }) {
           <button key={k} className={`heatmap-btn${mode === k ? ' active' : ''}`} onClick={() => setMode(k)}>{label}</button>
         ))}
       </div>
-      <div className="heatmap-grid">
+      <div className="heatmap-grid" role="img" aria-label="Spending heatmap calendar — each cell represents one day">
         {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((l, i) => (
-          <div key={i} className="heatmap-dow">{l}</div>
+          <div key={i} className="heatmap-dow" aria-hidden="true">{l}</div>
         ))}
         {weeks.map((week, wi) =>
           week.map((d, di) => (
             <div key={`${wi}-${di}`}
               className="heatmap-cell"
               style={{ background: d ? cellMap.get(d.date) : 'transparent', border: d ? undefined : 'none' }}
-              title={d ? tipMap.get(d.date) : ''}
+              title={d ? tipMap.get(d.date) : undefined}
+              aria-label={d ? tipMap.get(d.date) : undefined}
+              aria-hidden={d ? undefined : 'true'}
             />
           ))
         )}
       </div>
-      <div className="heatmap-legend">
+      <div className="heatmap-legend" aria-hidden="true">
         <span>Less</span>
         {[0, 0.25, 0.5, 0.75, 1].map((t, i) => {
           const a = (0.15 + t * 0.85).toFixed(2)
-          return <div key={i} className="heatmap-cell" style={{ background: `rgba(102,126,234,${a})` }} />
+          return <div key={i} className="heatmap-cell" style={{ background: `rgba(99,102,241,${a})` }} />
         })}
         <span>More</span>
       </div>
@@ -930,7 +932,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
             {!initialData && (
               <button type="button" className="btn-primary-sm" onClick={() => setShowScanner(true)}>📷 Scan</button>
             )}
-            <button className="modal-close" onClick={onClose}>✕</button>
+            <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
           </div>
         </div>
         <form onSubmit={sub} className="form">
@@ -1427,7 +1429,7 @@ function IncomeForm({ onSubmit, onClose, initialData, rateData }) {
         </div>
         <div className="modal-header">
           <h2>{initialData ? '✏️ Edit Income' : '💵 Add Income'}</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
         <form onSubmit={sub} className="form">
           <div className="form-row">
@@ -1545,7 +1547,7 @@ function CreateGoalModal({ onSave, onClose }) {
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
-        <div className="modal-header"><h2>🎯 New Goal</h2><button className="modal-close" onClick={onClose}>✕</button></div>
+        <div className="modal-header"><h2>🎯 New Goal</h2><button className="modal-close" onClick={onClose} aria-label="Close">✕</button></div>
         <form onSubmit={submit} className="form">
           <div className="form-group">
             <label htmlFor="gf-name">Goal Name *</label>
@@ -1603,7 +1605,7 @@ function AddContributionModal({ goal, goalContribs, onSave, onClose }) {
       <div className="modal modal-sm">
         <div className="modal-header">
           <h2>{goal.icon} Add Contribution</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
         <form onSubmit={submit} className="form">
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
@@ -1744,8 +1746,8 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
         {item.currency !== 'INR' && <div className="item-foreign">{CM[item.currency]?.symbol || item.currency}{item.amount}</div>}
         {!bulkMode && (
           <div className="item-actions">
-            <button className="item-btn" onClick={() => onEdit(item)}>✏️</button>
-            <button className="item-btn item-btn-del" onClick={() => onDelete(item.id)}>🗑️</button>
+            <button className="item-btn" onClick={() => onEdit(item)} aria-label="Edit expense">✏️</button>
+            <button className="item-btn item-btn-del" onClick={() => onDelete(item.id)} aria-label="Delete expense">🗑️</button>
           </div>
         )}
       </div>
@@ -1774,8 +1776,8 @@ const IncItem = memo(function IncItem({ item, onDelete, onEdit }) {
         </div>
         {item.currency !== 'INR' && <div className="item-foreign">{CM[item.currency]?.symbol || item.currency}{item.amount}</div>}
         <div className="item-actions">
-          <button className="item-btn" onClick={() => onEdit(item)}>✏️</button>
-          <button className="item-btn item-btn-del" onClick={() => onDelete(item.id)}>🗑️</button>
+          <button className="item-btn" onClick={() => onEdit(item)} aria-label="Edit income">✏️</button>
+          <button className="item-btn item-btn-del" onClick={() => onDelete(item.id)} aria-label="Delete income">🗑️</button>
         </div>
       </div>
     </div>
@@ -4820,7 +4822,7 @@ export default function Tracker({ session }) {
                               <span className="contrib-amount">+{incognito ? '••••' : fmtINR(c.amount)}</span>
                               {c.note && <span className="contrib-note">{c.note}</span>}
                             </div>
-                            <button className="contrib-del" onClick={() => deleteContribution(c.id)}>✕</button>
+                            <button className="contrib-del" onClick={() => deleteContribution(c.id)} aria-label="Remove contribution">✕</button>
                           </div>
                         ))}
                       </div>
@@ -5821,7 +5823,7 @@ export default function Tracker({ session }) {
           <div className="modal modal-sm">
             <div className="modal-header">
               <h2>{confirmAction.type === 'factory-reset' ? '🏭' : '🗑️'} {confirmAction.label}</h2>
-              <button className="modal-close" onClick={() => setConfirmAction(null)}>✕</button>
+              <button className="modal-close" onClick={() => setConfirmAction(null)} aria-label="Close">✕</button>
             </div>
             <p style={{ padding: '1rem 1.25rem', color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.6 }}>{confirmAction.detail}</p>
             <div className="modal-footer">

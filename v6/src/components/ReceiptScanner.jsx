@@ -408,7 +408,7 @@ export default function ReceiptScanner({ onResult, onClose }) {
       <div className="modal" style={{ maxWidth: 480 }}>
         <div className="modal-header">
           <h2>Scan Receipt</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
 
         {/* ── PREPARING (PDF render) ── */}
