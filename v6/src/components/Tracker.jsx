@@ -192,6 +192,7 @@ function BiometricSettings({ session }) {
           </div>
           <div className="settings-row">
             <input className="input-sm" type="email" placeholder="backup@example.com"
+              aria-label="Backup OTP email address"
               value={backupEmail} onChange={e => setBackupEmail(e.target.value)}
               style={{ flex: 1 }} />
             <button className="btn-primary-sm" onClick={handleUpdateBackupEmail}>Save</button>
@@ -206,7 +207,9 @@ function BiometricSettings({ session }) {
             </div>
           </div>
           <div className="settings-row">
-            <input className="input-sm" placeholder="Device name (optional)" value={deviceName}
+            <input className="input-sm" placeholder="Device name (optional)"
+              aria-label="Device name for this biometric credential"
+              value={deviceName}
               onChange={e => setDeviceName(e.target.value)} style={{ maxWidth: 180 }} />
             <button className="btn-primary-sm" onClick={handleEnroll} disabled={enrolling}>
               {enrolling ? 'Setting up…' : 'Enable Biometric Lock'}
@@ -220,6 +223,7 @@ function BiometricSettings({ session }) {
           </div>
           <div className="settings-row">
             <input className="input-sm" type="email" placeholder="backup@example.com (optional)"
+              aria-label="Backup OTP email address (optional)"
               value={backupEmail} onChange={e => setBackupEmail(e.target.value)}
               style={{ flex: 1 }} />
           </div>
@@ -232,19 +236,33 @@ function BiometricSettings({ session }) {
 // ─── Toast System ─────────────────────────────────────────
 
 function ToastStack({ toasts, onDismiss }) {
-  return (
-    <div className="toast-stack" role="status" aria-live="polite">
-      {toasts.map(t => (
-        <div key={t.id} className={`toast toast-${t.kind || 'info'} ${t.exiting ? 'toast-exit' : ''}`}
-          onClick={() => onDismiss(t.id)}>
-          <span className="toast-icon">{t.icon || '💡'}</span>
-          <div className="toast-body">
-            <div className="toast-title">{t.title}</div>
-            <div className="toast-msg">{t.msg}</div>
-          </div>
-          <button className="toast-close" aria-label="Dismiss" onClick={e => { e.stopPropagation(); onDismiss(t.id) }}>✕</button>
+  const polite  = toasts.filter(t => t.kind !== 'danger')
+  const urgent  = toasts.filter(t => t.kind === 'danger')
+  function renderToast(t) {
+    return (
+      <div key={t.id} className={`toast toast-${t.kind || 'info'} ${t.exiting ? 'toast-exit' : ''}`}
+        onClick={() => onDismiss(t.id)}>
+        <span className="toast-icon">{t.icon || '💡'}</span>
+        <div className="toast-body">
+          <div className="toast-title">{t.title}</div>
+          <div className="toast-msg">{t.msg}</div>
         </div>
-      ))}
+        <button className="toast-close" aria-label="Dismiss" onClick={e => { e.stopPropagation(); onDismiss(t.id) }}>✕</button>
+      </div>
+    )
+  }
+  return (
+    <div className="toast-stack">
+      {polite.length > 0 && (
+        <div role="status" aria-live="polite" aria-atomic="false">
+          {polite.map(renderToast)}
+        </div>
+      )}
+      {urgent.length > 0 && (
+        <div role="alert" aria-live="assertive" aria-atomic="false">
+          {urgent.map(renderToast)}
+        </div>
+      )}
     </div>
   )
 }
@@ -933,17 +951,17 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
           )}
           <div className="form-row">
             <div className="form-group">
-              <label>Date *</label>
-              <input type="date" value={form.date} onChange={e => s('date', e.target.value)} required />
+              <label htmlFor="ef-date">Date *</label>
+              <input id="ef-date" type="date" value={form.date} onChange={e => s('date', e.target.value)} required />
             </div>
             <div className="form-group">
-              <label>Amount *</label>
-              <input type="number" min="0.01" step="0.01" value={form.amount}
+              <label htmlFor="ef-amount">Amount *</label>
+              <input id="ef-amount" type="number" min="0.01" step="0.01" value={form.amount}
                 onChange={e => s('amount', e.target.value)} required placeholder="0.00" autoFocus={!initialData} />
             </div>
             <div className="form-group">
-              <label>Currency</label>
-              <select value={form.currency} onChange={e => onCurrencyChange(e.target.value)}>
+              <label htmlFor="ef-currency">Currency</label>
+              <select id="ef-currency" value={form.currency} onChange={e => onCurrencyChange(e.target.value)}>
                 {Object.entries(CG).map(([group, list]) => (
                   <optgroup key={group} label={group}>
                     {list.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code} — {c.name}</option>)}
@@ -955,12 +973,12 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
           {isForeign && (
             <div className="form-row">
               <div className="form-group">
-                <label>
+                <label htmlFor="ef-rate">
                   Rate: 1 {form.currency} = ? INR
-                  {rateFetching && <span style={{ marginLeft: 6, fontSize: '0.78em', color: 'var(--accent)' }}>⏳ Fetching historical rate…</span>}
+                  {rateFetching && <span style={{ marginLeft: 6, fontSize: '0.78em', color: 'var(--primary)' }}>⏳ Fetching historical rate…</span>}
                   {!rateFetching && form.date < today && <span style={{ marginLeft: 6, fontSize: '0.78em', color: 'var(--text-muted)' }}>📅 {fmtDate(form.date)}</span>}
                 </label>
-                <input type="number" step="0.000001" min="0" value={form.conversionRate}
+                <input id="ef-rate" type="number" step="0.000001" min="0" value={form.conversionRate}
                   onChange={e => s('conversionRate', parseFloat(e.target.value) || 0)}
                   disabled={rateFetching} />
               </div>
@@ -973,19 +991,19 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
             </div>
           )}
           <div className="form-group">
-            <label>Description *</label>
-            <input value={form.description} onChange={e => s('description', e.target.value)} required placeholder="What did you spend on?" />
+            <label htmlFor="ef-desc">Description *</label>
+            <input id="ef-desc" value={form.description} onChange={e => s('description', e.target.value)} required placeholder="What did you spend on?" />
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Category</label>
-              <select value={form.category} onChange={e => { s('category', e.target.value); s('subcategory', ''); s('diningApp', '') }}>
+              <label htmlFor="ef-cat">Category</label>
+              <select id="ef-cat" value={form.category} onChange={e => { s('category', e.target.value); s('subcategory', ''); s('diningApp', '') }}>
                 {Object.keys(CATS).map(c => <option key={c} value={c}>{CATS[c].icon} {c}</option>)}
               </select>
             </div>
             <div className="form-group">
-              <label>Subcategory</label>
-              <select value={form.subcategory} onChange={e => s('subcategory', e.target.value)}>
+              <label htmlFor="ef-subcat">Subcategory</label>
+              <select id="ef-subcat" value={form.subcategory} onChange={e => s('subcategory', e.target.value)}>
                 <option value="">—</option>
                 {catSubs.map(sub => <option key={sub}>{sub}</option>)}
               </select>
@@ -1108,45 +1126,45 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
           )}
           <div className="form-row">
             <div className="form-group">
-              <label>Payment</label>
-              <select value={form.paymentMethod} onChange={e => s('paymentMethod', e.target.value)}>
+              <label htmlFor="ef-payment">Payment</label>
+              <select id="ef-payment" value={form.paymentMethod} onChange={e => s('paymentMethod', e.target.value)}>
                 {PAY_METHODS.map(p => <option key={p}>{p}</option>)}
               </select>
             </div>
             <div className="form-group">
-              <label>Type</label>
-              <select value={form.expenseType} onChange={e => s('expenseType', e.target.value)}>
+              <label htmlFor="ef-type">Type</label>
+              <select id="ef-type" value={form.expenseType} onChange={e => s('expenseType', e.target.value)}>
                 {EXP_TYPES.map(t => <option key={t}>{t}</option>)}
               </select>
             </div>
           </div>
           {form.paymentMethod === 'UPI/QR' && (
             <div className="form-group">
-              <label>UPI App</label>
-              <select value={form.paymentDescription || ''} onChange={e => s('paymentDescription', e.target.value)}>
+              <label htmlFor="ef-upi">UPI App</label>
+              <select id="ef-upi" value={form.paymentDescription || ''} onChange={e => s('paymentDescription', e.target.value)}>
                 {UPI_APPS.map(a => <option key={a} value={a}>{a || '— Select app —'}</option>)}
               </select>
             </div>
           )}
           {form.paymentMethod === 'Wallet' && (
             <div className="form-group">
-              <label>Wallet</label>
-              <select value={form.paymentDescription || ''} onChange={e => s('paymentDescription', e.target.value)}>
+              <label htmlFor="ef-wallet">Wallet</label>
+              <select id="ef-wallet" value={form.paymentDescription || ''} onChange={e => s('paymentDescription', e.target.value)}>
                 {WALLET_APPS.map(a => <option key={a} value={a}>{a || '— Select wallet —'}</option>)}
               </select>
             </div>
           )}
           {form.paymentMethod !== 'Cash' && form.paymentMethod !== 'UPI/QR' && form.paymentMethod !== 'Wallet' && (
             <div className="form-group">
-              <label>Payment Reference</label>
-              <input value={form.paymentDescription || ''} onChange={e => s('paymentDescription', e.target.value)}
+              <label htmlFor="ef-payref">Payment Reference</label>
+              <input id="ef-payref" value={form.paymentDescription || ''} onChange={e => s('paymentDescription', e.target.value)}
                 placeholder="Card last 4 digits, txn ID…" />
             </div>
           )}
           {form.category === 'Food' && (
             <div className="form-group">
-              <label>Dining App</label>
-              <select value={form.diningApp || ''} onChange={e => s('diningApp', e.target.value)}>
+              <label htmlFor="ef-dining">Dining App</label>
+              <select id="ef-dining" value={form.diningApp || ''} onChange={e => s('diningApp', e.target.value)}>
                 {DINING_APPS.map(a => <option key={a} value={a}>{a || '— None —'}</option>)}
               </select>
             </div>
@@ -1165,12 +1183,12 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
           )}
           <div className="form-row">
             <div className="form-group">
-              <label>Receipt / Order ID</label>
-              <input value={form.receiptRef || ''} onChange={e => s('receiptRef', e.target.value)} placeholder="Order #, receipt number…" />
+              <label htmlFor="ef-receipt">Receipt / Order ID</label>
+              <input id="ef-receipt" value={form.receiptRef || ''} onChange={e => s('receiptRef', e.target.value)} placeholder="Order #, receipt number…" />
             </div>
             <div className="form-group">
-              <label>Notes</label>
-              <input value={form.notes} onChange={e => s('notes', e.target.value)} placeholder="Optional note" />
+              <label htmlFor="ef-notes">Notes</label>
+              <input id="ef-notes" value={form.notes} onChange={e => s('notes', e.target.value)} placeholder="Optional note" />
             </div>
           </div>
           {/* Tax Breakdown */}
@@ -1203,13 +1221,13 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Split With</label>
-              <input value={form.splitWith || ''} onChange={e => s('splitWith', e.target.value)} placeholder="Alice, Bob… (leave blank if no split)" />
+              <label htmlFor="ef-splitwith">Split With</label>
+              <input id="ef-splitwith" value={form.splitWith || ''} onChange={e => s('splitWith', e.target.value)} placeholder="Alice, Bob… (leave blank if no split)" />
             </div>
             {form.splitWith && (
               <div className="form-group">
-                <label>Total Parts (your share = 1/{form.splitParts || 2})</label>
-                <input type="number" min="2" max="20" value={form.splitParts || 2} onChange={e => s('splitParts', parseInt(e.target.value) || 2)} />
+                <label htmlFor="ef-splitparts">Total Parts (your share = 1/{form.splitParts || 2})</label>
+                <input id="ef-splitparts" type="number" min="2" max="20" value={form.splitParts || 2} onChange={e => s('splitParts', parseInt(e.target.value) || 2)} />
                 {form.amount && <div className="currency-preview">Your share: {fmtINR(parseFloat(form.amount) / (parseInt(form.splitParts) || 2))}</div>}
               </div>
             )}
@@ -1246,8 +1264,8 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
           </div>
           {form.isRecurring && (
             <div className="form-group" style={{ marginTop: 8 }}>
-              <label>Next Due Date</label>
-              <input type="date" value={form.nextDueDate || calcNextDue(form.date, form.recurringPeriod)}
+              <label htmlFor="ef-nextdue">Next Due Date</label>
+              <input id="ef-nextdue" type="date" value={form.nextDueDate || calcNextDue(form.date, form.recurringPeriod)}
                 onChange={e => s('nextDueDate', e.target.value)} />
             </div>
           )}
@@ -1414,17 +1432,17 @@ function IncomeForm({ onSubmit, onClose, initialData, rateData }) {
         <form onSubmit={sub} className="form">
           <div className="form-row">
             <div className="form-group">
-              <label>Date *</label>
-              <input type="date" value={form.date} onChange={e => s('date', e.target.value)} required />
+              <label htmlFor="if-date">Date *</label>
+              <input id="if-date" type="date" value={form.date} onChange={e => s('date', e.target.value)} required />
             </div>
             <div className="form-group">
-              <label>Amount *</label>
-              <input type="number" min="0.01" step="0.01" value={form.amount}
+              <label htmlFor="if-amount">Amount *</label>
+              <input id="if-amount" type="number" min="0.01" step="0.01" value={form.amount}
                 onChange={e => s('amount', e.target.value)} required placeholder="0.00" autoFocus={!initialData} />
             </div>
             <div className="form-group">
-              <label>Currency</label>
-              <select value={form.currency} onChange={e => onCurrencyChange(e.target.value)}>
+              <label htmlFor="if-currency">Currency</label>
+              <select id="if-currency" value={form.currency} onChange={e => onCurrencyChange(e.target.value)}>
                 {Object.entries(CG).map(([group, list]) => (
                   <optgroup key={group} label={group}>
                     {list.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code} — {c.name}</option>)}
@@ -1436,12 +1454,12 @@ function IncomeForm({ onSubmit, onClose, initialData, rateData }) {
           {isForeign && (
             <div className="form-row">
               <div className="form-group">
-                <label>
+                <label htmlFor="if-rate">
                   Rate: 1 {form.currency} = ? INR
-                  {rateFetching && <span style={{ marginLeft: 6, fontSize: '0.78em', color: 'var(--accent)' }}>⏳ Fetching historical rate…</span>}
+                  {rateFetching && <span style={{ marginLeft: 6, fontSize: '0.78em', color: 'var(--primary)' }}>⏳ Fetching historical rate…</span>}
                   {!rateFetching && form.date < today && <span style={{ marginLeft: 6, fontSize: '0.78em', color: 'var(--text-muted)' }}>📅 {fmtDate(form.date)}</span>}
                 </label>
-                <input type="number" step="0.000001" min="0" value={form.conversionRate}
+                <input id="if-rate" type="number" step="0.000001" min="0" value={form.conversionRate}
                   onChange={e => s('conversionRate', parseFloat(e.target.value) || 0)}
                   disabled={rateFetching} />
               </div>
@@ -1454,26 +1472,26 @@ function IncomeForm({ onSubmit, onClose, initialData, rateData }) {
             </div>
           )}
           <div className="form-group">
-            <label>Description *</label>
-            <input value={form.description} onChange={e => s('description', e.target.value)} required placeholder="e.g. Monthly salary" />
+            <label htmlFor="if-desc">Description *</label>
+            <input id="if-desc" value={form.description} onChange={e => s('description', e.target.value)} required placeholder="e.g. Monthly salary" />
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Source</label>
-              <select value={form.source} onChange={e => s('source', e.target.value)}>
+              <label htmlFor="if-source">Source</label>
+              <select id="if-source" value={form.source} onChange={e => s('source', e.target.value)}>
                 {INC_SOURCES.map(src => <option key={src}>{src}</option>)}
               </select>
             </div>
             <div className="form-group">
-              <label>Payment Method</label>
-              <select value={form.paymentMethod} onChange={e => s('paymentMethod', e.target.value)}>
+              <label htmlFor="if-payment">Payment Method</label>
+              <select id="if-payment" value={form.paymentMethod} onChange={e => s('paymentMethod', e.target.value)}>
                 {PAY_METHODS.map(p => <option key={p}>{p}</option>)}
               </select>
             </div>
           </div>
           <div className="form-group">
-            <label>Notes</label>
-            <input value={form.notes} onChange={e => s('notes', e.target.value)} placeholder="Optional note" />
+            <label htmlFor="if-notes">Notes</label>
+            <input id="if-notes" value={form.notes} onChange={e => s('notes', e.target.value)} placeholder="Optional note" />
           </div>
           <div className="form-check">
             <input type="checkbox" id="inc-rec" checked={form.isRecurring} onChange={e => s('isRecurring', e.target.checked)} />
@@ -1530,17 +1548,17 @@ function CreateGoalModal({ onSave, onClose }) {
         <div className="modal-header"><h2>🎯 New Goal</h2><button className="modal-close" onClick={onClose}>✕</button></div>
         <form onSubmit={submit} className="form">
           <div className="form-group">
-            <label>Goal Name *</label>
-            <input value={form.name} onChange={e => s('name', e.target.value)} required placeholder="e.g. Emergency Fund" autoFocus />
+            <label htmlFor="gf-name">Goal Name *</label>
+            <input id="gf-name" value={form.name} onChange={e => s('name', e.target.value)} required placeholder="e.g. Emergency Fund" autoFocus />
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Target Amount (₹) *</label>
-              <input type="number" min="1" step="1" value={form.target} onChange={e => s('target', e.target.value)} required placeholder="50000" />
+              <label htmlFor="gf-target">Target Amount (₹) *</label>
+              <input id="gf-target" type="number" min="1" step="1" value={form.target} onChange={e => s('target', e.target.value)} required placeholder="50000" />
             </div>
             <div className="form-group">
-              <label>Target Date</label>
-              <input type="date" value={form.targetDate} onChange={e => s('targetDate', e.target.value)} />
+              <label htmlFor="gf-date">Target Date</label>
+              <input id="gf-date" type="date" value={form.targetDate} onChange={e => s('targetDate', e.target.value)} />
             </div>
           </div>
           <div className="form-group">
@@ -1552,8 +1570,8 @@ function CreateGoalModal({ onSave, onClose }) {
             </div>
           </div>
           <div className="form-group">
-            <label>Note</label>
-            <input value={form.note} onChange={e => s('note', e.target.value)} placeholder="Optional note" />
+            <label htmlFor="gf-note">Note</label>
+            <input id="gf-note" value={form.note} onChange={e => s('note', e.target.value)} placeholder="Optional note" />
           </div>
           <div className="modal-footer">
             <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
@@ -1593,17 +1611,17 @@ function AddContributionModal({ goal, goalContribs, onSave, onClose }) {
           </p>
           <div className="form-row">
             <div className="form-group">
-              <label>Date</label>
-              <input type="date" value={form.date} onChange={e => s('date', e.target.value)} required />
+              <label htmlFor="cf-date">Date</label>
+              <input id="cf-date" type="date" value={form.date} onChange={e => s('date', e.target.value)} required />
             </div>
             <div className="form-group">
-              <label>Amount (₹) *</label>
-              <input type="number" min="1" step="1" value={form.amount} onChange={e => s('amount', e.target.value)} required placeholder="1000" autoFocus />
+              <label htmlFor="cf-amount">Amount (₹) *</label>
+              <input id="cf-amount" type="number" min="1" step="1" value={form.amount} onChange={e => s('amount', e.target.value)} required placeholder="1000" autoFocus />
             </div>
           </div>
           <div className="form-group">
-            <label>Note</label>
-            <input value={form.note} onChange={e => s('note', e.target.value)} placeholder="Optional" />
+            <label htmlFor="cf-note">Note</label>
+            <input id="cf-note" value={form.note} onChange={e => s('note', e.target.value)} placeholder="Optional" />
           </div>
           <div className="modal-footer">
             <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
@@ -1675,7 +1693,7 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
       </div>
     <div className={`item${isSelected ? ' item-selected' : ''}`}
       style={{
-        borderLeft: `3px solid ${item.customColor || cat.color}`,
+        background: `color-mix(in srgb, ${item.customColor || cat.color} 7%, var(--surface))`,
         transform: sliding ? `translateX(${-swipeX}px)` : undefined,
         transition: sliding ? 'none' : 'transform 0.2s ease',
         position: 'relative', zIndex: 1,
@@ -1738,7 +1756,7 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
 
 const IncItem = memo(function IncItem({ item, onDelete, onEdit }) {
   return (
-    <div className="item" style={{ borderLeft: '3px solid var(--color-inc)' }}>
+    <div className="item" style={{ background: 'color-mix(in srgb, var(--color-inc) 5%, var(--surface))' }}>
       <div className="item-icon">💵</div>
       <div className="item-body">
         <div className="item-desc">{item.description}</div>
@@ -3442,7 +3460,7 @@ export default function Tracker({ session }) {
       <div className="glass-shell">
         <nav className="tabs" role="tablist">
           {TABS.map((t, i) => (
-            <button key={t.id} role="tab" aria-selected={tab === t.id}
+            <button key={t.id} id={`tab-btn-${t.id}`} role="tab" aria-selected={tab === t.id}
               className={`tab${tab === t.id ? ' active' : ''}`}
               onClick={() => setTab(t.id)} title={`Key ${i + 1}`}>
               <t.Icon size={13} style={{marginRight:'0.3rem',verticalAlign:'middle',flexShrink:0}} />
@@ -3454,7 +3472,7 @@ export default function Tracker({ session }) {
 
       {/* ══════════ OVERVIEW ══════════ */}
       {tab === 'overview' && (
-        <main className="tab-content-active">
+        <section role="tabpanel" className="tab-content-active">
           {expenses.length === 0 && (
             <div className="empty-overview">
               <div className="empty-overview-icon"><Zap size={56} color="var(--primary)" strokeWidth={1.5} /></div>
@@ -4034,12 +4052,12 @@ export default function Tracker({ session }) {
                 bulkMode={bulkMode} isSelected={!!selectedIds[e.id]} onToggleSelect={toggleSelect} />)}
             </div>
           ))}
-        </main>
+        </section>
       )}
 
       {/* ══════════ INCOME ══════════ */}
       {tab === 'income' && (
-        <main className="tab-content-active">
+        <section role="tabpanel" className="tab-content-active">
           <div className="summary-grid">
             <div className="summary-card"><div className="summary-label">Total Income</div><div className="summary-amount" style={{ color: 'var(--color-inc)' }}>{fmtINR(allIncINR)}</div></div>
             <div className="summary-card"><div className="summary-label">Total Expenses</div><div className="summary-amount" style={{ color: 'var(--color-exp)' }}>{fmtINR(allExpINR)}</div></div>
@@ -4103,7 +4121,7 @@ export default function Tracker({ session }) {
                 onEdit={i => { setEditIncTarget(i); setShowIF(true) }} />)}
             </div>
           ))}
-        </main>
+        </section>
       )}
 
       {/* ══════════ ANALYTICS sub-nav ══════════ */}
@@ -4128,7 +4146,7 @@ export default function Tracker({ session }) {
 
       {/* ══════════ TRENDS ══════════ */}
       {tab === 'analytics' && analyticsTab === 'trends' && (
-        <main className="tab-content-active">
+        <section role="tabpanel" className="tab-content-active">
           {/* ── Grouped Monthly Bar Chart ── */}
           <div className="chart-card" style={{ marginBottom: '1rem' }}>
             <div className="chart-title-row">
@@ -4269,7 +4287,7 @@ export default function Tracker({ session }) {
               </table>
             </div>
           )}
-        </main>
+        </section>
       )}
 
       {/* ══════════ MERCHANTS ══════════ */}
@@ -4301,7 +4319,7 @@ export default function Tracker({ session }) {
         const globalMax = merchantData[0]?.total || 1
 
         return (
-          <main className="tab-content-active">
+          <section role="tabpanel" className="tab-content-active">
             {merchantData.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">🏪</div>
@@ -4413,7 +4431,7 @@ export default function Tracker({ session }) {
                 </div>
               </>
             )}
-          </main>
+          </section>
         )
       })()}
 
@@ -4432,7 +4450,7 @@ export default function Tracker({ session }) {
         const projY = sy(totalDailyRate)
 
         return (
-          <main className="tab-content-active">
+          <section role="tabpanel" className="tab-content-active">
             {/* 30 / 60 / 90-day projection tiles */}
             <div className="fcst-tiles">
               {proj.map(p => (
@@ -4592,7 +4610,7 @@ export default function Tracker({ session }) {
                 <button className="btn-primary btn-sm" onClick={() => setShowEF(true)}>➕ Add Expense</button>
               </div>
             )}
-          </main>
+          </section>
         )
       })()}
 
@@ -4612,7 +4630,7 @@ export default function Tracker({ session }) {
 
       {/* ══════════ BUDGETS ══════════ */}
       {tab === 'planning' && planningTab === 'budgets' && (
-        <main className="tab-content-active">
+        <section role="tabpanel" className="tab-content-active">
           <div className="summary-grid">
             {[
               { val: fmtINR(spentToday), lbl: 'Today', color: budgets.daily > 0 ? (spentToday / budgets.daily >= 1 ? 'var(--color-exp)' : spentToday / budgets.daily >= 0.5 ? 'var(--color-warning)' : 'var(--color-inc)') : 'var(--text)' },
@@ -4711,7 +4729,7 @@ export default function Tracker({ session }) {
               </p>
             )}
           </div>
-        </main>
+        </section>
       )}
 
       {/* ══════════ GOALS ══════════ */}
@@ -4721,7 +4739,7 @@ export default function Tracker({ session }) {
         const overallPct       = totalTarget > 0 ? Math.min((totalContributed / totalTarget) * 100, 100) : 0
         const completedGoals   = goalsWithContribs.filter(g => g.contributions.reduce((s, c) => s + c.amount, 0) >= g.target).length
         return (
-          <main className="tab-content-active">
+          <section role="tabpanel" className="tab-content-active">
             <div className="summary-grid">
               {[
                 { val: goalsWithContribs.length, lbl: 'Total Goals', color: 'var(--color-brand)' },
@@ -4822,13 +4840,13 @@ export default function Tracker({ session }) {
                 </div>
               </div>
             )}
-          </main>
+          </section>
         )
       })()}
 
       {/* ══════════ INSIGHTS ══════════ */}
       {tab === 'analytics' && analyticsTab === 'insights' && (
-        <main className="tab-content-active">
+        <section role="tabpanel" className="tab-content-active">
           {/* Financial Health Score */}
           <HealthScoreCard score={healthScore.score} breakdown={healthScore.breakdown} incognito={incognito} />
 
@@ -4963,12 +4981,12 @@ export default function Tracker({ session }) {
               )}
             </>
           )}
-        </main>
+        </section>
       )}
 
       {/* ── Trips tab ── */}
       {tab === 'trips' && (
-        <main className="tab-content-active">
+        <section role="tabpanel" className="tab-content-active">
           {/* Header row */}
           <div className="trips-header">
             <div>
@@ -5133,12 +5151,12 @@ export default function Tracker({ session }) {
               })}
             </div>
           )}
-        </main>
+        </section>
       )}
 
       {/* ── Exchange tab ── */}
       {tab === 'exchange' && (
-        <main className="tab-content-active">
+        <section role="tabpanel" className="tab-content-active">
 
           {/* ── Base currency info ── */}
           <div className="fx-info-tile">
@@ -5260,12 +5278,12 @@ export default function Tracker({ session }) {
             </div>
           </div>
 
-        </main>
+        </section>
       )}
 
       {/* ── Settings tab ── */}
       {tab === 'settings' && (
-        <main className="tab-content-active">
+        <section role="tabpanel" className="tab-content-active">
           {/* Security */}
           <BiometricSettings session={session} />
 
@@ -5606,7 +5624,7 @@ export default function Tracker({ session }) {
               <div className="about-row"><span>Last updated</span><span>2026-06-03 · Session 48 · v7.33.0 · All 32 phases complete</span></div>
             </div>
           </div>
-        </main>
+        </section>
       )}
 
       {/* ══════════ RECURRING ══════════ */}
@@ -5701,7 +5719,7 @@ export default function Tracker({ session }) {
         const cancelRisks = subZombieData.zombies
 
         return (
-          <main className="tab-content-active">
+          <section role="tabpanel" className="tab-content-active">
             {recurExp.length === 0 && recurInc.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">📋</div>
@@ -5789,7 +5807,7 @@ export default function Tracker({ session }) {
                 )}
               </>
             )}
-          </main>
+          </section>
         )
       })()}
 
