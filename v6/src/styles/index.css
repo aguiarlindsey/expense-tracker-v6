@@ -763,10 +763,17 @@ body {
   55%       { transform: rotate(10deg) scale(0.94); }
   80%       { transform: rotate(-7deg); }
 }
-@keyframes icon-drive {
-  0%, 25%  { transform: translate(0, 0); }
-  50%      { transform: translate(2px, -2px); }
-  75%      { transform: translate(0, -1px); }
+@keyframes icon-roll {
+  /* lateral sweep + 2× bounce per sweep = rolling wheels rhythm */
+  0%   { transform: translateX(-3px) translateY(0); }
+  12%  { transform: translateX(-1.5px) translateY(-2px); }
+  25%  { transform: translateX(0px) translateY(0); }
+  37%  { transform: translateX(1.5px) translateY(-2px); }
+  50%  { transform: translateX(3px) translateY(0); }
+  62%  { transform: translateX(1.5px) translateY(-2px); }
+  75%  { transform: translateX(0px) translateY(0); }
+  87%  { transform: translateX(-1.5px) translateY(-2px); }
+  100% { transform: translateX(-3px) translateY(0); }
 }
 @keyframes icon-heartbeat {
   0%, 100% { transform: scale(1); }
@@ -786,11 +793,14 @@ body {
   30%       { transform: scale(1.08) rotate(0deg); }
   65%       { transform: scale(1); }
 }
-@keyframes icon-flash {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  20%      { transform: scale(1.28); opacity: 0.75; }
-  50%      { transform: scale(0.88); opacity: 1; }
-  75%      { transform: scale(1.1); opacity: 0.9; }
+@keyframes icon-zap {
+  /* double-strike then long silence — real lightning cadence */
+  0%         { transform: scale(1) rotate(0deg); opacity: 1; }
+  6%         { transform: scale(1.35) rotate(-6deg); opacity: 0.55; }
+  12%        { transform: scale(0.82) rotate(4deg); opacity: 1; }
+  18%        { transform: scale(1.2) rotate(-3deg); opacity: 0.7; }
+  28%        { transform: scale(1) rotate(0deg); opacity: 1; }
+  100%       { transform: scale(1) rotate(0deg); opacity: 1; }
 }
 @keyframes icon-bob {
   0%, 100% { transform: translateY(0); }
@@ -806,9 +816,12 @@ body {
   50%  { transform: rotate(180deg) scale(1.12); }
   100% { transform: rotate(360deg) scale(1); }
 }
-@keyframes icon-fly {
-  0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  50%      { transform: translate(3px, -3px) rotate(-9deg); }
+@keyframes icon-soar {
+  /* banks left → levels at peak → banks right → returns — lazy S-turn */
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  25%      { transform: rotate(-14deg) translateY(-3px); }
+  50%      { transform: rotate(0deg) translateY(-4px); }
+  75%      { transform: rotate(14deg) translateY(-3px); }
 }
 @keyframes icon-coin {
   0%, 45%, 100% { transform: scaleX(1); }
@@ -835,15 +848,15 @@ body {
 }
 
 .item:hover .item-icon[data-cat="Food"] svg          { animation: icon-chop      0.5s  cubic-bezier(0.22,1,0.36,1) infinite; }
-.item:hover .item-icon[data-cat="Transport"] svg      { animation: icon-drive     0.45s linear infinite; }
+.item:hover .item-icon[data-cat="Transport"] svg      { animation: icon-roll      0.7s  linear infinite; }
 .item:hover .item-icon[data-cat="Health"] svg         { animation: icon-heartbeat 0.8s  ease-in-out infinite; }
 .item:hover .item-icon[data-cat="Shopping"] svg       { animation: icon-swing     0.5s  ease-in-out infinite; transform-origin: top center; }
 .item:hover .item-icon[data-cat="Entertainment"] svg  { animation: icon-clap      0.6s  ease-in-out infinite; }
-.item:hover .item-icon[data-cat="Utilities"] svg      { animation: icon-flash     0.4s  ease-in-out infinite; }
+.item:hover .item-icon[data-cat="Utilities"] svg      { animation: icon-zap       1.4s  ease-in-out infinite; }
 .item:hover .item-icon[data-cat="Housing"] svg        { animation: icon-bob       0.65s ease-in-out infinite; }
 .item:hover .item-icon[data-cat="Education"] svg      { animation: icon-read      0.7s  ease-in-out infinite; }
 .item:hover .item-icon[data-cat="Personal"] svg       { animation: icon-twirl     0.9s  linear infinite; }
-.item:hover .item-icon[data-cat="Travel"] svg         { animation: icon-fly       0.65s ease-in-out infinite; }
+.item:hover .item-icon[data-cat="Travel"] svg         { animation: icon-soar      1.2s  ease-in-out infinite; }
 .item:hover .item-icon[data-cat="Finance"] svg        { animation: icon-coin      0.7s  ease-in-out infinite; }
 .item:hover .item-icon[data-cat="Social"] svg         { animation: icon-bounce    0.5s  cubic-bezier(0.22,1,0.36,1) infinite; }
 .item:hover .item-icon[data-cat="Administrative"] svg { animation: icon-stamp     0.5s  cubic-bezier(0.22,1,0.36,1) infinite; }
