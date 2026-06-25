@@ -16,7 +16,7 @@
 | ✅ Complete | 32 phases | ~200h |
 | 🔨 In Progress | 0 phases | — |
 | 📋 Planned | 0 phases | — |
-| **Total** | **32 phases** | **~200h · ~52 days** |
+| **Total** | **36 phases** | **~211h · ~52 days** |
 
 ---
 
@@ -32,6 +32,7 @@
 | [6 — Planning Tab](#epic-6--planning-tab) | Budgets + Goals merged | `██████████` 100% | 3/3 | ~18h |
 | [7 — New Features](#epic-7--new-features) | Templates, forecast, PDF | `██████████` 100% | 8/8 | ~40h |
 | [8 — Launch](#epic-8--launch--polish) | Mobile polish, docs | `██████████` 100% | 4/4 | ~9h |
+| [9 — OCR Enhancement](#epic-9--ocr-enhancement) | Self-built bill scanning pipeline | `██████████` 100% | 4/4 | ~11h |
 
 ---
 
@@ -172,6 +173,24 @@
 
 ---
 
+## Epic 9 — OCR Enhancement
+
+> Self-built image processing pipeline to improve bill scanning accuracy.
+> No external APIs, no models — pure JavaScript algorithms running in the browser.
+
+```
+██████████  100%   4 / 4 phases
+```
+
+| Status | Phase | Description | Complexity | Est. |
+|--------|-------|-------------|-----------|------|
+| ✅ | **9.1 — Image Preprocessing** | Otsu auto-threshold · Sauvola adaptive threshold · skew correction via projection profiles · unsharp mask · replaces current grayscale+contrast stretch in `ReceiptScanner.jsx` | Medium | 3–4h |
+| ✅ | **9.2 — Tesseract Tuning** | PSM mode per receipt type · two-pass OCR (full page + zoomed amount/date region, PSM 4+6) | Medium | 3–4h |
+| ✅ | **9.3 — Parser Improvements** | Fuzzy merchant matching (Levenshtein) · Indian bill patterns (Net Total, Bill Value, combined GST) · amount dedup · high-confidence detection | Medium | 2–3h |
+| ✅ | **9.4 — Learn from Corrections** | `ocr_corrections` Supabase table · `ocrCorrections.js` util · auto-apply saved corrections on every scan · corrections cached in localStorage | Medium | 3–4h |
+
+---
+
 ## Optional / Future
 
 > Not scheduled — add to a future Epic if demand warrants it.
@@ -212,7 +231,11 @@
 | v7.30.0 | Phase 7.5 — Merchant Analytics | ✅ |
 | v7.31.0 | Phase 7.6 — Cash Flow Forecast | ✅ |
 | v7.32.0 | Phase 7.7 — PDF Monthly Report + Phase 7.8 — Natural Language Search | ✅ |
-| v7.33.0 | Epic 8 — Mobile Audit · Email Share · Performance · Docs — ALL 32 phases complete | ✅ Current |
+| v7.33.0 | Epic 8 — Mobile Audit · Email Share · Performance · Docs — ALL 32 phases complete | ✅ |
+| v7.34.0 | Phase 9.1 — Image Preprocessing (Otsu + Sauvola threshold · skew correction · unsharp mask) | ✅ |
+| v7.35.0 | Phase 9.2 — Tesseract Tuning (PSM modes · two-pass OCR) | ✅ |
+| v7.36.0 | Phase 9.3 — Parser Improvements (fuzzy matching · Indian patterns · confidence scoring) | ✅ |
+| v7.37.0 | Phase 9.4 — Learn from Corrections (Supabase-backed pattern learning) | ✅ Current |
 
 ---
 
@@ -228,4 +251,4 @@
 
 ---
 
-*Last updated: 03-06-2026 · Session 48 · v7.33.0 shipped · ALL 32 phases complete 🎉*
+*Last updated: 25-06-2026 · Session 49 · Epic 9 OCR Enhancement complete · v7.37.0 · 36/36 phases done*

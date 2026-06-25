@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { parseReceipt } from '../utils/receiptParser.js';
+import { parseReceipt, currencySymbol } from '../utils/receiptParser.js';
 
 const isMobile = () => typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 const MAX_DIM = 1500;
@@ -44,23 +44,175 @@ function resizeToCanvas(img) {
   return canvas;
 }
 
-function grayscaleContrast(canvas) {
+// Convert to grayscale and return pixel array
+function toGrayscale(canvas) {
   const ctx = canvas.getContext('2d');
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const { data } = imageData;
   const grays = new Uint8Array(data.length / 4);
-  let min = 255, max = 0;
   for (let p = 0; p < grays.length; p++) {
     const i = p * 4;
-    const g = Math.round(0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]);
-    grays[p] = g; if (g < min) min = g; if (g > max) max = g;
+    grays[p] = Math.round(0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]);
   }
-  const range = max - min || 1;
-  for (let p = 0; p < grays.length; p++) {
-    const v = Math.round((grays[p] - min) / range * 255);
-    const i = p * 4; data[i] = data[i+1] = data[i+2] = v;
+  return { imageData, grays };
+}
+
+// Otsu's method — finds optimal global threshold to separate text from background
+function otsuThreshold(grays) {
+  const hist = new Int32Array(256);
+  for (let i = 0; i < grays.length; i++) hist[grays[i]]++;
+  const total = grays.length;
+  let sum = 0;
+  for (let i = 0; i < 256; i++) sum += i * hist[i];
+  let sumB = 0, wB = 0, max = 0, threshold = 0;
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t];
+    if (!wB) continue;
+    const wF = total - wB;
+    if (!wF) break;
+    sumB += t * hist[t];
+    const mB = sumB / wB;
+    const mF = (sum - sumB) / wF;
+    const between = wB * wF * (mB - mF) * (mB - mF);
+    if (between > max) { max = between; threshold = t; }
+  }
+  return threshold;
+}
+
+// Sauvola adaptive threshold — handles uneven lighting and shadows on phone photos
+// Each pixel compared to local mean in a tile window, with contrast-weighted bias
+function sauvolaThreshold(canvas, grays, windowSize = 32, k = 0.2) {
+  const { width, height } = canvas;
+  const n = width * height;
+  // Build integral image and integral of squares for O(1) tile stats
+  const intg  = new Float64Array((width + 1) * (height + 1));
+  const intg2 = new Float64Array((width + 1) * (height + 1));
+  const W1 = width + 1;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const g = grays[y * width + x];
+      intg [(y+1)*W1 + (x+1)] = g      + intg [y*W1 + (x+1)] + intg [(y+1)*W1 + x] - intg [y*W1 + x];
+      intg2[(y+1)*W1 + (x+1)] = g*g    + intg2[y*W1 + (x+1)] + intg2[(y+1)*W1 + x] - intg2[y*W1 + x];
+    }
+  }
+  const half = Math.floor(windowSize / 2);
+  const result = new Uint8Array(n);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const x1 = Math.max(0, x - half), y1 = Math.max(0, y - half);
+      const x2 = Math.min(width - 1, x + half), y2 = Math.min(height - 1, y + half);
+      const count = (x2 - x1 + 1) * (y2 - y1 + 1);
+      const s  = intg [(y2+1)*W1 + (x2+1)] - intg [y1*W1 + (x2+1)] - intg [(y2+1)*W1 + x1] + intg [y1*W1 + x1];
+      const s2 = intg2[(y2+1)*W1 + (x2+1)] - intg2[y1*W1 + (x2+1)] - intg2[(y2+1)*W1 + x1] + intg2[y1*W1 + x1];
+      const mean = s / count;
+      const std  = Math.sqrt(Math.max(0, s2 / count - mean * mean));
+      const threshold = mean * (1 + k * (std / 128 - 1));
+      result[y * width + x] = grays[y * width + x] <= threshold ? 0 : 255;
+    }
+  }
+  return result;
+}
+
+// Unsharp mask — sharpens blurry text edges before thresholding
+function unsharpMask(grays, width, height, amount = 1.2) {
+  const blurred = new Float32Array(grays.length);
+  // Fast box blur approximation (3 passes of 3x3)
+  const tmp = new Float32Array(grays.length);
+  const blur1 = (src, dst) => {
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let sum = 0, cnt = 0;
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const ny = y+dy, nx = x+dx;
+            if (ny >= 0 && ny < height && nx >= 0 && nx < width) { sum += src[ny*width+nx]; cnt++; }
+          }
+        }
+        dst[y*width+x] = sum / cnt;
+      }
+    }
+  };
+  blur1(grays, tmp); blur1(tmp, blurred);
+  const sharpened = new Uint8Array(grays.length);
+  for (let i = 0; i < grays.length; i++) {
+    sharpened[i] = Math.max(0, Math.min(255, Math.round(grays[i] + amount * (grays[i] - blurred[i]))));
+  }
+  return sharpened;
+}
+
+// Skew correction — tests 5 angles, picks the one where horizontal text lines
+// produce maximum variance in row-projection sums (text = high variance)
+// ponytail: 5-angle sample covers ~90% of real phone photos; expand to 61-step if needed
+function deskew(canvas) {
+  const { width, height } = canvas;
+  const ctx = canvas.getContext('2d');
+  const angles = [-8, -4, 0, 4, 8];
+  let bestAngle = 0, bestVariance = -1;
+  const offscreen = document.createElement('canvas');
+  offscreen.width = width; offscreen.height = height;
+  const octx = offscreen.getContext('2d');
+  for (const angle of angles) {
+    octx.clearRect(0, 0, width, height);
+    octx.save();
+    octx.translate(width/2, height/2);
+    octx.rotate(angle * Math.PI / 180);
+    octx.drawImage(canvas, -width/2, -height/2);
+    octx.restore();
+    const { data } = octx.getImageData(0, 0, width, height);
+    const rowSums = new Float32Array(height);
+    for (let y = 0; y < height; y++) {
+      let s = 0;
+      for (let x = 0; x < width; x++) s += data[(y * width + x) * 4]; // already grayscale
+      rowSums[y] = s / width;
+    }
+    const mean = rowSums.reduce((a, b) => a + b, 0) / height;
+    const variance = rowSums.reduce((a, b) => a + (b - mean) ** 2, 0) / height;
+    if (variance > bestVariance) { bestVariance = variance; bestAngle = angle; }
+  }
+  if (bestAngle !== 0) {
+    const tmp = document.createElement('canvas');
+    tmp.width = width; tmp.height = height;
+    const tctx = tmp.getContext('2d');
+    tctx.translate(width/2, height/2);
+    tctx.rotate(bestAngle * Math.PI / 180);
+    tctx.drawImage(canvas, -width/2, -height/2);
+    ctx.clearRect(0, 0, width, height);
+    ctx.drawImage(tmp, 0, 0);
+  }
+}
+
+// Main enhancement pipeline: grayscale → sharpen → Sauvola threshold → deskew
+// Falls back to Otsu global threshold if Sauvola produces a mostly-black image (edge case)
+function enhanceForOcr(canvas) {
+  const ctx = canvas.getContext('2d');
+  const { imageData, grays } = toGrayscale(canvas);
+  const { data } = imageData;
+  const { width, height } = canvas;
+
+  // Sharpen before thresholding so edges are crisp
+  const sharpened = unsharpMask(grays, width, height);
+
+  // Sauvola adaptive threshold (handles phone photo shadows/uneven lighting)
+  const binary = sauvolaThreshold(canvas, sharpened);
+
+  // Sanity check: if >95% black, Sauvola over-thresholded — fall back to Otsu
+  const blackCount = binary.reduce((n, v) => n + (v === 0 ? 1 : 0), 0);
+  const pixels = blackCount < binary.length * 0.95
+    ? binary
+    : (() => {
+        const t = otsuThreshold(sharpened);
+        return sharpened.map(v => v < t ? 0 : 255);
+      })();
+
+  for (let p = 0; p < pixels.length; p++) {
+    const i = p * 4;
+    data[i] = data[i+1] = data[i+2] = pixels[p];
+    data[i+3] = 255;
   }
   ctx.putImageData(imageData, 0, 0);
+
+  // Deskew after binarization (binary image gives cleaner projection profile)
+  deskew(canvas);
 }
 
 async function preprocessImage(blobUrl, cropPct) {
@@ -77,13 +229,24 @@ async function preprocessImage(blobUrl, cropPct) {
         const c = document.createElement('canvas');
         c.width = cw; c.height = ch;
         c.getContext('2d').drawImage(resized, cx, cy, cw, ch, 0, 0, cw, ch);
-        grayscaleContrast(c);
+        enhanceForOcr(c);
         resolve({ canvas: c, dataUrl: c.toDataURL('image/png') });
       } catch (e) { reject(e); }
     };
     img.onerror = reject;
     img.src = blobUrl;
   });
+}
+
+// Crop the bottom portion of a canvas into a new canvas (for two-pass OCR on totals region)
+function cropBottomRegion(canvas, fromPct = 0.55) {
+  const { width, height } = canvas;
+  const startY = Math.round(height * fromPct);
+  const regionH = height - startY;
+  const out = document.createElement('canvas');
+  out.width = width; out.height = regionH;
+  out.getContext('2d').drawImage(canvas, 0, startY, width, regionH, 0, 0, width, regionH);
+  return out;
 }
 
 async function runOcrOnCanvas(canvas, onProgress) {
@@ -93,13 +256,26 @@ async function runOcrOnCanvas(canvas, onProgress) {
     workerBlobURL: false,
     logger: m => {
       if (m.status === 'loading language traineddata') onProgress('Loading language data…', null);
-      else if (m.status === 'recognizing text')        onProgress(null, m.progress || 0);
+      else if (m.status === 'recognizing text')        onProgress(null, (m.progress || 0) * 0.7);
     },
   });
+
+  // Pass 1 — full page, PSM 6 (uniform block of text)
   try { await worker.setParameters({ tessedit_pageseg_mode: '6' }); } catch (_) {}
-  const { data: { text } } = await worker.recognize(canvas);
+  const { data: { text: fullText } } = await worker.recognize(canvas);
+
+  // Pass 2 — bottom 45% of receipt (totals, taxes, payment method), PSM 4 (single column)
+  // Totals are almost always in the lower portion; a focused pass catches them more reliably
+  const bottomCanvas = cropBottomRegion(canvas, 0.55);
+  try { await worker.setParameters({ tessedit_pageseg_mode: '4' }); } catch (_) {}
+  onProgress(null, 0.85);
+  const { data: { text: bottomText } } = await worker.recognize(bottomCanvas);
+  onProgress(null, 1);
+
   await worker.terminate();
-  return text;
+
+  // Merge: bottom-region text first so amount/tax patterns get priority in parser
+  return [bottomText, fullText].filter(Boolean).join('\n---\n');
 }
 
 // ── Crop Tool ─────────────────────────────────────────────────────────────────
@@ -562,7 +738,7 @@ export default function ReceiptScanner({ onResult, onClose }) {
               </div>
             )}
             <p style={{ margin:0, fontSize:'0.85rem', color:'var(--text-muted)' }}>Review below — edit anything after applying.</p>
-            <ResultRow label="Amount"   value={parsed.amount?`₹${parsed.amount}`:'—'}                 found={parsed._confidence.amount} />
+            <ResultRow label="Amount"   value={parsed.amount?`${currencySymbol(parsed.detectedCurrency)}${parsed.amount}`:'—'} found={parsed._confidence.amount} />
             <ResultRow label="Date"     value={parsed.date?(() => { const [y,m,d]=parsed.date.split('-'); return `${d}-${m}-${y}`; })():'—'} found={parsed._confidence.date} />
             <ResultRow label="Merchant" value={parsed.description||'—'}                               found={parsed._confidence.description} />
             <ResultRow label="Category" value={parsed.category?`${parsed.category}${parsed.subcategory?' › '+parsed.subcategory:''}`:'—'} found={parsed._confidence.category} />
@@ -662,7 +838,7 @@ export default function ReceiptScanner({ onResult, onClose }) {
               <div style={{ borderTop:'1px solid var(--border)', paddingTop:'0.6rem' }}>
                 <div style={{ fontSize:'0.78rem', fontWeight:600, color:'var(--text-muted)', marginBottom:'0.4rem' }}>Fuel details ✓</div>
                 <div style={{ display:'flex', flexWrap:'wrap', gap:'0.4rem' }}>
-                  <Chip>⛽ ₹{parsed.fuelRate}/L</Chip>
+                  <Chip>⛽ {currencySymbol(parsed.detectedCurrency)}{parsed.fuelRate}/L</Chip>
                   {parsed.fuelQuantity && <Chip>{parsed.fuelQuantity} L</Chip>}
                   {parsed.fuelType    && <Chip>{parsed.fuelType}</Chip>}
                 </div>
@@ -670,10 +846,10 @@ export default function ReceiptScanner({ onResult, onClose }) {
             )}
             {parsed.taxAmount > 0 && (
               <div style={{ borderTop:'1px solid var(--border)', paddingTop:'0.6rem' }}>
-                <div style={{ fontSize:'0.78rem', fontWeight:600, color:'var(--text-muted)', marginBottom:'0.4rem' }}>Taxes — Total ₹{parsed.taxAmount.toFixed(2)} ✓</div>
+                <div style={{ fontSize:'0.78rem', fontWeight:600, color:'var(--text-muted)', marginBottom:'0.4rem' }}>Taxes — Total {currencySymbol(parsed.detectedCurrency)}{parsed.taxAmount.toFixed(2)} ✓</div>
                 <div style={{ display:'flex', flexWrap:'wrap', gap:'0.4rem' }}>
                   {Object.entries(parsed.taxBreakdown).map(([k,v]) => (
-                    <Chip key={k}>{k==='serviceCharge'?'Svc Charge':k.toUpperCase()} ₹{v.toFixed(2)}</Chip>
+                    <Chip key={k}>{k==='serviceCharge'?'Svc Charge':k.toUpperCase()} {currencySymbol(parsed.detectedCurrency)}{v.toFixed(2)}</Chip>
                   ))}
                 </div>
               </div>

@@ -8,6 +8,7 @@ import AirplaneIcon from './AirplaneIcon'
 import ZapIcon from './ZapIcon'
 import SparklesIcon from './SparklesIcon'
 import { makeExpense, makeIncome, makeDedupContext, matchesSearch, stableId, detectAnomaly } from '../utils/dataHelpers'
+import { saveCorrection } from '../utils/ocrCorrections'
 import { migrateV5Data, validateV5File } from '../utils/migrateV5'
 import { useNotifications } from '../hooks/useNotifications'
 import { useInsightViews } from '../hooks/useInsightViews'
@@ -835,6 +836,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
   }
 
   const applyOcr = (parsed) => {
+    lastOcrRef.current = parsed // store so handleAddExpense can detect user corrections
     if (parsed._receiptImageB64) setReceiptImageB64(parsed._receiptImageB64)
     if (parsed.amount)      s('amount', parsed.amount)
     if (parsed.date)        s('date', parsed.date)
@@ -3313,7 +3315,22 @@ export default function Tracker({ session }) {
   const selectedCount = Object.keys(selectedIds).length
 
   // ── CRUD handlers ─────────────────────────────────────
+  const lastOcrRef = useRef(null) // stores OCR result so corrections can be saved on submit
+
   const handleAddExpense = f => {
+    // Save corrections for any fields the user changed from OCR values
+    if (lastOcrRef.current) {
+      const ocr = lastOcrRef.current
+      const fields = ['description', 'amount', 'category', 'paymentMethod']
+      fields.forEach(field => {
+        const ocrVal = String(ocr[field] || '')
+        const userVal = String(f[field] || '')
+        if (ocrVal !== userVal && userVal) {
+          saveCorrection({ field, ocrValue: ocrVal, correctValue: userVal, ocrText: ocr._rawText })
+        }
+      })
+      lastOcrRef.current = null
+    }
     const e = makeExpense(f, 'manual')
     if (makeDedupContext(expenses).isDuplicate(e)) return
     addExpense(e)

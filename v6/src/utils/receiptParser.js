@@ -1,8 +1,9 @@
 import { CATS, PAY_METHODS, UPI_APPS, DINING_APPS } from './constants.js';
+import { applyCorrections } from './ocrCorrections.js';
 
 // Known merchant → { category, subcategory } mappings
 const MERCHANT_MAP = {
-  // Food delivery
+  // ── India: Food delivery ──────────────────────────────────────────────────
   swiggy:        { category: 'Food', subcategory: 'Takeaway' },
   zomato:        { category: 'Food', subcategory: 'Takeaway' },
   blinkit:       { category: 'Food', subcategory: 'Groceries' },
@@ -11,13 +12,10 @@ const MERCHANT_MAP = {
   bigbasket:     { category: 'Food', subcategory: 'Groceries' },
   grofers:       { category: 'Food', subcategory: 'Groceries' },
   instamart:     { category: 'Food', subcategory: 'Groceries' },
-  grab:          { category: 'Food', subcategory: 'Takeaway' },
-  // Supermarkets / retail
+  // ── India: Supermarkets ───────────────────────────────────────────────────
   dmart:         { category: 'Food', subcategory: 'Groceries' },
-  reliance:      { category: 'Food', subcategory: 'Groceries' },
   spencers:      { category: 'Food', subcategory: 'Groceries' },
-  lulu:          { category: 'Food', subcategory: 'Groceries' },
-  // Fuel stations — match brand prefixes that appear on pump receipts
+  // ── India: Fuel stations ──────────────────────────────────────────────────
   'indian oil':       { category: 'Transport', subcategory: 'Fuel' },
   'indianoil':        { category: 'Transport', subcategory: 'Fuel' },
   'iocl':             { category: 'Transport', subcategory: 'Fuel' },
@@ -27,12 +25,9 @@ const MERCHANT_MAP = {
   'hindustan petroleum': { category: 'Transport', subcategory: 'Fuel' },
   'bpcl':             { category: 'Transport', subcategory: 'Fuel' },
   'bharat petroleum': { category: 'Transport', subcategory: 'Fuel' },
-  'essar':            { category: 'Transport', subcategory: 'Fuel' },
-  'shell':            { category: 'Transport', subcategory: 'Fuel' },
   'reliance petrol':  { category: 'Transport', subcategory: 'Fuel' },
-  // Transport
+  // ── India: Transport ──────────────────────────────────────────────────────
   ola:           { category: 'Transport', subcategory: 'Auto/Cab' },
-  uber:          { category: 'Transport', subcategory: 'Auto/Cab' },
   rapido:        { category: 'Transport', subcategory: 'Auto/Cab' },
   irctc:         { category: 'Transport', subcategory: 'Bus/Train' },
   makemytrip:    { category: 'Transport', subcategory: 'Flight' },
@@ -40,54 +35,126 @@ const MERCHANT_MAP = {
   spicejet:      { category: 'Transport', subcategory: 'Flight' },
   vistara:       { category: 'Transport', subcategory: 'Flight' },
   airindia:      { category: 'Transport', subcategory: 'Flight' },
-  // Health & pharma
+  // ── India: Health ─────────────────────────────────────────────────────────
   apollo:        { category: 'Health', subcategory: 'Medicine' },
   medplus:       { category: 'Health', subcategory: 'Medicine' },
   netmeds:       { category: 'Health', subcategory: 'Medicine' },
   '1mg':         { category: 'Health', subcategory: 'Medicine' },
   pharmeasy:     { category: 'Health', subcategory: 'Medicine' },
   practo:        { category: 'Health', subcategory: 'Doctor' },
-  // Shopping
-  amazon:        { category: 'Shopping', subcategory: 'Electronics' },
+  // ── India: Shopping ───────────────────────────────────────────────────────
   flipkart:      { category: 'Shopping', subcategory: 'Electronics' },
   meesho:        { category: 'Shopping', subcategory: 'Clothes' },
   myntra:        { category: 'Shopping', subcategory: 'Clothes' },
   ajio:          { category: 'Shopping', subcategory: 'Clothes' },
   nykaa:         { category: 'Personal', subcategory: 'Skincare' },
-  // Entertainment
-  netflix:       { category: 'Entertainment', subcategory: 'OTT/Streaming' },
+  // ── India: Entertainment ──────────────────────────────────────────────────
   hotstar:       { category: 'Entertainment', subcategory: 'OTT/Streaming' },
-  'disney+':     { category: 'Entertainment', subcategory: 'OTT/Streaming' },
-  prime:         { category: 'Entertainment', subcategory: 'OTT/Streaming' },
-  spotify:       { category: 'Entertainment', subcategory: 'OTT/Streaming' },
   bookmyshow:    { category: 'Entertainment', subcategory: 'Movies' },
   pvr:           { category: 'Entertainment', subcategory: 'Movies' },
   inox:          { category: 'Entertainment', subcategory: 'Movies' },
-  // Utilities
+  // ── India: Utilities ──────────────────────────────────────────────────────
   airtel:        { category: 'Utilities', subcategory: 'Phone' },
   jio:           { category: 'Utilities', subcategory: 'Phone' },
   bsnl:          { category: 'Utilities', subcategory: 'Phone' },
-  // Dining chains
+  // ── India: Personal / Gym ─────────────────────────────────────────────────
+  cultfit:       { category: 'Personal', subcategory: 'Gym' },
+  'cult.fit':    { category: 'Personal', subcategory: 'Gym' },
+  uclean:        { category: 'Personal', subcategory: 'Laundry' },
+  // ── Australia: Supermarkets / Retail ─────────────────────────────────────
+  woolworths:    { category: 'Food', subcategory: 'Groceries' },
+  coles:         { category: 'Food', subcategory: 'Groceries' },
+  aldi:          { category: 'Food', subcategory: 'Groceries' },
+  iga:           { category: 'Food', subcategory: 'Groceries' },
+  'harris farm': { category: 'Food', subcategory: 'Groceries' },
+  'dan murphy':  { category: 'Food', subcategory: 'Beverages' },
+  'bws':         { category: 'Food', subcategory: 'Beverages' },
+  // ── Australia: Pharmacy / Health ─────────────────────────────────────────
+  'chemist warehouse': { category: 'Health', subcategory: 'Medicine' },
+  priceline:     { category: 'Health', subcategory: 'Medicine' },
+  'terry white': { category: 'Health', subcategory: 'Medicine' },
+  amcal:         { category: 'Health', subcategory: 'Medicine' },
+  // ── Australia: Electronics / Home ────────────────────────────────────────
+  'jb hi-fi':    { category: 'Shopping', subcategory: 'Electronics' },
+  jbhifi:        { category: 'Shopping', subcategory: 'Electronics' },
+  'harvey norman': { category: 'Shopping', subcategory: 'Electronics' },
+  bunnings:      { category: 'Shopping', subcategory: 'Home' },
+  kmart:         { category: 'Shopping', subcategory: 'Home' },
+  target:        { category: 'Shopping', subcategory: 'Clothes' },
+  bigw:          { category: 'Shopping', subcategory: 'Home' },
+  'big w':       { category: 'Shopping', subcategory: 'Home' },
+  myer:          { category: 'Shopping', subcategory: 'Clothes' },
+  // ── Australia: Transport ──────────────────────────────────────────────────
+  'opal':        { category: 'Transport', subcategory: 'Bus/Train' },
+  'myki':        { category: 'Transport', subcategory: 'Bus/Train' },
+  'go card':     { category: 'Transport', subcategory: 'Bus/Train' },
+  qantas:        { category: 'Transport', subcategory: 'Flight' },
+  'virgin australia': { category: 'Transport', subcategory: 'Flight' },
+  jetstar:       { category: 'Transport', subcategory: 'Flight' },
+  // ── Australia: Fuel ───────────────────────────────────────────────────────
+  'bp australia': { category: 'Transport', subcategory: 'Fuel' },
+  'ampol':        { category: 'Transport', subcategory: 'Fuel' },
+  caltex:         { category: 'Transport', subcategory: 'Fuel' },
+  '7-eleven':     { category: 'Transport', subcategory: 'Fuel' },
+  'united petroleum': { category: 'Transport', subcategory: 'Fuel' },
+  // ── Saudi Arabia: Supermarkets ────────────────────────────────────────────
+  danube:        { category: 'Food', subcategory: 'Groceries' },
+  panda:         { category: 'Food', subcategory: 'Groceries' },
+  tamimi:        { category: 'Food', subcategory: 'Groceries' },
+  'bin dawood':  { category: 'Food', subcategory: 'Groceries' },
+  othaim:        { category: 'Food', subcategory: 'Groceries' },
+  nesto:         { category: 'Food', subcategory: 'Groceries' },
+  // ── Saudi Arabia: Electronics / Retail ───────────────────────────────────
+  'extra':       { category: 'Shopping', subcategory: 'Electronics' },
+  jarir:         { category: 'Shopping', subcategory: 'Electronics' },
+  'virgin megastore': { category: 'Shopping', subcategory: 'Electronics' },
+  // ── Saudi Arabia: Fuel ────────────────────────────────────────────────────
+  aramco:        { category: 'Transport', subcategory: 'Fuel' },
+  'sahar':       { category: 'Transport', subcategory: 'Fuel' },
+  // ── Saudi Arabia: Transport ───────────────────────────────────────────────
+  careem:        { category: 'Transport', subcategory: 'Auto/Cab' },
+  'saudi airlines': { category: 'Transport', subcategory: 'Flight' },
+  saudia:        { category: 'Transport', subcategory: 'Flight' },
+  flynas:        { category: 'Transport', subcategory: 'Flight' },
+  // ── International / Global ────────────────────────────────────────────────
+  reliance:      { category: 'Food', subcategory: 'Groceries' },  // India + global
+  lulu:          { category: 'Food', subcategory: 'Groceries' },  // India + Saudi + UAE
+  carrefour:     { category: 'Food', subcategory: 'Groceries' },
+  grab:          { category: 'Transport', subcategory: 'Auto/Cab' },
+  uber:          { category: 'Transport', subcategory: 'Auto/Cab' },
+  lyft:          { category: 'Transport', subcategory: 'Auto/Cab' },
+  shell:         { category: 'Transport', subcategory: 'Fuel' },
+  bp:            { category: 'Transport', subcategory: 'Fuel' },
+  essar:         { category: 'Transport', subcategory: 'Fuel' },
+  amazon:        { category: 'Shopping', subcategory: 'Electronics' },
+  ikea:          { category: 'Shopping', subcategory: 'Home' },
+  zara:          { category: 'Shopping', subcategory: 'Clothes' },
+  'h&m':         { category: 'Shopping', subcategory: 'Clothes' },
+  uniqlo:        { category: 'Shopping', subcategory: 'Clothes' },
+  'marks & spencer': { category: 'Shopping', subcategory: 'Clothes' },
+  netflix:       { category: 'Entertainment', subcategory: 'OTT/Streaming' },
+  'disney+':     { category: 'Entertainment', subcategory: 'OTT/Streaming' },
+  prime:         { category: 'Entertainment', subcategory: 'OTT/Streaming' },
+  spotify:       { category: 'Entertainment', subcategory: 'OTT/Streaming' },
   starbucks:     { category: 'Food', subcategory: 'Beverages' },
   'cafe coffee': { category: 'Food', subcategory: 'Beverages' },
   ccd:           { category: 'Food', subcategory: 'Beverages' },
   'costa coffee':{ category: 'Food', subcategory: 'Beverages' },
-  dominos:       { category: 'Food', subcategory: 'Takeaway' },
-  'pizza hut':   { category: 'Food', subcategory: 'Takeaway' },
-  pizzahut:      { category: 'Food', subcategory: 'Takeaway' },
+  'tim hortons': { category: 'Food', subcategory: 'Beverages' },
+  'gloria jeans':{ category: 'Food', subcategory: 'Beverages' },
   mcdonalds:     { category: 'Food', subcategory: 'Takeaway' },
   'mcdonald':    { category: 'Food', subcategory: 'Takeaway' },
   kfc:           { category: 'Food', subcategory: 'Takeaway' },
   subway:        { category: 'Food', subcategory: 'Takeaway' },
+  dominos:       { category: 'Food', subcategory: 'Takeaway' },
+  'pizza hut':   { category: 'Food', subcategory: 'Takeaway' },
+  pizzahut:      { category: 'Food', subcategory: 'Takeaway' },
   'burger king': { category: 'Food', subcategory: 'Takeaway' },
   burgerking:    { category: 'Food', subcategory: 'Takeaway' },
+  'hungry jacks':{ category: 'Food', subcategory: 'Takeaway' },  // Australia (Burger King)
+  'nando':       { category: 'Food', subcategory: 'Takeaway' },
   'barbeque nation': { category: 'Food', subcategory: 'Restaurants' },
   'paradise':    { category: 'Food', subcategory: 'Restaurants' },
-  // Gym / personal
-  cultfit:       { category: 'Personal', subcategory: 'Gym' },
-  'cult.fit':    { category: 'Personal', subcategory: 'Gym' },
-  // Laundry
-  uclean:        { category: 'Personal', subcategory: 'Laundry' },
 };
 
 // Lines to skip when scanning for the business name
@@ -129,8 +196,37 @@ const FOOD_KW = [
   'veg ','non-veg','vegan','jain','butter','garlic','sauce','gravy',
 ];
 
-// UPI app keyword detection
-const UPI_KEYWORD_MAP = {
+// ── Currency detection ────────────────────────────────────────────────────────
+// Returns the most likely currency code for this receipt based on symbols and context
+export function detectCurrency(text) {
+  const t = text.toLowerCase();
+  // Saudi Riyal — SR, SAR, ر.س, ﷼ symbol
+  if (/\b(sar|sr)\b|ر\.س|﷼/.test(t)) return 'SAR';
+  // UAE Dirham
+  if (/\b(aed)\b|د\.إ/.test(t)) return 'AED';
+  // Australian dollar — AUD or A$ or Australian context keywords
+  if (/\baud\b|(?<!\w)a\$/.test(t) || (/(?<!\w)\$/.test(t) && /woolworths|coles|bunnings|eftpos|payid|abn\b|gst\b/.test(t))) return 'AUD';
+  // Indian Rupee — ₹, Rs, INR, or Indian tax terms
+  if (/₹|rs\b|rs\.|inr|\bsgst\b|\bcgst\b/.test(t)) return 'INR';
+  // Euro, GBP, JPY
+  if (/€/.test(t)) return 'EUR';
+  if (/£/.test(t)) return 'GBP';
+  if (/¥/.test(t)) return 'JPY';
+  // Generic $ — could be USD, AUD, SGD etc.; return USD as default
+  if (/\$/.test(t)) return 'USD';
+  return null;
+}
+
+// Currency symbol for display
+const CURRENCY_SYMBOLS = {
+  INR: '₹', AUD: 'A$', SAR: 'SR ', AED: 'د.إ ',
+  USD: '$', EUR: '€', GBP: '£', JPY: '¥', SGD: 'S$',
+};
+export function currencySymbol(code) { return CURRENCY_SYMBOLS[code] || (code ? code + ' ' : ''); }
+
+// Payment method keyword detection — India + Australia + Saudi + international
+const PAYMENT_KW_MAP = {
+  // India — UPI
   'gpay': 'GPay', 'google pay': 'GPay',
   'phonepe': 'PhonePe', 'phone pe': 'PhonePe',
   'paytm': 'Paytm',
@@ -140,22 +236,71 @@ const UPI_KEYWORD_MAP = {
   'whatsapp pay': 'WhatsApp Pay',
   'cred': 'Cred',
   'slice': 'Slice',
+  // Australia
+  'eftpos': 'EFTPOS',
+  'payid': 'PayID',
+  'afterpay': 'Afterpay',
+  'zip pay': 'Zip Pay',
+  'zippay': 'Zip Pay',
+  'bpay': 'BPAY',
+  // Saudi Arabia
+  'mada': 'mada',
+  'stc pay': 'STC Pay',
+  'stcpay': 'STC Pay',
+  // International
+  'apple pay': 'Apple Pay',
+  'samsung pay': 'Samsung Pay',
+  'paypal': 'PayPal',
 };
+
+// ── Fuzzy merchant matching ───────────────────────────────────────────────────
+// Levenshtein distance for catching OCR errors like "Sw1ggy" → "Swiggy"
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i-1] === b[j-1]
+        ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+    }
+  }
+  return dp[m][n];
+}
+
+function fuzzyMerchantLookup(searchArea) {
+  // Only try fuzzy on tokens of 4+ chars to avoid false matches on short words
+  const tokens = searchArea.split(/\s+/).filter(t => t.length >= 4);
+  let bestKey = null, bestDist = 3; // max edit distance = 2 (allows 1-2 OCR errors)
+  for (const key of Object.keys(MERCHANT_MAP)) {
+    const keyWords = key.split(/\s+/);
+    for (const token of tokens) {
+      for (const kw of keyWords) {
+        if (kw.length < 4) continue;
+        const dist = levenshtein(token, kw);
+        if (dist < bestDist) { bestDist = dist; bestKey = key; }
+      }
+    }
+  }
+  return bestKey;
+}
 
 // ── Amount ───────────────────────────────────────────────────────────────────
 function extractAmount(text) {
   const values = [];
 
-  // Priority: look near "total" keywords first
-  const totalPat = /(?:grand\s*total|bill\s*total|total\s*amount|amount\s*paid|net\s*amount|bill\s*amount|sale\s*amount|billed\s*amount|net\s*payable|payable|total)[^\d₹Rs¥€£]{0,15}(?:₹|Rs\.?|INR|¥|€|£)?\s*([\d,]+(?:\.\d{1,2})?)/gi;
+  // Priority: look near "total" keywords — covers Indian, Australian, Saudi bill formats
+  const totalPat = /(?:grand\s*total|bill\s*total|total\s*amount|amount\s*paid|net\s*amount|bill\s*amount|sale\s*amount|billed\s*amount|net\s*payable|net\s*total|bill\s*value|bill\s*amt|payable\s*amount|amount\s*payable|total\s*due|amount\s*due|total\s*payable|balance\s*due|payable|total)[^\d₹Rs¥€£$SR]{0,15}(?:₹|Rs\.?|INR|A\$|AUD|SR\s*|SAR|AED|¥|€|£|\$)?\s*([\d,]+(?:\.\d{1,2})?)/gi;
   let m;
   while ((m = totalPat.exec(text)) !== null) {
     const v = parseFloat(m[1].replace(/,/g, ''));
     if (!isNaN(v) && v > 0) values.push(v);
   }
 
-  // Secondary: any ₹/Rs/¥/€/£ amount — OCR frequently misreads ₹ as ¥, €, or £
-  const symPat = /(?:₹|Rs\.?|INR|¥|€|£)\s*([\d,]+(?:\.\d{1,2})?)/gi;
+  // Secondary: any currency symbol/code + amount
+  // Covers ₹ Rs INR (India), $ A$ AUD (Australia), SR SAR ر.س (Saudi), €, £, ¥
+  const symPat = /(?:₹|Rs\.?|INR|A\$|AUD|SR\s*|SAR|ر\.س|AED|¥|€|£|\$)\s*([\d,]+(?:\.\d{1,2})?)/gi;
   while ((m = symPat.exec(text)) !== null) {
     const v = parseFloat(m[1].replace(/,/g, ''));
     if (!isNaN(v) && v > 0) values.push(v);
@@ -170,7 +315,9 @@ function extractAmount(text) {
     }
   }
 
-  return values.length ? Math.max(...values) : null;
+  // Dedup before picking max — prevents phantom duplicates when same number matches two patterns
+  const unique = [...new Set(values)];
+  return unique.length ? Math.max(...unique) : null;
 }
 
 // ── Date ─────────────────────────────────────────────────────────────────────
@@ -196,7 +343,7 @@ function extractDate(text) {
 }
 
 // ── Merchant name ─────────────────────────────────────────────────────────────
-const ADDR_RE = /\b(road|rd\b|street|st\b|lane|ln\b|nagar|colony|sector|floor|shop|near|opp|opposite|ph:|no\.|door|flat|apt)\b/i;
+const ADDR_RE = /\b(road|rd\b|street|st\b|lane|ln\b|avenue|ave\b|drive|dr\b|boulevard|blvd|nagar|colony|sector|floor|shop|near|opp|opposite|ph:|no\.|door|flat|apt|suite|level|nsw|vic|qld|wa\b|sa\b|riyadh|jeddah|dammam)\b/i;
 
 function isNameCandidate(line) {
   if (line.length < 3) return false;
@@ -216,12 +363,14 @@ function extractMerchantName(text) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   const searchArea = lines.slice(0, 15).join(' ').toLowerCase();
 
-  // 1. Known merchant map (highest confidence)
+  // 1. Known merchant map — exact match first, then fuzzy (catches OCR errors like "Sw1ggy")
   for (const key of Object.keys(MERCHANT_MAP)) {
     if (searchArea.includes(key)) {
       return key.replace(/\b\w/g, c => c.toUpperCase());
     }
   }
+  const fuzzyKey = fuzzyMerchantLookup(searchArea);
+  if (fuzzyKey) return fuzzyKey.replace(/\b\w/g, c => c.toUpperCase());
 
   // 2. Priority pass: first all-caps line in top 5.
   //    If the line has a company suffix, extract the part before it.
@@ -362,15 +511,21 @@ function extractPaymentMethod(text) {
 
   if (/\bcash\b/.test(lower)) return { paymentMethod: 'Cash', paymentDescription: '' };
 
-  for (const [kw, appName] of Object.entries(UPI_KEYWORD_MAP)) {
-    if (lower.includes(kw)) return { paymentMethod: 'UPI/QR', paymentDescription: appName };
+  // Named digital wallets / tap-and-pay / UPI apps (India + Australia + Saudi + global)
+  for (const [kw, appName] of Object.entries(PAYMENT_KW_MAP)) {
+    if (lower.includes(kw)) {
+      // EFTPOS and mada are card-based, not UPI
+      if (['EFTPOS', 'mada'].includes(appName)) return { paymentMethod: 'Debit Card', paymentDescription: appName };
+      if (['BPAY'].includes(appName))            return { paymentMethod: 'Net Banking', paymentDescription: appName };
+      return { paymentMethod: 'UPI/QR', paymentDescription: appName };
+    }
   }
   if (/\bupi\b/.test(lower)) return { paymentMethod: 'UPI/QR', paymentDescription: '' };
 
-  if (/\b(visa|master|mastercard|rupay|credit\s*card)\b/i.test(lower)) return { paymentMethod: 'Credit Card', paymentDescription: '' };
+  if (/\b(visa|master|mastercard|rupay|amex|american\s*express|credit\s*card)\b/i.test(lower)) return { paymentMethod: 'Credit Card', paymentDescription: '' };
   if (/\bdebit\s*card\b/i.test(lower))                                  return { paymentMethod: 'Debit Card', paymentDescription: '' };
-  // "MOP CARD" / "From CARD" on fuel receipts = card payment (type unknown, default credit)
-  if (/\b(mop\s*card|from\s*card|paid\s*by\s*card|card\s*payment)\b/i.test(lower)) return { paymentMethod: 'Credit Card', paymentDescription: '' };
+  // "MOP CARD" / "From CARD" / "CARD" on fuel receipts
+  if (/\b(mop\s*card|from\s*card|paid\s*by\s*card|card\s*payment|tap\s*&?\s*go|contactless)\b/i.test(lower)) return { paymentMethod: 'Credit Card', paymentDescription: '' };
   if (/\b(net\s*banking|netbanking|neft|imps|rtgs)\b/i.test(lower))    return { paymentMethod: 'Net Banking', paymentDescription: '' };
   if (/\bwallet\b/i.test(lower))                                         return { paymentMethod: 'Wallet', paymentDescription: '' };
 
@@ -387,13 +542,26 @@ function extractDiningApp(text) {
 }
 
 // ── Tax extraction ────────────────────────────────────────────────────────────
+// Currency-agnostic amount capture suffix — matches any currency symbol or none
+const CUR = /(?:₹|Rs\.?|INR|A\$|AUD|SR\s*|SAR|AED|¥|€|£|\$)?/;
+const AMT = /([\d,]+(?:\.\d{1,2})?)/;
+function taxRe(keyword) {
+  return new RegExp(`\\b${keyword}\\b[^:\\d₹Rs$A]*(?:\\d+\\.?\\d*\\s*%\\s*)?${CUR.source}\\s*${AMT.source}`, 'i');
+}
+
 const TAX_PATTERNS = [
-  { key: 'sgst',          re: /\bSGST\b[^:\d₹Rs]*(?:\d+\.?\d*\s*%\s*)?(?:₹|Rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)/i },
-  { key: 'cgst',          re: /\bCGST\b[^:\d₹Rs]*(?:\d+\.?\d*\s*%\s*)?(?:₹|Rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)/i },
-  { key: 'igst',          re: /\bIGST\b[^:\d₹Rs]*(?:\d+\.?\d*\s*%\s*)?(?:₹|Rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)/i },
-  { key: 'vat',           re: /\bVAT\b[^:\d₹Rs]*(?:\d+\.?\d*\s*%\s*)?(?:₹|Rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)/i },
-  { key: 'serviceCharge', re: /\bService\s*Charge\b[^:\d₹Rs]*(?:\d+\.?\d*\s*%\s*)?(?:₹|Rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)/i },
-  { key: 'cess',          re: /\b(?:Cess|Surcharge)\b[^:\d₹Rs]*(?:\d+\.?\d*\s*%\s*)?(?:₹|Rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)/i },
+  // India
+  { key: 'sgst',          re: taxRe('SGST') },
+  { key: 'cgst',          re: taxRe('CGST') },
+  { key: 'igst',          re: taxRe('IGST') },
+  { key: 'cess',          re: taxRe('(?:Cess|Surcharge)') },
+  { key: 'serviceCharge', re: taxRe('Service\\s*Charge') },
+  // India + international (VAT used in Saudi, UAE, EU)
+  { key: 'vat',           re: taxRe('VAT') },
+  // Australia + India generic GST
+  { key: 'gst',           re: taxRe('GST') },
+  // Saudi Arabic VAT label (ضريبة القيمة المضافة)
+  { key: 'vat',           re: /ضريبة القيمة المضافة[^:\d]*(\d+(?:\.\d{1,2})?)/ },
 ];
 
 function extractTaxes(text) {
@@ -522,6 +690,7 @@ function extractVehicleServiceData(text) {
 export function parseReceipt(rawText) {
   if (!rawText || !rawText.trim()) return null;
 
+  const detectedCurrency            = detectCurrency(rawText);
   const merchantName                = extractMerchantName(rawText);
   const { category, subcategory }   = extractCategory(merchantName, rawText);
   const { paymentMethod, paymentDescription } = extractPaymentMethod(rawText);
@@ -542,8 +711,11 @@ export function parseReceipt(rawText) {
   const isVehicleService            = category === 'Transport' && subcategory === 'Vehicle Maintenance';
   const vehicleData                 = isVehicleService ? extractVehicleServiceData(rawText) : {};
 
+  // Confidence: true = high confidence, false = low/none (used by UI to flag uncertain fields)
+  // Amount is high-confidence only when found near a "total" keyword, not just any ₹ symbol
+  const amountHighConf = amount !== null && /(?:grand\s*total|bill\s*total|total\s*amount|amount\s*paid|net\s*(?:total|amount|payable)|bill\s*(?:value|amount|amt)|payable)/i.test(rawText);
   const confidence = {
-    amount:        amount !== null,
+    amount:        amountHighConf,
     date:          date !== null,
     description:   !!merchantName,
     category:      !!category,
@@ -552,10 +724,11 @@ export function parseReceipt(rawText) {
     fuel:          !!fuelRate,
   };
 
-  return {
+  const raw = {
     amount:             amount !== null ? String(amount) : '',
     date:               date || '',
     description:        merchantName || '',
+    detectedCurrency,
     category,
     subcategory,
     paymentMethod,
@@ -570,4 +743,7 @@ export function parseReceipt(rawText) {
     _rawText:           rawText,
     _confidence:        confidence,
   };
+
+  // Apply any saved user corrections for this merchant/context
+  return applyCorrections(raw, rawText);
 }
