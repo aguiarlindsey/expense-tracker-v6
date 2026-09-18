@@ -4337,13 +4337,38 @@ export default function Tracker({ session }) {
 
       const totalFuelSpend = fuelExps.reduce((s, e) => s + toINR(e), 0)
       const totalMaintSpend = maintExps.reduce((s, e) => s + toINR(e), 0)
+
+      // Distance per fill-up: prefer the odometer delta since the previous fill-up
+      // (recorded every refuel, so it's the ground truth) — fall back to the
+      // logged trip-meter reading only when odo data is missing (e.g. the first
+      // fill-up ever, or a gap where the odo wasn't noted).
+      const sortedFuel = [...fuelExps].sort((a, b) => a.date.localeCompare(b.date) || (Number(a.odoReading) || 0) - (Number(b.odoReading) || 0))
       let totalDistance = 0, totalQty = 0
-      fuelExps.forEach(e => {
-        const trip = e.tripSelected === 'B' ? e.tripB : e.tripSelected === 'A' ? e.tripA : (e.tripA || e.tripB)
-        if (trip && e.fuelQuantity) { totalDistance += Number(trip); totalQty += Number(e.fuelQuantity) }
+      const kmEntries = [] // [{ date, km }] — one entry per fill-up with a known distance
+      sortedFuel.forEach((e, i) => {
+        const prev = sortedFuel[i - 1]
+        let km = null
+        if (prev && e.odoReading && prev.odoReading && Number(e.odoReading) > Number(prev.odoReading)) {
+          km = Number(e.odoReading) - Number(prev.odoReading)
+        } else {
+          const trip = e.tripSelected === 'B' ? e.tripB : e.tripSelected === 'A' ? e.tripA : (e.tripA || e.tripB)
+          if (trip) km = Number(trip)
+        }
+        if (km != null) {
+          totalDistance += km
+          kmEntries.push({ date: e.date, km })
+          if (e.fuelQuantity) totalQty += Number(e.fuelQuantity)
+        }
       })
       const avgEfficiency = totalQty > 0 ? totalDistance / totalQty : null
       const costPerKm = totalDistance > 0 ? totalFuelSpend / totalDistance : null
+
+      const kmThisWeek  = kmEntries.filter(k => k.date >= weekStart).reduce((s, k) => s + k.km, 0)
+      const kmThisMonth = kmEntries.filter(k => k.date.startsWith(todayStr.slice(0, 7))).reduce((s, k) => s + k.km, 0)
+      const kmThisYear  = kmEntries.filter(k => k.date.startsWith(todayStr.slice(0, 4))).reduce((s, k) => s + k.km, 0)
+      const kmByMonth = {}
+      kmEntries.forEach(k => { const m = k.date.slice(0, 7); kmByMonth[m] = (kmByMonth[m] || 0) + k.km })
+      const kmMonthly = Object.entries(kmByMonth).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 12)
 
       const serviceHistory = maintExps.map(e => ({
         id: e.id, date: e.date, cost: toINR(e),
@@ -4357,9 +4382,10 @@ export default function Tracker({ session }) {
       return {
         ...veh, totalFuelSpend, totalMaintSpend, totalSpend: totalFuelSpend + totalMaintSpend,
         avgEfficiency, costPerKm, totalDistance, serviceHistory,
+        kmThisWeek, kmThisMonth, kmThisYear, kmMonthly,
       }
     })
-  }, [vehicles, expenses, todayStr])
+  }, [vehicles, expenses, todayStr, weekStart])
 
   // ── Subscription zombie detection ────────────────────
   const SUB_SUBS = new Set(['OTT/Streaming', 'Streaming', 'Subscriptions', 'Software', 'Gaming', 'Cable'])
@@ -5691,6 +5717,29 @@ export default function Tracker({ session }) {
                   <div className="summary-card"><div className="summary-label">Avg Efficiency</div><div className="summary-amount">{veh.avgEfficiency != null ? `${veh.avgEfficiency.toFixed(2)} ${FUEL_UNIT[veh.fuelType] || 'km/L'}` : '—'}</div></div>
                   <div className="summary-card"><div className="summary-label">Cost / KM</div><div className="summary-amount">{veh.costPerKm != null ? fmtINR(veh.costPerKm) : '—'}</div></div>
                 </div>
+
+                <div className="card-title">📊 KMs Driven — updated from odometer readings each fill-up</div>
+                <div className="summary-grid">
+                  <div className="summary-card"><div className="summary-label">This Week</div><div className="summary-amount">{veh.kmThisWeek > 0 ? `${veh.kmThisWeek.toLocaleString('en-IN')} km` : '—'}</div></div>
+                  <div className="summary-card"><div className="summary-label">This Month</div><div className="summary-amount">{veh.kmThisMonth > 0 ? `${veh.kmThisMonth.toLocaleString('en-IN')} km` : '—'}</div></div>
+                  <div className="summary-card"><div className="summary-label">This Year</div><div className="summary-amount">{veh.kmThisYear > 0 ? `${veh.kmThisYear.toLocaleString('en-IN')} km` : '—'}</div></div>
+                </div>
+
+                {veh.kmMonthly.length > 0 && (
+                  <div style={{ marginBottom: '0.75rem' }}>
+                    <div className="card-title">Monthly Breakdown</div>
+                    {veh.kmMonthly.map(([month, km]) => {
+                      const [y, m] = month.split('-')
+                      const label = new Date(+y, +m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                      return (
+                        <div key={month} className="settings-row">
+                          <div className="settings-row-label"><strong>{label}</strong></div>
+                          <span>{km.toLocaleString('en-IN')} km</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
 
                 {veh.serviceHistory.length === 0 ? (
                   <p className="budget-hint">No service history yet — tag a Vehicle Maintenance expense to this vehicle to see it here.</p>
