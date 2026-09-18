@@ -4367,9 +4367,18 @@ export default function Tracker({ session }) {
       const avgEfficiency = totalQty > 0 ? totalDistance / totalQty : null
       const costPerKm = totalDistance > 0 ? totalFuelSpend / totalDistance : null
 
-      // Odometer reading as of the last fill-up — the car's actual total mileage,
-      // distinct from totalDistance (which only counts km driven since tracking started).
+      // Odometer reading as of the last fill-up — the vehicle's actual total mileage.
       const latestOdo = fuelExps.reduce((max, e) => e.odoReading ? Math.max(max, Number(e.odoReading)) : max, 0) || null
+
+      // KMs driven since the first-ever logged fill-up: latest odometer minus the
+      // very first one on record. Unlike totalDistance above (which sums per-fill-up
+      // trip/odo-delta estimates and can miss legs where neither was logged), this
+      // is a single clean subtraction between two known readings — always accurate,
+      // and matches how you'd sanity-check it by hand (e.g. bought at ~2km on the
+      // odometer, next fill-up logged at 102.1km — driven since tracking = ~100.1km).
+      const readingsWithOdo = sortedFuel.filter(e => e.odoReading).map(e => Number(e.odoReading))
+      const firstOdo = readingsWithOdo.length ? readingsWithOdo[0] : null
+      const kmSinceTracking = (latestOdo != null && firstOdo != null) ? Math.max(0, latestOdo - firstOdo) : null
 
       // This-year KMs, from the odometer itself rather than bucketing fill-up
       // deltas by date — a week/month bucket is unreliable unless you happen to
@@ -4397,7 +4406,7 @@ export default function Tracker({ session }) {
 
       return {
         ...veh, totalFuelSpend, totalMaintSpend, totalSpend: totalFuelSpend + totalMaintSpend,
-        avgEfficiency, costPerKm, totalDistance, latestOdo, serviceHistory,
+        avgEfficiency, costPerKm, latestOdo, kmSinceTracking, serviceHistory,
         kmThisYear, kmMonthly,
       }
     })
@@ -5731,7 +5740,7 @@ export default function Tracker({ session }) {
                   <div className="summary-card"><div className="summary-label">Maintenance Spend</div><div className="summary-amount">{incognito ? '••••' : fmtINR(veh.totalMaintSpend)}</div></div>
                   <div className="summary-card"><div className="summary-label">Total KMs</div><div className="summary-amount">{veh.latestOdo != null ? `${veh.latestOdo.toLocaleString('en-IN')} km` : '—'}</div></div>
                   <div className="summary-card"><div className="summary-label">KMs This Year</div><div className="summary-amount">{veh.kmThisYear > 0 ? `${veh.kmThisYear.toLocaleString('en-IN')} km` : '—'}</div></div>
-                  <div className="summary-card"><div className="summary-label">KMs Driven (Tracked)</div><div className="summary-amount">{veh.totalDistance > 0 ? veh.totalDistance.toLocaleString('en-IN') : '—'}</div></div>
+                  <div className="summary-card"><div className="summary-label">KMs Driven (Tracked)</div><div className="summary-amount">{veh.kmSinceTracking != null ? `${veh.kmSinceTracking.toLocaleString('en-IN')} km` : '—'}</div></div>
                   <div className="summary-card"><div className="summary-label">Avg Efficiency</div><div className="summary-amount">{veh.avgEfficiency != null ? `${veh.avgEfficiency.toFixed(2)} ${FUEL_UNIT[veh.fuelType] || 'km/L'}` : '—'}</div></div>
                   <div className="summary-card"><div className="summary-label">Cost / KM</div><div className="summary-amount">{veh.costPerKm != null ? fmtINR(veh.costPerKm) : '—'}</div></div>
                 </div>
