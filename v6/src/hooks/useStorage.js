@@ -50,6 +50,7 @@ function expenseToDb(e, userId) {
     vehicle_next_service_km: e.vehicleNextServiceKm ? parseInt(e.vehicleNextServiceKm, 10) || null : null,
     asset_type:              e.assetType || null,
     asset_id:                e.assetId || null,
+    service_parts:           Array.isArray(e.serviceParts) && e.serviceParts.length ? e.serviceParts : null,
     fingerprint:             e._fp || null,
     migrated_from:       e.migratedFrom || null,
     imported_from:       e.importedFrom || null,
@@ -94,6 +95,7 @@ function expenseFromDb(row) {
     vehicleNextServiceKm: row.vehicle_next_service_km ? parseInt(row.vehicle_next_service_km) : null,
     assetType:           row.asset_type || null,
     assetId:             row.asset_id || null,
+    serviceParts:        row.service_parts || [],
     _fp:                 row.fingerprint || '',
     migratedFrom:       row.migrated_from || '',
     importedFrom:       row.imported_from || '',
@@ -173,6 +175,37 @@ function tripFromDb(row) {
   }
 }
 
+// ── Vehicle mappers ───────────────────────────────────────
+
+function vehicleToDb(v, userId) {
+  return {
+    id:            v.id,
+    user_id:       userId,
+    name:          v.name,
+    type:          v.type || 'car',
+    fuel_type:     v.fuelType || 'petrol',
+    reg_number:    v.regNumber || null,
+    purchase_date: v.purchaseDate || null,
+    next_puc_date: v.nextPucDate || null,
+    notes:         v.notes || null,
+  }
+}
+
+function vehicleFromDb(row) {
+  return {
+    id:           row.id,
+    name:         row.name,
+    type:         row.type || 'car',
+    fuelType:     row.fuel_type || 'petrol',
+    regNumber:    row.reg_number || '',
+    purchaseDate: row.purchase_date || '',
+    nextPucDate:  row.next_puc_date || '',
+    notes:        row.notes || '',
+    createdAt:    row.created_at || '',
+    _rowVersion:  row.row_version || 1,
+  }
+}
+
 // ── Hook ─────────────────────────────────────────────────
 
 export function useStorage(userId) {
@@ -182,6 +215,7 @@ export function useStorage(userId) {
   const [goals,         setGoals]         = useState([])
   const [contributions, setContributions] = useState([])
   const [trips,         setTrips]         = useState([])
+  const [vehicles,      setVehicles]      = useState([])
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState(null)
   const [syncing,         setSyncing]         = useState(false)
@@ -225,7 +259,8 @@ export function useStorage(userId) {
       supabase.from('goals').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
       supabase.from('goal_contributions').select('*').eq('user_id', userId).order('date', { ascending: false }),
       supabase.from('trips').select('*').eq('user_id', userId).order('start_date', { ascending: false }),
-    ]).then(([expRes, incRes, budRes, gRes, cRes, tRes]) => {
+      supabase.from('vehicles').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+    ]).then(([expRes, incRes, budRes, gRes, cRes, tRes, vRes]) => {
       if (!mounted) return
       if (expRes.error) setError(expRes.error.message)
       if (incRes.error) setError(incRes.error.message)
@@ -252,6 +287,7 @@ export function useStorage(userId) {
         amount: parseFloat(c.amount), note: c.note || '',
       })))
       setTrips((tRes.data || []).map(tripFromDb))
+      setVehicles((vRes.data || []).map(vehicleFromDb))
       setLoading(false)
     })
     return () => { mounted = false }
@@ -367,6 +403,22 @@ export function useStorage(userId) {
     }
   }
 
+  function handleVehicleEvent(payload) {
+    if (payload.eventType === 'INSERT') {
+      const incoming = vehicleFromDb(payload.new)
+      setVehicles(prev => {
+        if (prev.some(v => v.id === incoming.id && !v._pending)) return prev
+        const hasPending = prev.some(v => v.id === incoming.id && v._pending)
+        if (hasPending) return prev.map(v => v.id === incoming.id ? incoming : v)
+        return [incoming, ...prev]
+      })
+    } else if (payload.eventType === 'UPDATE') {
+      setVehicles(prev => prev.map(v => v.id === payload.new.id ? vehicleFromDb(payload.new) : v))
+    } else if (payload.eventType === 'DELETE') {
+      setVehicles(prev => prev.filter(v => v.id !== payload.old.id))
+    }
+  }
+
   // ── Realtime subscription ─────────────────────────────────
   useEffect(() => {
     if (!userId) return
@@ -384,6 +436,7 @@ export function useStorage(userId) {
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'goals',              filter: `user_id=eq.${userId}` }, p => handleGoalEvent(p))
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'goal_contributions', filter: `user_id=eq.${userId}` }, p => handleContributionEvent(p))
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'trips',              filter: `user_id=eq.${userId}` }, p => handleTripEvent(p))
+      .on('postgres_changes', { event: '*',      schema: 'public', table: 'vehicles',           filter: `user_id=eq.${userId}` }, p => handleVehicleEvent(p))
       .subscribe(status => {
         if (status === 'SUBSCRIBED')    setRealtimeStatus('live')
         else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setRealtimeStatus('error')
@@ -445,6 +498,32 @@ export function useStorage(userId) {
       }
       case 'deleteIncome': {
         const { error: err } = await supabase.from('income').delete().eq('id', payload.id)
+        if (err) throw new Error(err.message)
+        break
+      }
+      case 'addVehicle': {
+        const { data, error: err } = await supabase.from('vehicles').insert(vehicleToDb(payload, userId)).select().single()
+        if (err) throw new Error(err.message)
+        setVehicles(prev => prev.map(v => v.id === payload.id ? vehicleFromDb(data) : v))
+        break
+      }
+      case 'editVehicle': {
+        const rowVersion = payload._rowVersion || 1
+        const { data, error: err } = await supabase
+          .from('vehicles').update(vehicleToDb(payload, userId))
+          .eq('id', payload.id).eq('row_version', rowVersion).select()
+        if (err) throw new Error(err.message)
+        if (!data || data.length === 0) {
+          const { data: dbRow } = await supabase.from('vehicles').select('*').eq('id', payload.id).single()
+          if (dbRow) addConflict('vehicles', payload, vehicleFromDb(dbRow))
+          else setError('This vehicle was deleted on another device.')
+          break
+        }
+        setVehicles(prev => prev.map(v => v.id === payload.id ? vehicleFromDb(data[0]) : v))
+        break
+      }
+      case 'deleteVehicle': {
+        const { error: err } = await supabase.from('vehicles').delete().eq('id', payload.id)
         if (err) throw new Error(err.message)
         break
       }
@@ -738,6 +817,54 @@ export function useStorage(userId) {
     if (err) setError(err.message)
   }, [userId])
 
+  // ── Vehicles ─────────────────────────────────────────────
+  const addVehicle = useCallback(async (vehicle) => {
+    setVehicles(prev => [{ ...vehicle, _pending: true }, ...prev])
+    if (!navigator.onLine) { enqueue('addVehicle', vehicle); return }
+    const { data, error: err } = await supabase.from('vehicles').insert(vehicleToDb(vehicle, userId)).select().single()
+    if (err) {
+      if (isNetworkError(err)) { enqueue('addVehicle', vehicle) }
+      else { setError(err.message); setVehicles(prev => prev.filter(v => v.id !== vehicle.id)) }
+      return
+    }
+    setVehicles(prev => prev.map(v => v.id === vehicle.id ? vehicleFromDb(data) : v))
+  }, [userId, enqueue])
+
+  const editVehicle = useCallback(async (vehicle) => {
+    setVehicles(prev => prev.map(v => v.id === vehicle.id ? { ...vehicle, _pending: true } : v))
+    const deps = () => loadQueueSnapshot().filter(i => i.op === 'addVehicle' && i.payload.id === vehicle.id).map(i => i.id)
+    if (!navigator.onLine) { enqueue('editVehicle', vehicle, deps()); return }
+    const rowVersion = vehicle._rowVersion || 1
+    const { data, error: err } = await supabase
+      .from('vehicles')
+      .update(vehicleToDb(vehicle, userId))
+      .eq('id', vehicle.id)
+      .eq('row_version', rowVersion)
+      .select()
+    if (err) {
+      if (isNetworkError(err)) { enqueue('editVehicle', vehicle, deps()) }
+      else { setError(err.message) }
+      return
+    }
+    if (!data || data.length === 0) {
+      const { data: dbRow } = await supabase.from('vehicles').select('*').eq('id', vehicle.id).single()
+      if (dbRow) addConflict('vehicles', vehicle, vehicleFromDb(dbRow))
+      else setError('This vehicle was deleted on another device.')
+      setVehicles(prev => prev.map(v => v.id === vehicle.id ? { ...v, _pending: false } : v))
+      return
+    }
+    setVehicles(prev => prev.map(v => v.id === vehicle.id ? vehicleFromDb(data[0]) : v))
+  }, [userId, enqueue]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const deleteVehicle = useCallback(async (id) => {
+    setVehicles(prev => prev.filter(v => v.id !== id))
+    const deps = () => loadQueueSnapshot().filter(i => ['addVehicle','editVehicle'].includes(i.op) && i.payload.id === id).map(i => i.id)
+    if (!navigator.onLine) { enqueue('deleteVehicle', { id }, deps()); return }
+    const { error: err } = await supabase.from('vehicles').delete().eq('id', id)
+    if (err && isNetworkError(err)) enqueue('deleteVehicle', { id }, deps())
+    else if (err) setError(err.message)
+  }, [userId, enqueue])
+
   // ── Bulk import ──────────────────────────────────────────
   const bulkAddExpenses = useCallback(async (exps) => {
     if (!exps.length) return { added: 0, errors: 0 }
@@ -771,6 +898,7 @@ export function useStorage(userId) {
       if (conflict.table === 'expenses') setExpenses(es => es.map(e => e.id === conflict.remote.id ? conflict.remote : e))
       if (conflict.table === 'income')   setIncome(is => is.map(i => i.id === conflict.remote.id ? conflict.remote : i))
       if (conflict.table === 'trips')    setTrips(ts => ts.map(t => t.id === conflict.remote.id ? conflict.remote : t))
+      if (conflict.table === 'vehicles') setVehicles(vs => vs.map(v => v.id === conflict.remote.id ? conflict.remote : v))
     } else {
       // 'mine' or 'merge' — re-attempt write using remote's current row_version
       const base = resolution === 'merge' && mergedData ? mergedData : conflict.local
@@ -778,8 +906,9 @@ export function useStorage(userId) {
       if (conflict.table === 'expenses') await editExpense(forceWrite)
       if (conflict.table === 'income')   await editIncome(forceWrite)
       if (conflict.table === 'trips')    await editTrip(forceWrite)
+      if (conflict.table === 'vehicles') await editVehicle(forceWrite)
     }
-  }, [editExpense, editIncome, editTrip]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [editExpense, editIncome, editTrip, editVehicle]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const dismissConflict = useCallback((conflictId) => {
     setConflicts(prev => prev.filter(c => c.id !== conflictId))
@@ -815,6 +944,7 @@ export function useStorage(userId) {
       supabase.from('goals').delete().eq('user_id', userId),
       supabase.from('goal_contributions').delete().eq('user_id', userId),
       supabase.from('trips').delete().eq('user_id', userId),
+      supabase.from('vehicles').delete().eq('user_id', userId),
     ])
     setExpenses([])
     setIncome([])
@@ -822,13 +952,14 @@ export function useStorage(userId) {
     setGoals([])
     setContributions([])
     setTrips([])
+    setVehicles([])
     try {
       ['et_v6_rates', 'et_v6_dark', 'et_v6_cb', 'et_v6_base', 'et_v6_retry_queue'].forEach(k => localStorage.removeItem(k))
     } catch {}
   }, [userId])
 
   return {
-    expenses, income, budgets, goals, contributions, trips,
+    expenses, income, budgets, goals, contributions, trips, vehicles,
     loading, error,
     pendingCount: queue.length,
     syncing,
@@ -840,6 +971,7 @@ export function useStorage(userId) {
     saveBudgets,
     addGoal, deleteGoal, addContribution, deleteContribution,
     addTrip, editTrip, deleteTrip,
+    addVehicle, editVehicle, deleteVehicle,
     bulkAddExpenses, bulkAddIncome,
     clearExpenses, clearIncome, clearAll, factoryReset,
   }

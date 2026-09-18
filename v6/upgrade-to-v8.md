@@ -48,22 +48,22 @@ A second shared building block: a generic `.ics` calendar-reminder download help
 
 ## To-do list
 
-### Phase 0 — shared infrastructure
-- [ ] `supabase/add_personalize.sql`: `alter table expenses add column if not exists asset_type text, add column if not exists asset_id text;`
-- [ ] `asset_type`/`assetId` in `makeExpense()` (`dataHelpers.js`) and `expenseToDb`/`expenseFromDb` (`useStorage.js`)
-- [ ] `downloadIcsReminder()` generic helper in `Tracker.jsx`
-- [ ] "🏠 Personalize" settings-section shell with type pills (Vehicles active first, others show "coming soon" until their phase ships — or just add pills as each phase ships, whichever is less throwaway UI)
+### Phase 0 — shared infrastructure ✅ done 2026-09-18
+- [x] `supabase/add_personalize.sql`: `alter table expenses add column if not exists asset_type text, add column if not exists asset_id text;`
+- [x] `asset_type`/`assetId` in `makeExpense()` (`dataHelpers.js`) and `expenseToDb`/`expenseFromDb` (`useStorage.js`)
+- [x] `downloadIcsReminder()` generic helper — module-level function in `Tracker.jsx` (not settings-section-scoped, since `PersonalizeModal` needs it too)
+- [x] "🏠 Personalize" launcher — implemented as a modal (see revised shared-infrastructure note above), not an inline settings-section
 
-### Phase 1 — Vehicles (fully scoped, build first)
-- [ ] `vehicles` table (same migration file as Phase 0, or its own — cloned from `add_trips.sql` shape): `id, user_id, name, type [car|bike|scooter], fuel_type [petrol|diesel|cng|electric|hydrogen], reg_number, purchase_date, next_puc_date, notes, row_version, updated_at, created_at` + RLS + realtime + row-version trigger (reuses existing `bump_row_version()`)
-- [ ] `expenses.service_parts jsonb` column — structured `[{part, dueKm}]` list on Vehicle Maintenance expenses, same precedent as existing `tax_breakdown jsonb`
-- [ ] `useStorage.js`: `vehicleToDb`/`vehicleFromDb` mappers, `vehicles` state, initial load, realtime subscribe, `addVehicle`/`editVehicle`/`deleteVehicle` (model on `addExpense`/`editExpense`/`deleteExpense` for offline-queue support — trips itself has no queue, don't copy that gap), conflict resolution, `factoryReset` cleanup, return object
-- [ ] `ExpenseForm` (`Tracker.jsx` line 769): vehicle picker in Fuel Details (lines 1098-1183) and Vehicle Maintenance (lines 1184-1201) sections, only shown if `vehicles.length > 0`; picking a vehicle auto-sets `fuelType` and switches unit labels via `FUEL_UNIT`/`FUEL_ICON` lookup (`{petrol:'km/L', diesel:'km/L', cng:'km/kg', hydrogen:'km/kg', electric:'km/kWh'}`); minimal repeatable parts-due list editor (`form.serviceParts`)
-- [ ] Submit handler (`sub`, lines 932-959): add `assetType: form.vehicleId ? 'vehicle' : null, assetId: form.vehicleId || null, serviceParts: (form.serviceParts||[]).filter(p=>p.part?.trim())`
-- [ ] List-item badges (lines 1817-1840): unit-aware fuel display, parts-tracked count on maintenance badge
-- [ ] `vehiclesWithData` memo (next to `tripsWithData`, ~line 3026): match expenses via `e.assetType==='vehicle' && e.assetId===veh.id`; compute avg mileage/efficiency, total fuel spend, cost/km, next service due + parts due, vehicle age (from `purchaseDate`), PUC days-until (from `nextPucDate`)
-- [ ] `unassignedVehicleExps` memo: Fuel/Vehicle-Maintenance expenses with `!assetId`, for manual after-the-fact assignment (no forced migration)
-- [ ] Vehicles pill content in the Personalize section: add/edit form, vehicle cards (metrics, Edit/Delete — no confirm dialog, matches existing `deleteTrip` precedent), "Download PUC reminder (.ics)" button calling the shared helper, "Unassigned expenses" panel with inline per-row vehicle assign dropdown
+### Phase 1 — Vehicles ✅ done 2026-09-18 (fully scoped, build first)
+- [x] `vehicles` table (`supabase/add_vehicles.sql`, cloned from `add_trips.sql` shape): `id, user_id, name, type [car|bike|scooter], fuel_type [petrol|diesel|cng|electric|hydrogen], reg_number, purchase_date, next_puc_date, notes, row_version, updated_at, created_at` + RLS + realtime + row-version trigger (reuses existing `bump_row_version()`) — **not yet run against production, user needs to paste into Supabase SQL editor**
+- [x] `expenses.service_parts jsonb` column — structured `[{part, dueKm}]` list on Vehicle Maintenance expenses, same precedent as existing `tax_breakdown jsonb`
+- [x] `useStorage.js`: `vehicleToDb`/`vehicleFromDb` mappers, `vehicles` state, initial load, realtime subscribe, `addVehicle`/`editVehicle`/`deleteVehicle` (modeled on `addExpense`/`editExpense`/`deleteExpense` with offline-queue support), conflict resolution, `factoryReset` cleanup, return object
+- [x] `ExpenseForm`: vehicle picker in Fuel Details and Vehicle Maintenance sections, only shown if `vehicles.length > 0`; picking a vehicle auto-sets `fuelType` and switches unit labels via `FUEL_UNIT`/`FUEL_ICON` lookup; repeatable parts-due list editor (`form.serviceParts`)
+- [x] Submit handler: `assetType`/`assetId`/`serviceParts` wired into the `onSubmit` payload
+- [x] List-item badges: unit-aware fuel display (icon/unit driven by `item.fuelType`), parts-tracked count on maintenance badge
+- [x] `vehiclesWithData` memo (inside `PersonalizeModal`, not the main Tracker component — matches expenses via `e.assetType==='vehicle' && e.assetId===veh.id`): avg mileage/efficiency, total fuel spend, cost/km, next service due, vehicle age, PUC days-until
+- [x] `unassignedVehicleExps` memo (inside `PersonalizeModal`): Fuel/Vehicle-Maintenance expenses with `!assetId`, for manual after-the-fact assignment
+- [x] Vehicles tab content inside `PersonalizeModal`: add/edit form, vehicle cards (metrics, Edit/Delete — no confirm dialog, matches existing `deleteTrip` precedent), "Download PUC reminder (.ics)" button, "Unassigned expenses" panel with inline per-row vehicle assign dropdown
 - [ ] *(stretch, optional)* `receiptParser.js` vehicleReg/vehicleModel → auto-match against saved vehicles to auto-fill `vehicleId` on OCR scan
 
 ### Phase 2 — Credit Cards (scoped now at medium detail; full field/metric design happens when this phase starts)

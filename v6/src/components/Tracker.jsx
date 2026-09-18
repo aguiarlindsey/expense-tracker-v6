@@ -32,6 +32,10 @@ const CURRENCY_ICON_MAP = {
   BTC: Bitcoin, ETH: Bitcoin,
 }
 
+// ─── Vehicle fuel-type unit/icon lookups ─────────────────
+const FUEL_UNIT = { petrol: 'km/L', diesel: 'km/L', cng: 'km/kg', hydrogen: 'km/kg', electric: 'km/kWh' }
+const FUEL_ICON = { petrol: '⛽', diesel: '⛽', cng: '⛽', hydrogen: '💧', electric: '🔌' }
+
 // ─── Helpers ─────────────────────────────────────────────
 
 // South-Asian currencies use the lakh/crore grouping (1,00,000); everything else uses standard (100,000)
@@ -59,6 +63,29 @@ function fmtDate(iso) {
   const [y, m, d] = iso.split('-')
   return d && m && y ? `${d}-${m}-${y}` : iso
 }
+// Generic .ics calendar-reminder download — reused across Personalize asset
+// types (vehicle PUC, credit card due date, rent due, warranty expiry, ...).
+function downloadIcsReminder({ uid, date, summary, description, alarmDaysBefore = 3 }) {
+  const dt = (date || '').replace(/-/g, '')
+  if (!dt) return
+  const ics = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ExpenseTracker//Reminder//EN',
+    'BEGIN:VEVENT', `UID:${uid}@expense-tracker`,
+    `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
+    `DTSTART;VALUE=DATE:${dt}`, `DTEND;VALUE=DATE:${dt}`,
+    `SUMMARY:${summary}`, `DESCRIPTION:${description}`,
+    'BEGIN:VALARM', `TRIGGER:-P${alarmDaysBefore}D`, 'ACTION:DISPLAY', `DESCRIPTION:${summary}`, 'END:VALARM',
+    'END:VEVENT', 'END:VCALENDAR',
+  ].join('\r\n')
+  const blob = new Blob([ics], { type: 'text/calendar' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href = url
+  a.download = `${uid}.ics`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 function toINR(e) {
   if (!e) return 0
   if (!e.currency || e.currency === 'INR') return parseFloat(e.amount || 0)
@@ -766,11 +793,13 @@ function useBottomSheet(onClose) {
 
 // ─── Expense Form ─────────────────────────────────────────
 
-function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
+function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [] }) {
   const today = new Date().toISOString().split('T')[0]
   const [form, setForm] = useState(initialData ? {
     useCatAlloc: !!(initialData.categoryAllocations && Object.keys(initialData.categoryAllocations || {}).length),
     categoryAllocations: initialData.categoryAllocations || {},
+    vehicleId: initialData.assetType === 'vehicle' ? (initialData.assetId || '') : '',
+    serviceParts: Array.isArray(initialData.serviceParts) ? initialData.serviceParts : [],
     ...initialData,
   } : {
     date: today, description: '', amount: '', currency: 'INR',
@@ -783,6 +812,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
     taxAmount: 0, taxBreakdown: {},
     fuelRate: '', fuelQuantity: '', fuelType: '', odoReading: '', tripA: '', tripB: '', tripSelected: '',
     vehicleCurrentKm: '', vehicleNextServiceKm: '',
+    vehicleId: '', serviceParts: [],
     useCatAlloc: false, categoryAllocations: {},
   })
   const [showPalette, setShowPalette] = useState(false)
@@ -956,6 +986,9 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
       tripA:        form.tripA    ? parseFloat(form.tripA)    || null : null,
       tripB:        form.tripB    ? parseFloat(form.tripB)    || null : null,
       tripSelected: form.tripSelected || null,
+      assetType: form.vehicleId ? 'vehicle' : null,
+      assetId:   form.vehicleId || null,
+      serviceParts: (form.serviceParts || []).filter(p => p.part && p.part.trim()),
     })
     if (!initialData && emailReceipt && receiptImageB64) {
       try {
@@ -1096,27 +1129,48 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
             </select>
           </div>
           {/* Fuel details — only for Transport / Fuel */}
-          {form.category === 'Transport' && form.subcategory === 'Fuel' && (
+          {form.category === 'Transport' && form.subcategory === 'Fuel' && (() => {
+            const selectedVehicle = vehicles.find(v => v.id === form.vehicleId)
+            const effectiveFuelType = selectedVehicle ? selectedVehicle.fuelType : (form.fuelType || '').toLowerCase()
+            const unit = FUEL_UNIT[effectiveFuelType] || 'km/L'
+            const unitIcon = FUEL_ICON[effectiveFuelType] || '⛽'
+            const qtyUnit = unit === 'km/kg' ? 'kg' : unit === 'km/kWh' ? 'kWh' : 'Litre'
+            const VEHICLE_FUEL_LABEL = { petrol: 'Petrol', diesel: 'Diesel', cng: 'CNG', electric: 'Electric', hydrogen: 'Hydrogen' }
+            return (
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '0.75rem', marginBottom: '0.5rem' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>⛽ Fuel Details</div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{unitIcon} Fuel Details</div>
+              {vehicles.length > 0 && (
+                <div className="form-group" style={{ marginBottom: '0.6rem' }}>
+                  <label>Vehicle</label>
+                  <select value={form.vehicleId || ''} onChange={e => {
+                    const vId = e.target.value
+                    s('vehicleId', vId)
+                    const veh = vehicles.find(v => v.id === vId)
+                    if (veh) s('fuelType', VEHICLE_FUEL_LABEL[veh.fuelType] || '')
+                  }}>
+                    <option value="">Unassigned</option>
+                    {vehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                  </select>
+                </div>
+              )}
               <div className="form-row">
                 <div className="form-group">
-                  <label>Rate per Litre (₹/L)</label>
+                  <label>Rate per {qtyUnit} (₹/{qtyUnit === 'Litre' ? 'L' : qtyUnit})</label>
                   <input type="number" min="0" step="0.01" placeholder="e.g. 103.50"
                     value={form.fuelRate || ''}
                     onChange={e => s('fuelRate', e.target.value)} />
                 </div>
                 <div className="form-group">
-                  <label>Quantity (Litres)</label>
+                  <label>Quantity ({qtyUnit === 'Litre' ? 'Litres' : qtyUnit})</label>
                   <input type="number" min="0" step="0.001" placeholder="e.g. 19.401"
                     value={form.fuelQuantity || ''}
                     onChange={e => s('fuelQuantity', e.target.value)} />
                 </div>
                 <div className="form-group">
                   <label>Fuel Type</label>
-                  <select value={form.fuelType || ''} onChange={e => s('fuelType', e.target.value)}>
+                  <select value={form.fuelType || ''} onChange={e => s('fuelType', e.target.value)} disabled={!!form.vehicleId}>
                     <option value="">—</option>
-                    {['Petrol','Diesel','CNG','LPG','Premium','Speed','Power'].map(t => <option key={t}>{t}</option>)}
+                    {['Petrol','Diesel','CNG','LPG','Premium','Speed','Power','Electric','Hydrogen'].map(t => <option key={t}>{t}</option>)}
                   </select>
                 </div>
               </div>
@@ -1171,20 +1225,30 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
                   if (!trip || !qty || qty <= 0) return null
                   return (
                     <div className="form-group">
-                      <label>km/L (Trip {label})</label>
+                      <label>{unit} (Trip {label})</label>
                       <div style={{ padding: '0.5rem 0.75rem', background: 'var(--surface-alt)', border: '2px solid var(--primary)', borderRadius: 8, fontSize: '0.9rem', fontWeight: 700, color: 'var(--primary)' }}>
-                        {(trip / qty).toFixed(2)} km/L
+                        {(trip / qty).toFixed(2)} {unit}
                       </div>
                     </div>
                   )
                 })()}
               </div>
             </div>
-          )}
+            )
+          })()}
           {/* Vehicle maintenance details — only for Transport / Vehicle Maintenance */}
           {form.category === 'Transport' && form.subcategory === 'Vehicle Maintenance' && (
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '0.75rem', marginBottom: '0.5rem' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🔧 Service Details</div>
+              {vehicles.length > 0 && (
+                <div className="form-group" style={{ marginBottom: '0.6rem' }}>
+                  <label>Vehicle</label>
+                  <select value={form.vehicleId || ''} onChange={e => s('vehicleId', e.target.value)}>
+                    <option value="">Unassigned</option>
+                    {vehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                  </select>
+                </div>
+              )}
               <div className="form-row">
                 <div className="form-group">
                   <label>KMs at Service</label>
@@ -1207,6 +1271,19 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData }) {
                     s('nextDueDate', e.target.value)
                     s('isRecurring', !!e.target.value)
                   }} />
+              </div>
+              <div className="form-group" style={{ marginTop: '0.5rem' }}>
+                <label>Parts serviced / due</label>
+                {(form.serviceParts || []).map((p, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
+                    <input placeholder="e.g. Brake pads" value={p.part || ''}
+                      onChange={e => { const next = [...form.serviceParts]; next[i] = { ...p, part: e.target.value }; s('serviceParts', next) }} />
+                    <input type="number" placeholder="Due at km" value={p.dueKm || ''}
+                      onChange={e => { const next = [...form.serviceParts]; next[i] = { ...p, dueKm: e.target.value }; s('serviceParts', next) }} />
+                    <button type="button" className="btn-ghost btn-sm" onClick={() => s('serviceParts', form.serviceParts.filter((_, j) => j !== i))}>✕</button>
+                  </div>
+                ))}
+                <button type="button" className="btn-ghost btn-sm" onClick={() => s('serviceParts', [...(form.serviceParts || []), { part: '', dueKm: '' }])}>+ Add part</button>
               </div>
             </div>
           )}
@@ -1722,8 +1799,74 @@ function AddContributionModal({ goal, goalContribs, onSave, onClose }) {
   )
 }
 
-function PersonalizeModal({ onClose }) {
+const EMPTY_VFORM = { name: '', type: 'car', fuelType: 'petrol', regNumber: '', purchaseDate: '', nextPucDate: '', notes: '' }
+const VEHICLE_TYPE_ICON = { car: '🚗', bike: '🏍️', scooter: '🛵' }
+
+function PersonalizeModal({ onClose, vehicles, expenses, addVehicle, editVehicle, deleteVehicle, editExpense }) {
   const [tab, setTab] = useState('vehicles')
+  const [showVehicleForm, setShowVehicleForm] = useState(false)
+  const [editingVehicle, setEditingVehicle] = useState(null)
+  const [vForm, setVForm] = useState(EMPTY_VFORM)
+  const vs = (k, v) => setVForm(f => ({ ...f, [k]: v }))
+
+  const vehiclesWithData = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0]
+    return vehicles.map(veh => {
+      const fuelExps = expenses.filter(e => e.assetType === 'vehicle' && e.assetId === veh.id && e.subcategory === 'Fuel')
+      const maintExps = expenses.filter(e => e.assetType === 'vehicle' && e.assetId === veh.id && e.subcategory === 'Vehicle Maintenance')
+        .sort((a, b) => b.date.localeCompare(a.date))
+
+      const totalFuelSpend = fuelExps.reduce((s, e) => s + toINR(e), 0)
+      let totalDistance = 0, totalQty = 0
+      fuelExps.forEach(e => {
+        const trip = e.tripSelected === 'B' ? e.tripB : e.tripSelected === 'A' ? e.tripA : (e.tripA || e.tripB)
+        if (trip && e.fuelQuantity) { totalDistance += Number(trip); totalQty += Number(e.fuelQuantity) }
+      })
+      const avgEfficiency = totalQty > 0 ? totalDistance / totalQty : null
+      const costPerKm = totalDistance > 0 ? totalFuelSpend / totalDistance : null
+
+      const lastMaint = maintExps[0] || null
+      const latestOdo = fuelExps.reduce((max, e) => e.odoReading ? Math.max(max, Number(e.odoReading)) : max, 0)
+      const nextServiceKm = lastMaint?.vehicleNextServiceKm || null
+      const kmToService = nextServiceKm && latestOdo ? nextServiceKm - latestOdo : null
+
+      const ageYears = veh.purchaseDate
+        ? (Date.now() - new Date(veh.purchaseDate + 'T00:00:00').getTime()) / (365.25 * 864e5)
+        : null
+
+      const pucDays = veh.nextPucDate
+        ? Math.round((new Date(veh.nextPucDate + 'T00:00:00') - new Date(todayStr + 'T00:00:00')) / 864e5)
+        : null
+
+      return {
+        ...veh, totalFuelSpend, avgEfficiency, costPerKm,
+        nextServiceKm, kmToService, ageYears, pucDays,
+        partsDue: lastMaint?.serviceParts || [],
+      }
+    })
+  }, [vehicles, expenses])
+
+  const unassignedVehicleExps = useMemo(() => {
+    return expenses
+      .filter(e => (e.subcategory === 'Fuel' || e.subcategory === 'Vehicle Maintenance') && !e.assetId)
+      .sort((a, b) => b.date.localeCompare(a.date))
+  }, [expenses])
+
+  const openAddVehicle = () => { setEditingVehicle(null); setVForm(EMPTY_VFORM); setShowVehicleForm(true) }
+  const openEditVehicle = (veh) => {
+    setEditingVehicle(veh)
+    setVForm({ name: veh.name, type: veh.type, fuelType: veh.fuelType, regNumber: veh.regNumber || '', purchaseDate: veh.purchaseDate || '', nextPucDate: veh.nextPucDate || '', notes: veh.notes || '' })
+    setShowVehicleForm(true)
+  }
+  const submitVehicleForm = () => {
+    if (!vForm.name.trim()) return
+    const clean = { ...vForm, name: vForm.name.trim(), regNumber: vForm.regNumber.trim(), notes: vForm.notes.trim() }
+    if (editingVehicle) editVehicle({ ...editingVehicle, ...clean })
+    else addVehicle({ id: stableId({}), ...clean })
+    setShowVehicleForm(false)
+    setEditingVehicle(null)
+  }
+
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
@@ -1747,16 +1890,149 @@ function PersonalizeModal({ onClose }) {
               onClick={() => setTab('phones')}>📱 Phones</button>
           </div>
         </div>
-        <div className="empty-state empty-state-sm">
-          <div className="empty-icon">{tab === 'vehicles' ? '🚗' : tab === 'cards' ? '💳' : tab === 'houses' ? '🏡' : '📱'}</div>
-          <h3>Coming soon</h3>
-          <p>
-            {tab === 'vehicles' && 'Register your cars and bikes to track mileage, fuel cost, service due dates, and PUC renewal reminders.'}
-            {tab === 'cards'    && 'Track spending, due dates, and utilization per credit card.'}
-            {tab === 'houses'   && 'Track rent, utilities, and maintenance per property.'}
-            {tab === 'phones'   && 'Track warranty, EMI, and upgrade reminders per device.'}
-          </p>
-        </div>
+
+        {tab === 'vehicles' && (
+          <>
+            <div className="settings-row" style={{ marginBottom: '0.75rem' }}>
+              <div className="settings-row-label">
+                <strong>Your vehicles</strong>
+                <span>Tag fuel and maintenance expenses to a vehicle to see mileage, cost/km, service due, and PUC reminders.</span>
+              </div>
+              <button className="btn-primary" onClick={openAddVehicle}>+ Add Vehicle</button>
+            </div>
+
+            {showVehicleForm && (
+              <div className="card trip-form-card" style={{ marginBottom: '0.75rem' }}>
+                <div className="card-title">{editingVehicle ? '✏️ Edit Vehicle' : '🚗 New Vehicle'}</div>
+                <div className="trip-form-grid">
+                  <label className="form-label">Name
+                    <input className="form-input" placeholder="e.g. Swift Dzire" value={vForm.name} onChange={e => vs('name', e.target.value)} />
+                  </label>
+                  <label className="form-label">Type
+                    <select className="form-input" value={vForm.type} onChange={e => vs('type', e.target.value)}>
+                      <option value="car">Car</option>
+                      <option value="bike">Bike</option>
+                      <option value="scooter">Scooter</option>
+                    </select>
+                  </label>
+                  <label className="form-label">Fuel Type
+                    <select className="form-input" value={vForm.fuelType} onChange={e => vs('fuelType', e.target.value)}>
+                      <option value="petrol">Petrol</option>
+                      <option value="diesel">Diesel</option>
+                      <option value="cng">CNG</option>
+                      <option value="electric">Electric</option>
+                      <option value="hydrogen">Hydrogen</option>
+                    </select>
+                  </label>
+                  <label className="form-label">Registration Number
+                    <input className="form-input" placeholder="e.g. KA01AB1234" value={vForm.regNumber} onChange={e => vs('regNumber', e.target.value)} />
+                  </label>
+                  <label className="form-label">Purchase Date
+                    <input type="date" className="form-input" value={vForm.purchaseDate} onChange={e => vs('purchaseDate', e.target.value)} />
+                  </label>
+                  <label className="form-label">Next PUC Date
+                    <input type="date" className="form-input" value={vForm.nextPucDate} onChange={e => vs('nextPucDate', e.target.value)} />
+                  </label>
+                  <label className="form-label trip-notes-label">Notes (optional)
+                    <input className="form-input" value={vForm.notes} onChange={e => vs('notes', e.target.value)} />
+                  </label>
+                </div>
+                <div className="trip-form-actions">
+                  <button className="btn-primary" onClick={submitVehicleForm} disabled={!vForm.name.trim()}>
+                    {editingVehicle ? 'Save changes' : 'Add vehicle'}
+                  </button>
+                  <button className="btn-ghost" onClick={() => { setShowVehicleForm(false); setEditingVehicle(null) }}>Cancel</button>
+                </div>
+              </div>
+            )}
+
+            {vehiclesWithData.length === 0 ? (
+              <div className="empty-state empty-state-sm">
+                <div className="empty-icon">🚗</div>
+                <h3>No vehicles yet</h3>
+                <p>Add a vehicle to start tracking mileage, fuel cost, service due dates, and PUC renewal.</p>
+              </div>
+            ) : (
+              <div className="trips-grid">
+                {vehiclesWithData.map(veh => {
+                  const unit = FUEL_UNIT[veh.fuelType] || 'km/L'
+                  const pucLabel = veh.pucDays == null ? null : veh.pucDays < 0 ? `Overdue ${Math.abs(veh.pucDays)}d` : `${veh.pucDays}d left`
+                  const pucClass = veh.pucDays == null ? '' : veh.pucDays < 0 ? 'trip-badge-active' : veh.pucDays <= 30 ? 'trip-badge-upcoming' : 'trip-badge-done'
+                  return (
+                    <div key={veh.id} className="trip-card">
+                      <div className="trip-card-top">
+                        <div className="trip-card-title-row">
+                          <span className="trip-card-name">{VEHICLE_TYPE_ICON[veh.type] || '🚗'} {veh.name}</span>
+                          {pucLabel && <span className={`trip-status-badge ${pucClass}`}>PUC {pucLabel}</span>}
+                        </div>
+                        <div className="trip-card-meta">
+                          <span>{FUEL_ICON[veh.fuelType] || '⛽'} {veh.fuelType}</span>
+                          {veh.ageYears != null && <><span className="trip-meta-dot">·</span><span>{veh.ageYears.toFixed(1)} yr old</span></>}
+                          {veh.regNumber && <><span className="trip-meta-dot">·</span><span>{veh.regNumber}</span></>}
+                        </div>
+                      </div>
+                      <div className="trip-card-body">
+                        <div className="trip-total-sub">
+                          <span>{veh.avgEfficiency != null ? `${veh.avgEfficiency.toFixed(2)} ${unit}` : 'No mileage data yet'}</span>
+                          {veh.totalFuelSpend > 0 && <><span className="trip-meta-dot">·</span><span>{fmtINR(veh.totalFuelSpend)} fuel spend</span></>}
+                          {veh.costPerKm != null && <><span className="trip-meta-dot">·</span><span>{fmtINR(veh.costPerKm)}/km</span></>}
+                        </div>
+                        {veh.kmToService != null && (
+                          <div className="trip-notes">🔧 {veh.kmToService > 0 ? `${veh.kmToService.toLocaleString('en-IN')} km to next service` : 'Service due now'}</div>
+                        )}
+                        {veh.partsDue.length > 0 && (
+                          <div className="trip-notes">Parts due: {veh.partsDue.map(p => p.part).filter(Boolean).join(', ')}</div>
+                        )}
+                        {veh.nextPucDate && (
+                          <button className="btn-ghost btn-sm" onClick={() => downloadIcsReminder({
+                            uid: `puc-${veh.id}`,
+                            date: veh.nextPucDate,
+                            summary: `PUC renewal due - ${veh.name}`,
+                            description: `PUC certificate renewal due for ${veh.name}${veh.regNumber ? ' (' + veh.regNumber + ')' : ''}.`,
+                          })}>📅 Download PUC reminder</button>
+                        )}
+                      </div>
+                      <div className="trip-card-actions">
+                        <button className="btn-ghost btn-sm" onClick={() => openEditVehicle(veh)}>✏️ Edit</button>
+                        <button className="btn-danger btn-sm" style={{ marginLeft: 'auto' }} onClick={() => deleteVehicle(veh.id)}>🗑️</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {unassignedVehicleExps.length > 0 && (
+              <div className="card" style={{ marginTop: 16 }}>
+                <div className="card-title">Unassigned fuel &amp; maintenance expenses ({unassignedVehicleExps.length})</div>
+                {unassignedVehicleExps.map(e => (
+                  <div key={e.id} className="settings-row">
+                    <div className="settings-row-label">
+                      <strong>{e.description}</strong>
+                      <span>{fmtDate(e.date)} · {e.subcategory} · {fmtINR(toINR(e))}</span>
+                    </div>
+                    <select value="" onChange={ev => ev.target.value && editExpense({ ...e, assetType: 'vehicle', assetId: ev.target.value })}>
+                      <option value="" disabled>Assign to…</option>
+                      {vehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {tab !== 'vehicles' && (
+          <div className="empty-state empty-state-sm">
+            <div className="empty-icon">{tab === 'cards' ? '💳' : tab === 'houses' ? '🏡' : '📱'}</div>
+            <h3>Coming soon</h3>
+            <p>
+              {tab === 'cards'  && 'Track spending, due dates, and utilization per credit card.'}
+              {tab === 'houses' && 'Track rent, utilities, and maintenance per property.'}
+              {tab === 'phones' && 'Track warranty, EMI, and upgrade reminders per device.'}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -1854,10 +2130,15 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
           {(item.tags || []).map(t => <span key={t} className="item-tag">{t}</span>)}
         </div>
         {item.notes && <div className="item-notes">{item.notes}</div>}
-        {item.subcategory === 'Fuel' && (item.fuelRate || item.odoReading || item.tripA || item.tripB) && (
+        {item.subcategory === 'Fuel' && (item.fuelRate || item.odoReading || item.tripA || item.tripB) && (() => {
+          const ft   = (item.fuelType || '').toLowerCase()
+          const unit = FUEL_UNIT[ft] || 'km/L'
+          const icon = FUEL_ICON[ft] || '⛽'
+          const qtyUnit = unit === 'km/kg' ? 'kg' : unit === 'km/kWh' ? 'kWh' : 'L'
+          return (
           <div className="item-notes">
-            {item.fuelRate ? `⛽ ₹${Number(item.fuelRate).toFixed(2)}/L` : '⛽'}
-            {item.fuelQuantity ? ` · ${Number(item.fuelQuantity).toFixed(3)} L` : ''}
+            {item.fuelRate ? `${icon} ₹${Number(item.fuelRate).toFixed(2)}/${qtyUnit}` : icon}
+            {item.fuelQuantity ? ` · ${Number(item.fuelQuantity).toFixed(3)} ${qtyUnit}` : ''}
             {item.fuelType    ? ` · ${item.fuelType}` : ''}
             {item.odoReading  ? ` · ODO ${Number(item.odoReading).toLocaleString(_localeFor(_appCurrency), { minimumFractionDigits: 0, maximumFractionDigits: 1 })} km` : ''}
             {item.tripA ? ` · A ${Number(item.tripA).toFixed(1)} km` : ''}
@@ -1867,15 +2148,17 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
                          : item.tripSelected === 'A' ? item.tripA
                          : (item.tripA || item.tripB)
               if (!trip || !item.fuelQuantity) return ''
-              return ` · ${(Number(trip) / Number(item.fuelQuantity)).toFixed(2)} km/L`
+              return ` · ${(Number(trip) / Number(item.fuelQuantity)).toFixed(2)} ${unit}`
             })()}
           </div>
-        )}
+          )
+        })()}
         {item.subcategory === 'Vehicle Maintenance' && item.vehicleCurrentKm && (
           <div className="item-notes">
             🔧 {Number(item.vehicleCurrentKm).toLocaleString(_localeFor(_appCurrency))} km at service
             {item.vehicleNextServiceKm ? ` · Next at ${Number(item.vehicleNextServiceKm).toLocaleString(_localeFor(_appCurrency))} km` : ''}
             {item.nextDueDate ? ` · Due ${fmtDate(item.nextDueDate)}` : ''}
+            {item.serviceParts?.length ? ` · ${item.serviceParts.length} part${item.serviceParts.length !== 1 ? 's' : ''} tracked` : ''}
           </div>
         )}
       </div>
@@ -2029,7 +2312,7 @@ function CommandPalette({ open, onClose, commands }) {
 export default function Tracker({ session }) {
   const userId = session.user.id
   const {
-    expenses, income, budgets, goals, contributions, trips,
+    expenses, income, budgets, goals, contributions, trips, vehicles,
     loading, error,
     pendingCount, syncing, online, realtimeStatus,
     conflicts, resolveConflict, dismissConflict,
@@ -2038,6 +2321,7 @@ export default function Tracker({ session }) {
     saveBudgets,
     addGoal, deleteGoal, addContribution, deleteContribution,
     addTrip, editTrip, deleteTrip,
+    addVehicle, editVehicle, deleteVehicle,
     bulkAddExpenses, bulkAddIncome,
     clearExpenses, clearIncome, clearAll, factoryReset,
   } = useStorage(userId)
@@ -2190,29 +2474,6 @@ export default function Tracker({ session }) {
     const a    = document.createElement('a')
     a.href = url
     a.download = `expenses-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  // Generic .ics calendar-reminder download — reused across Personalize asset
-  // types (vehicle PUC, credit card due date, rent due, warranty expiry, ...).
-  const downloadIcsReminder = ({ uid, date, summary, description, alarmDaysBefore = 3 }) => {
-    const dt = (date || '').replace(/-/g, '')
-    if (!dt) return
-    const ics = [
-      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ExpenseTracker//Reminder//EN',
-      'BEGIN:VEVENT', `UID:${uid}@expense-tracker`,
-      `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
-      `DTSTART;VALUE=DATE:${dt}`, `DTEND;VALUE=DATE:${dt}`,
-      `SUMMARY:${summary}`, `DESCRIPTION:${description}`,
-      'BEGIN:VALARM', `TRIGGER:-P${alarmDaysBefore}D`, 'ACTION:DISPLAY', `DESCRIPTION:${summary}`, 'END:VALARM',
-      'END:VEVENT', 'END:VCALENDAR',
-    ].join('\r\n')
-    const blob = new Blob([ics], { type: 'text/calendar' })
-    const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a')
-    a.href = url
-    a.download = `${uid}.ics`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -6030,8 +6291,8 @@ export default function Tracker({ session }) {
 
       {/* ── Modals ── */}
       <CommandPalette open={showCmd} onClose={() => setShowCmd(false)} commands={cmdCommands} />
-      {showEF && <ExpenseForm initialData={editExpTarget} onSubmit={editExpTarget ? handleEditExpense : handleAddExpense} onClose={() => { setShowEF(false); setEditExpTarget(null) }} rateData={rateData} />}
-      {showPersonalize && <PersonalizeModal onClose={() => setShowPersonalize(false)} />}
+      {showEF && <ExpenseForm initialData={editExpTarget} onSubmit={editExpTarget ? handleEditExpense : handleAddExpense} onClose={() => { setShowEF(false); setEditExpTarget(null) }} rateData={rateData} vehicles={vehicles} />}
+      {showPersonalize && <PersonalizeModal onClose={() => setShowPersonalize(false)} vehicles={vehicles} expenses={expenses} addVehicle={addVehicle} editVehicle={editVehicle} deleteVehicle={deleteVehicle} editExpense={editExpense} />}
       {showIF && <IncomeForm  initialData={editIncTarget} onSubmit={editIncTarget ? handleEditIncome  : handleAddIncome}  onClose={() => { setShowIF(false); setEditIncTarget(null) }} rateData={rateData} />}
       {delTarget && <ConfirmDialog message={delTarget.many ? `Permanently delete ${Object.keys(delTarget.ids).length} expenses?` : `Delete this ${delTarget.type}? Cannot be undone.`} onConfirm={handleDelete} onCancel={() => setDelTarget(null)} />}
       {confirmAction && (
