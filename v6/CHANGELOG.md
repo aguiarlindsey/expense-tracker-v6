@@ -61,7 +61,43 @@
 | 49 | 2026-06-03 | Post-launch perf + security fixes: slow biometric/post-unlock load fixed (useStorage two Promise.all merged into one — all 6 tables in a single round-trip, setLoading waits for goals/trips, second sequential fetch eliminated; biometric-auth-options + biometric-verify accept GET warmup pings returning 200 with no DB work; LockScreen fires parallel GET pings to both endpoints on mount so Lambda cold-start completes while user sees lock screen); auth-cookie SameSite Lax → Strict (CSRF surface reduction — endpoint never navigated to directly); mouse scroll wheel restored (overscroll-behavior-y:none removed from app-shell — overflow-x:hidden made it a scroll container that swallowed wheel events without chaining to document) | ~1.5 |
 | 50 | 2026-06-05 | Search + filter improvements: matchesSearch expanded to currency code, currency full name via CM lookup ("BAH" finds Bahraini Dinar expenses), paymentDescription ("HDFC 4521"), diningApp (Zomato/Swiggy), splitWith (person on split expenses); date preset chips in advanced filter — 6 one-tap buttons (This month / Last month / Last 3m / Last 6m / This year / Last year) above custom date range, sets expDateFrom+expDateTo with active-chip highlight, tap-again clears, month picker or custom date input clears active preset to avoid conflicts | ~1.5 |
 | 51 | 2026-06-12 | Session resume: full codebase review (src/, api/, supabase/, configs); retroactive hours logging for Sessions 49–50 (commits were made but never logged); CHANGELOG detailed entries added for post-launch fixes; project memory updated to reflect v7.33.0 complete status | 0.5 |
-| **Total** | | | **~203.5 h** |
+| 52 | 2026-06-19 → 2026-06-21 | WAT framework adoption (workflows/tools/.tmp structure); PWA install icons; 2× design/impeccable audit passes (a11y, contrast, motion, progress bars); analytics sub-nav mobile scroll fix; bento savings tile border fix; pie/bar chart + category trend bar load animations | 5.5 |
+| 53 | 2026-06-22 | Full dark mode visual redesign; Phosphor duotone icon upgrade; category icon hover animations for Transport/Utilities/Travel (iterated via motion/react, settled back on Phosphor duotone + CSS); GlowingEffect conic border sweep on bento tile hover; Uiverse poda conic-gradient search bar; 2× impeccable audit passes | 8.5 |
+| 54 | 2026-06-23 | SparklesIcon for Personal category + icon grid category picker; LineChart hover tooltips + poda placeholder fix; odo reading input allows 1 decimal place | 2.0 |
+| 55 | 2026-06-25 | v7.34.0–v7.37.0 Epic 9 — self-built OCR enhancement pipeline: Otsu/Sauvola thresholding + skew correction + unsharp mask (9.1); Tesseract PSM tuning + two-pass OCR (9.2); fuzzy merchant matching + Indian bill patterns + confidence scoring (9.3); ocr_corrections table + auto-apply learned corrections (9.4); international bill support (Australia, Saudi Arabia, global brands) | 11.0 |
+| **Total** | | | **~230.5 h** |
+
+---
+
+## [Sessions 52–55] — WAT Framework, Dark Mode Redesign & Epic 9 OCR Enhancement
+_2026-06-19 → 2026-06-25_ · post-v7.33.0
+
+### Session 52 — WAT Framework + Design Audits (2026-06-19 → 2026-06-21)
+- **WAT framework adopted** (`af87a6c`) — reorganised the project into `workflows/`, `tools/`, `.tmp/` per the Workflows-Agents-Tools operating model; 13 files touched
+- **PWA install icons** (`7d2ed7f`) — added the missing PNG icon set so the "Install App" prompt actually renders (previously blocked silently on Chrome/Edge without them)
+- **Two impeccable/design audit passes** (`4112531`, `6c1d61f`) — a11y, anti-pattern, theming, contrast, motion, and progress-bar fixes across ~9 files
+- **Mobile fixes** — analytics sub-nav made horizontally scrollable on narrow screens (`d6f4d39`); bento savings tile's missing border-top accent restored (`c9c5afd`)
+- **Chart load animations** — pie chart slices + bar chart fills animate in (`a3080f4`); category trend bars animate on load (`5aa26de`)
+
+### Session 53 — Dark Mode Redesign + Icon System (2026-06-22)
+- **Full dark mode visual redesign** (`3c60d09`) — sharper, higher-contrast dark theme pass across the app
+- **Two more impeccable audit passes** (`788a1ad`, `307837e`) — a11y/theming/perf/anti-patterns, 20/20 on the second pass
+- **Icon system overhaul** — item icons upgraded to Phosphor duotone SVGs in coloured containers (`ffc748b`); category icons animate on expense-item hover, iterated across several passes for Transport/Utilities/Travel (`f93ced7`, `f3e0966`, `372f924`); Travel/Utilities icons briefly tried `motion/react`-driven animation (`73ed8a7`, `006d16d`), then settled back on Phosphor duotone artwork while keeping the motion/react animation wrapper (`9bec7e4`) — the Utilities lightning-bolt draw-in was rebuilt as a hand-authored stroke SVG using the real Phosphor Lightning path data (`df4348e`) and slowed from 0.6s→1s for readability (`4c54ff2`)
+- **Bento tile hover effects** — GlowingEffect conic-gradient border sweep on hover (`0bb0430`); the tile's static border now fades out so GlowingEffect can take over cleanly (`3ad9da1`)
+- **Search bar redesign** — Uiverse "poda" conic-gradient animated border on the Overview filter search input (`41af823`); dark-mode placeholder text lightened for contrast (`d7afe9a`)
+
+### Session 54 — Category Picker + Chart Tooltips (2026-06-23)
+- **Icon-grid category picker** (`990dfa6`) — replaced the category dropdown with a visual icon grid; added a dedicated SparklesIcon for the Personal category
+- **LineChart hover tooltips** (`eaa4c03`) — hover/tap a point to see its exact value; also fixed the poda search bar's placeholder text
+- **ODO reading decimal fix** (`b0fa923`) — odometer input now accepts 1 decimal place (was integer-only, rejecting real odometer readings like "45231.5")
+
+### Session 55 — Epic 9: Self-Built OCR Enhancement Pipeline (2026-06-25)
+v7.34.0 → v7.37.0, delivered in a single commit (`2abdad1`) covering all 4 planned phases:
+- **9.1 Image Preprocessing** — Otsu auto-threshold, Sauvola adaptive threshold, skew correction via projection profiles, unsharp mask; replaces the previous flat grayscale + contrast stretch in `ReceiptScanner.jsx`
+- **9.2 Tesseract Tuning** — receipt-type-aware PSM mode selection; two-pass OCR (full page, then a zoomed pass over just the amount/date region using PSM 4+6)
+- **9.3 Parser Improvements** — fuzzy merchant matching via Levenshtein distance; Indian bill pattern support (Net Total, Bill Value, combined-GST line formats); amount dedup; high-confidence detection scoring
+- **9.4 Learn from Corrections** — new `ocr_corrections` Supabase table + `ocrCorrections.js` util; user corrections to extracted fields are saved and auto-applied on future scans, cached locally
+- **International bill support** — merchant/keyword maps extended beyond India (Australia: Woolworths, Aldi, Chemist Warehouse, JB Hi-Fi, Qantas, Ampol; Saudi Arabia: Danube, Tamimi, Aramco, Careem; plus global brands)
 
 ---
 

@@ -2029,6 +2029,7 @@ export default function Tracker({ session }) {
     const p = new URLSearchParams(window.location.search).get('ptab')
     return p === 'goals' ? 'goals' : 'budgets'
   })
+  const [personalizeTab, setPersonalizeTab] = useState('vehicles')
   const [budgetDraft, setBudgetDraft]     = useState(null)
   const [focusedBudget, setFocusedBudget] = useState(null)
   const [dark, setDark]                   = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s !== null ? s === '1' : window.matchMedia('(prefers-color-scheme: dark)').matches })
@@ -2149,6 +2150,29 @@ export default function Tracker({ session }) {
     const a    = document.createElement('a')
     a.href = url
     a.download = `expenses-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // Generic .ics calendar-reminder download — reused across Personalize asset
+  // types (vehicle PUC, credit card due date, rent due, warranty expiry, ...).
+  const downloadIcsReminder = ({ uid, date, summary, description, alarmDaysBefore = 3 }) => {
+    const dt = (date || '').replace(/-/g, '')
+    if (!dt) return
+    const ics = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ExpenseTracker//Reminder//EN',
+      'BEGIN:VEVENT', `UID:${uid}@expense-tracker`,
+      `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
+      `DTSTART;VALUE=DATE:${dt}`, `DTEND;VALUE=DATE:${dt}`,
+      `SUMMARY:${summary}`, `DESCRIPTION:${description}`,
+      'BEGIN:VALARM', `TRIGGER:-P${alarmDaysBefore}D`, 'ACTION:DISPLAY', `DESCRIPTION:${summary}`, 'END:VALARM',
+      'END:VEVENT', 'END:VCALENDAR',
+    ].join('\r\n')
+    const blob = new Blob([ics], { type: 'text/calendar' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href = url
+    a.download = `${uid}.ics`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -5439,6 +5463,37 @@ export default function Tracker({ session }) {
             </div>
           </div>
 
+          {/* Personalize */}
+          <div className="settings-section">
+            <h3><span aria-hidden="true">🏠</span> Personalize</h3>
+            <div className="sub-nav-wrap">
+              <div className="sub-nav" role="tablist">
+                <button role="tab" aria-selected={personalizeTab === 'vehicles'}
+                  className={'sub-nav-btn' + (personalizeTab === 'vehicles' ? ' active' : '')}
+                  onClick={() => setPersonalizeTab('vehicles')}>🚗 Vehicles</button>
+                <button role="tab" aria-selected={personalizeTab === 'cards'}
+                  className={'sub-nav-btn' + (personalizeTab === 'cards' ? ' active' : '')}
+                  onClick={() => setPersonalizeTab('cards')}>💳 Credit Cards</button>
+                <button role="tab" aria-selected={personalizeTab === 'houses'}
+                  className={'sub-nav-btn' + (personalizeTab === 'houses' ? ' active' : '')}
+                  onClick={() => setPersonalizeTab('houses')}>🏡 Houses</button>
+                <button role="tab" aria-selected={personalizeTab === 'phones'}
+                  className={'sub-nav-btn' + (personalizeTab === 'phones' ? ' active' : '')}
+                  onClick={() => setPersonalizeTab('phones')}>📱 Phones</button>
+              </div>
+            </div>
+            <div className="empty-state empty-state-sm">
+              <div className="empty-icon">{personalizeTab === 'vehicles' ? '🚗' : personalizeTab === 'cards' ? '💳' : personalizeTab === 'houses' ? '🏡' : '📱'}</div>
+              <h3>Coming soon</h3>
+              <p>
+                {personalizeTab === 'vehicles' && 'Register your cars and bikes to track mileage, fuel cost, service due dates, and PUC renewal reminders.'}
+                {personalizeTab === 'cards'    && 'Track spending, due dates, and utilization per credit card.'}
+                {personalizeTab === 'houses'   && 'Track rent, utilities, and maintenance per property.'}
+                {personalizeTab === 'phones'   && 'Track warranty, EMI, and upgrade reminders per device.'}
+              </p>
+            </div>
+          </div>
+
           {/* Appearance */}
           <div className="settings-section">
             <h3><span aria-hidden="true">🎨</span> Appearance</h3>
@@ -5723,8 +5778,8 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title" style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}><Zap size={18} color="var(--primary)" />Expense Tracker V7</div>
               <div className="about-meta">
-                <span className="about-badge">v7.33.0</span>
-                <span className="about-badge">32 Phases Complete</span>
+                <span className="about-badge">v7.37.0</span>
+                <span className="about-badge">37 Phases Complete</span>
                 <span className="about-badge">Glass UI</span>
                 <span className="about-badge">Bento Dashboard</span>
                 <span className="about-badge">⌘K Palette</span>
@@ -5746,6 +5801,7 @@ export default function Tracker({ session }) {
                 <span className="about-badge">PDF Reports</span>
                 <span className="about-badge">NL Search</span>
                 <span className="about-badge">Email Share</span>
+                <span className="about-badge">Self-Built OCR</span>
               </div>
               <div className="about-row"><span>Architecture</span><span>Vite + React 18 + Supabase · deployed on Vercel</span></div>
               <div className="about-row"><span>Auth</span><span>Magic-link email · WebAuthn biometric lock · Email OTP fallback</span></div>
@@ -5761,7 +5817,7 @@ export default function Tracker({ session }) {
               <div className="about-row"><span>Features</span><span>Expense templates · bulk edit · subscription tracker · spend streak + gamification · receipt OCR · PDF monthly reports · natural language search · email share (PDF + receipt) · trip tracking · fuel tracking · incognito mode · 259-colour palette</span></div>
               <div className="about-row"><span>Performance</span><span>Initial JS 214 kB gzip · jsPDF + pdfjs deferred · vendor chunks cached separately · 53% bundle reduction vs v7.32</span></div>
               <div className="about-row"><span>PWA</span><span>Installable · offline-capable · auto-update with force-reload banner · iOS Safari compatible</span></div>
-              <div className="about-row"><span>Last updated</span><span>2026-06-03 · Session 48 · v7.33.0 · All 32 phases complete</span></div>
+              <div className="about-row"><span>Last updated</span><span>2026-06-25 · Session 55 · v7.37.0 · All 37 phases complete</span></div>
             </div>
           </div>
         </section>

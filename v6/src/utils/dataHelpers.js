@@ -107,6 +107,8 @@ export function makeExpense(partial = {}, source = 'manual') {
     tripA:              partial.tripA        ? parseFloat(partial.tripA)        : null,
     tripB:              partial.tripB        ? parseFloat(partial.tripB)        : null,
     tripSelected:       partial.tripSelected || null,
+    assetType:          partial.assetType || null,
+    assetId:            partial.assetId || null,
     migratedFrom:       source,
     version:            6,
   }
