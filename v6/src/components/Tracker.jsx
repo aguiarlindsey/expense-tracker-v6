@@ -6760,8 +6760,8 @@ export default function Tracker({ session }) {
             <div className="about-card">
               <div className="about-title" style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}><Zap size={18} color="var(--primary)" />Expense Tracker V7</div>
               <div className="about-meta">
-                <span className="about-badge">v7.37.0</span>
-                <span className="about-badge">37 Phases Complete</span>
+                <span className="about-badge">v8.0.0</span>
+                <span className="about-badge">Epic A: Personalization</span>
                 <span className="about-badge">Glass UI</span>
                 <span className="about-badge">Bento Dashboard</span>
                 <span className="about-badge">⌘K Palette</span>
@@ -6784,22 +6784,26 @@ export default function Tracker({ session }) {
                 <span className="about-badge">NL Search</span>
                 <span className="about-badge">Email Share</span>
                 <span className="about-badge">Self-Built OCR</span>
+                <span className="about-badge">Personalize</span>
+                <span className="about-badge">Vehicle Analytics</span>
               </div>
               <div className="about-row"><span>Architecture</span><span>Vite + React 18 + Supabase · deployed on Vercel</span></div>
               <div className="about-row"><span>Auth</span><span>Magic-link email · WebAuthn biometric lock · Email OTP fallback</span></div>
               <div className="about-row"><span>Database</span><span>Supabase Postgres + RLS · SQL views for aggregations · dependency-ordered offline sync</span></div>
               <div className="about-row"><span>Security</span><span>Server-enforced biometric lock · alphanumeric OTP · rate limiting · RLS on all tables · HTTP security headers</span></div>
               <div className="about-row"><span>UI</span><span>Glassmorphism shell · Bento grid dashboard · 30-day sparkline · category tiles · month picker · system / light / dark theme · FOUC prevention · locale-aware number formatting</span></div>
-              <div className="about-row"><span>Navigation</span><span>8 tabs · Analytics sub-nav (Insights | Trends | Merchants | Forecast) · Planning sub-nav (Budgets | Goals) · ⌘K command palette · keyboard shortcuts 1–8</span></div>
+              <div className="about-row"><span>Navigation</span><span>8 tabs · Analytics sub-nav (Insights | Trends | Merchants | Forecast | Vehicles) · Planning sub-nav (Budgets | Goals) · ⌘K command palette · keyboard shortcuts 1–8</span></div>
               <div className="about-row"><span>Mobile</span><span>Bottom nav + FAB · More sheet · slide-up drawers · swipe to delete/edit · haptic feedback · safe-area insets · iOS zoom fix · touch targets · overscroll containment</span></div>
               <div className="about-row"><span>Analytics</span><span>Financial Health Score (0–100 animated ring, 4 sub-scores) · grouped bar chart · category trends · MoM savings rate · anomaly detection · Merchant Analytics · Cash Flow Forecast (30/60/90d)</span></div>
               <div className="about-row"><span>Planning</span><span>Budget rollover (unused carries to next month, per-category toggle) · goal progress rings · milestone badges (🥉🥈🥇🏆) · contribution timeline · colour-coded countdown</span></div>
               <div className="about-row"><span>Onboarding</span><span>5-step wizard (name · currency · budget · notifications · done) · first-run empty states with CTAs · user_metadata persisted to Supabase</span></div>
               <div className="about-row"><span>Exchange</span><span>122 currencies in 8 regions · live FX rates · quick converter · BTC + ETH via CoinGecko · search filter</span></div>
               <div className="about-row"><span>Features</span><span>Expense templates · bulk edit · subscription tracker · spend streak + gamification · receipt OCR · PDF monthly reports · natural language search · email share (PDF + receipt) · trip tracking · fuel tracking · incognito mode · 259-colour palette</span></div>
+              <div className="about-row"><span>Personalize</span><span>Vehicles (fuel/mileage/service history/PUC) · Credit Cards (billing cycle/utilization) · Houses (owned/rented/leased-out, rent/electricity/maintenance reminders) · Other Assets (open-ended item registry with warranty + EMI reminders) — all with .ics calendar downloads</span></div>
+              <div className="about-row"><span>Vehicle Analytics</span><span>Per-vehicle spend breakdown, total odometer + this-year KMs, avg efficiency, cost/km, full service history with per-part warranty tracking</span></div>
               <div className="about-row"><span>Performance</span><span>Initial JS 214 kB gzip · jsPDF + pdfjs deferred · vendor chunks cached separately · 53% bundle reduction vs v7.32</span></div>
               <div className="about-row"><span>PWA</span><span>Installable · offline-capable · auto-update with force-reload banner · iOS Safari compatible</span></div>
-              <div className="about-row"><span>Last updated</span><span>2026-06-25 · Session 55 · v7.37.0 · All 37 phases complete</span></div>
+              <div className="about-row"><span>Last updated</span><span>2026-09-19 · Session 57 · v8.0.0 · Epic A (Personalization) complete</span></div>
             </div>
           </div>
         </section>

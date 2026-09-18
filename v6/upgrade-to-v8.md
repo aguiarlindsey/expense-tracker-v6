@@ -1,6 +1,6 @@
 # Combined To-Do List — V8 Upgrade (Personalization + Household/Multi-User + Financial Planning)
 
-**Status**: all three epics fully scoped, none started. Epic A approved earlier. Epic B's schema/RLS design has been pressure-tested by a Plan agent and spot-verified against the actual codebase (see verification notes at the top of Epic B). Epic C scoped directly against existing code (`cashFlowForecast`, EMI/loan fields, OCR `ocr_corrections` precedent) with the user picking the lean version of all three sub-features. Ready for implementation to begin whenever the user gives the go-ahead.
+**Status** (updated 2026-09-19): Epic A is fully built and shipped (Phases 0-4 — see below). Epic B and Epic C remain fully scoped but not started. Epic B's schema/RLS design has been pressure-tested by a Plan agent and spot-verified against the actual codebase (see verification notes at the top of Epic B). Epic C scoped directly against existing code (`cashFlowForecast`, EMI/loan fields, OCR `ocr_corrections` precedent) with the user picking the lean version of all three sub-features. Ready for implementation to begin whenever the user picks one.
 
 **Now starting: Epic A, Phase 0 + Phase 1 (Vehicles)** — user go-ahead given 2026-09-17. Phases 0-4 (shared infra, Vehicles, Credit Cards, Houses, Other Assets) done as of 2026-09-19. Epic A is now fully shipped; Epic B or C is next whenever the user picks one.
 
