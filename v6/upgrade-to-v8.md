@@ -2,7 +2,7 @@
 
 **Status**: all three epics fully scoped, none started. Epic A approved earlier. Epic B's schema/RLS design has been pressure-tested by a Plan agent and spot-verified against the actual codebase (see verification notes at the top of Epic B). Epic C scoped directly against existing code (`cashFlowForecast`, EMI/loan fields, OCR `ocr_corrections` precedent) with the user picking the lean version of all three sub-features. Ready for implementation to begin whenever the user gives the go-ahead.
 
-**Now starting: Epic A, Phase 0 + Phase 1 (Vehicles)** — user go-ahead given 2026-09-17.
+**Now starting: Epic A, Phase 0 + Phase 1 (Vehicles)** — user go-ahead given 2026-09-17. Phases 0-3 (shared infra, Vehicles, Credit Cards, Houses) done as of 2026-09-18; Phase 4 (Phones) is next.
 
 **Testing environment — no staging/beta, live app only.** All verification happens against the real deployed app (expense-tracker-v6.vercel.app) and the real production Supabase project — there is no separate test instance. This raises the bar on the manual-SQL-migration step in particular (already flagged per-epic as "no migration runner"): before pasting any `supabase/add_*.sql` into the SQL editor, take a fresh export (Settings → Export Data → Download JSON, or a Supabase dashboard backup) first, since a bad RLS policy or migration has no staging environment to catch it before it touches real data. Epic B's "test with two real accounts" means two real production accounts (e.g. the user's own + a family member's, or two of the user's own emails) — not throwaway sandbox users.
 
@@ -76,11 +76,18 @@ A second shared building block: a generic `.ics` calendar-reminder download help
 - [x] Credit Cards tab content in `PersonalizeModal`, cloned from the Vehicles card-list shape, plus its own "Unassigned card expenses" panel (`paymentMethod === 'Credit Card' && !cardId`)
 - [ ] *(explicitly deferred)* auto-suggesting a card from `paymentMethod`/last4 matching — manual picking only for v1
 
-### Phase 3 — Houses (scoped now at medium detail)
-- [ ] `houses` table: `id, user_id, name, address, ownership [owned|rented], move_in_date, rent_amount, notes, row_version, updated_at, created_at`
-- [ ] Expenses tag via `asset_type='house'` / `asset_id`, likely useful for rent/utilities/maintenance category expenses
-- [ ] Metrics: total spend by category tagged to this house, "Download rent-due reminder (.ics)" if `ownership==='rented'`
-- [ ] Houses pill in the Personalize section
+### Phase 3 — Houses ✅ done 2026-09-18
+**Design correction #1 (2026-09-18, at phase start)**: the table needs a `rent_due_day` column (day-of-month, 1-28, same shape as credit cards' `due_day`) — the plan's original field list (`rent_amount` only) had no date to drive the "Download rent-due reminder" bullet below, so it was added alongside `rent_amount`.
+
+**Design correction #2 (2026-09-18, user-requested expansion before first SQL run)**: `ownership` widened from a 2-way `owned|rented` to a 3-way `owned|rented|leased_out` — user currently owns all their houses outright but wants to model both "I move out and rent somewhere" (`rented`, I pay) and "I own a house and rent it out" (`leased_out`, I collect) as distinct future states on the same record shape. Also added `electricity_due_day` and `maintenance_due_day` (same 1-28 day-of-month shape as `rent_due_day`), independent of ownership — owned houses still have electricity/society-maintenance bills. Since the SQL had not yet been run against production, the table definition was edited in place rather than shipped as a follow-up `alter table`.
+
+- [x] `houses` table (`supabase/add_houses.sql`, cloned from `add_vehicles.sql` shape): `id, user_id, name, address, ownership [owned|rented|leased_out], move_in_date, rent_amount, rent_due_day, electricity_due_day, maintenance_due_day, notes, row_version, updated_at, created_at` + RLS + realtime + row-version trigger — **not yet run against production, user needs to paste into Supabase SQL editor**
+- [x] No new `expenses` columns — reuses `asset_type='house'` / `asset_id` from Phase 0
+- [x] `useStorage.js`: `houseToDb`/`houseFromDb` mappers, `houses` state, initial load, realtime subscribe, `addHouse`/`editHouse`/`deleteHouse` (offline-queue + conflict resolution, cloned from `addVehicle`/`editVehicle`/`deleteVehicle`), conflict resolution, `factoryReset` cleanup, return object
+- [x] `ExpenseForm`: house picker shown whenever `form.category === 'Housing' || form.category === 'Utilities'` (not sub-gated like the vehicle Fuel/Maintenance split — houses don't need per-subcategory detail fields)
+- [x] `housesWithData` memo (inside `PersonalizeModal`, matches `e.assetType==='house' && e.assetId===house.id`): total tagged spend, three independent countdowns (rent when `ownership!=='owned'`, electricity, maintenance — all via `nextDueDateFor()`, reused from credit cards), card's top status badge shows whichever of the three is soonest
+- [x] `unassignedHouseExps` memo (inside `PersonalizeModal`): Housing/Utilities-category expenses with `!assetId`, for manual after-the-fact assignment
+- [x] Houses tab content inside `PersonalizeModal`: add/edit form (ownership dropdown drives whether rent fields show; electricity/maintenance due-day fields always shown), house cards (spend, rent, Edit/Delete — no confirm dialog, matches Vehicles/Cards precedent), up to three independent "Download reminder (.ics)" buttons (rent — label adapts to "due" vs "collect" by ownership, electricity, maintenance), "Unassigned expenses" panel with inline per-row house assign dropdown
 
 ### Phase 4 — Phones (scoped now at medium detail)
 - [ ] `phones` table: `id, user_id, name, carrier, model, purchase_date, warranty_expiry_date, emi_amount, notes, row_version, updated_at, created_at`

@@ -793,12 +793,13 @@ function useBottomSheet(onClose) {
 
 // ─── Expense Form ─────────────────────────────────────────
 
-function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], creditCards = [] }) {
+function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], creditCards = [], houses = [] }) {
   const today = new Date().toISOString().split('T')[0]
   const [form, setForm] = useState(initialData ? {
     useCatAlloc: !!(initialData.categoryAllocations && Object.keys(initialData.categoryAllocations || {}).length),
     categoryAllocations: initialData.categoryAllocations || {},
     vehicleId: initialData.assetType === 'vehicle' ? (initialData.assetId || '') : '',
+    houseId: initialData.assetType === 'house' ? (initialData.assetId || '') : '',
     serviceParts: Array.isArray(initialData.serviceParts) ? initialData.serviceParts : [],
     ...initialData,
   } : {
@@ -812,7 +813,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
     taxAmount: 0, taxBreakdown: {},
     fuelRate: '', fuelQuantity: '', fuelType: '', odoReading: '', tripA: '', tripB: '', tripSelected: '',
     vehicleCurrentKm: '', vehicleNextServiceKm: '',
-    vehicleId: '', serviceParts: [], cardId: '',
+    vehicleId: '', houseId: '', serviceParts: [], cardId: '',
     useCatAlloc: false, categoryAllocations: {},
   })
   const [showPalette, setShowPalette] = useState(false)
@@ -986,8 +987,8 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
       tripA:        form.tripA    ? parseFloat(form.tripA)    || null : null,
       tripB:        form.tripB    ? parseFloat(form.tripB)    || null : null,
       tripSelected: form.tripSelected || null,
-      assetType: form.vehicleId ? 'vehicle' : null,
-      assetId:   form.vehicleId || null,
+      assetType: form.vehicleId ? 'vehicle' : form.houseId ? 'house' : null,
+      assetId:   form.vehicleId || form.houseId || null,
       serviceParts: (form.serviceParts || []).filter(p => p.part && p.part.trim()),
       cardId: form.paymentMethod === 'Credit Card' ? (form.cardId || null) : null,
     })
@@ -1129,6 +1130,15 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
               {catSubs.map(sub => <option key={sub}>{sub}</option>)}
             </select>
           </div>
+          {(form.category === 'Housing' || form.category === 'Utilities') && houses.length > 0 && (
+            <div className="form-group">
+              <label htmlFor="ef-house">House</label>
+              <select id="ef-house" value={form.houseId || ''} onChange={e => s('houseId', e.target.value)}>
+                <option value="">Unassigned</option>
+                {houses.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
+              </select>
+            </div>
+          )}
           {/* Fuel details — only for Transport / Fuel */}
           {form.category === 'Transport' && form.subcategory === 'Fuel' && (() => {
             const selectedVehicle = vehicles.find(v => v.id === form.vehicleId)
@@ -1812,6 +1822,8 @@ function AddContributionModal({ goal, goalContribs, onSave, onClose }) {
 const EMPTY_VFORM = { name: '', type: 'car', fuelType: 'petrol', regNumber: '', purchaseDate: '', nextPucDate: '', notes: '' }
 const VEHICLE_TYPE_ICON = { car: '🚗', bike: '🏍️', scooter: '🛵' }
 const EMPTY_CFORM = { name: '', bank: '', last4: '', creditLimit: '', billingCycleDay: '', dueDay: '', notes: '' }
+const EMPTY_HFORM = { name: '', address: '', ownership: 'owned', moveInDate: '', rentAmount: '', rentDueDay: '', electricityDueDay: '', maintenanceDueDay: '', notes: '' }
+const HOUSE_OWNERSHIP_LABEL = { owned: 'Owned', rented: 'Renting (I pay rent)', leased_out: 'Leased Out (I collect rent)' }
 
 // Cycle window [start, end) containing today, for a statement that resets on `billingCycleDay` each month.
 function cycleWindowFor(billingCycleDay) {
@@ -1832,7 +1844,7 @@ function nextDueDateFor(dueDay) {
 }
 const toISODate = d => d.toISOString().split('T')[0]
 
-function PersonalizeModal({ onClose, vehicles, creditCards, expenses, addVehicle, editVehicle, deleteVehicle, addCreditCard, editCreditCard, deleteCreditCard, editExpense }) {
+function PersonalizeModal({ onClose, vehicles, creditCards, houses, expenses, addVehicle, editVehicle, deleteVehicle, addCreditCard, editCreditCard, deleteCreditCard, addHouse, editHouse, deleteHouse, editExpense }) {
   const [tab, setTab] = useState('vehicles')
   const [showVehicleForm, setShowVehicleForm] = useState(false)
   const [editingVehicle, setEditingVehicle] = useState(null)
@@ -1842,6 +1854,10 @@ function PersonalizeModal({ onClose, vehicles, creditCards, expenses, addVehicle
   const [editingCard, setEditingCard] = useState(null)
   const [cForm, setCForm] = useState(EMPTY_CFORM)
   const cs = (k, v) => setCForm(f => ({ ...f, [k]: v }))
+  const [showHouseForm, setShowHouseForm] = useState(false)
+  const [editingHouse, setEditingHouse] = useState(null)
+  const [hForm, setHForm] = useState(EMPTY_HFORM)
+  const hs = (k, v) => setHForm(f => ({ ...f, [k]: v }))
 
   const vehiclesWithData = useMemo(() => {
     const todayStr = new Date().toISOString().split('T')[0]
@@ -1905,6 +1921,29 @@ function PersonalizeModal({ onClose, vehicles, creditCards, expenses, addVehicle
       .sort((a, b) => b.date.localeCompare(a.date))
   }, [expenses])
 
+  const housesWithData = useMemo(() => {
+    return houses.map(house => {
+      const houseExps = expenses.filter(e => e.assetType === 'house' && e.assetId === house.id)
+      const totalSpend = houseExps.reduce((s, e) => s + toINR(e), 0)
+      const rentDue = house.ownership !== 'owned' ? nextDueDateFor(house.rentDueDay) : null
+      const electricityDue = nextDueDateFor(house.electricityDueDay)
+      const maintenanceDue = nextDueDateFor(house.maintenanceDueDay)
+      const daysTo = d => d ? Math.round((d - new Date()) / 864e5) : null
+      return {
+        ...house, totalSpend,
+        rentDue, daysToRentDue: daysTo(rentDue),
+        electricityDue, daysToElectricityDue: daysTo(electricityDue),
+        maintenanceDue, daysToMaintenanceDue: daysTo(maintenanceDue),
+      }
+    })
+  }, [houses, expenses])
+
+  const unassignedHouseExps = useMemo(() => {
+    return expenses
+      .filter(e => (e.category === 'Housing' || e.category === 'Utilities') && !e.assetId)
+      .sort((a, b) => b.date.localeCompare(a.date))
+  }, [expenses])
+
   const openAddVehicle = () => { setEditingVehicle(null); setVForm(EMPTY_VFORM); setShowVehicleForm(true) }
   const openEditVehicle = (veh) => {
     setEditingVehicle(veh)
@@ -1937,6 +1976,26 @@ function PersonalizeModal({ onClose, vehicles, creditCards, expenses, addVehicle
     else addCreditCard({ id: stableId({}), ...clean })
     setShowCardForm(false)
     setEditingCard(null)
+  }
+
+  const openAddHouse = () => { setEditingHouse(null); setHForm(EMPTY_HFORM); setShowHouseForm(true) }
+  const openEditHouse = (house) => {
+    setEditingHouse(house)
+    setHForm({
+      name: house.name, address: house.address || '', ownership: house.ownership,
+      moveInDate: house.moveInDate || '', rentAmount: house.rentAmount || '', rentDueDay: house.rentDueDay || '',
+      electricityDueDay: house.electricityDueDay || '', maintenanceDueDay: house.maintenanceDueDay || '',
+      notes: house.notes || '',
+    })
+    setShowHouseForm(true)
+  }
+  const submitHouseForm = () => {
+    if (!hForm.name.trim()) return
+    const clean = { ...hForm, name: hForm.name.trim(), address: hForm.address.trim(), notes: hForm.notes.trim() }
+    if (editingHouse) editHouse({ ...editingHouse, ...clean })
+    else addHouse({ id: stableId({}), ...clean })
+    setShowHouseForm(false)
+    setEditingHouse(null)
   }
 
   return (
@@ -2206,14 +2265,156 @@ function PersonalizeModal({ onClose, vehicles, creditCards, expenses, addVehicle
           </>
         )}
 
-        {tab !== 'vehicles' && tab !== 'cards' && (
+        {tab === 'houses' && (
+          <>
+            <div className="settings-row" style={{ marginBottom: '0.75rem' }}>
+              <div className="settings-row-label">
+                <strong>Your houses</strong>
+                <span>Tag Housing and Utilities expenses to a property to see total spend and rent-due reminders.</span>
+              </div>
+              <button className="btn-primary" onClick={openAddHouse}>+ Add House</button>
+            </div>
+
+            {showHouseForm && (
+              <div className="card trip-form-card" style={{ marginBottom: '0.75rem' }}>
+                <div className="card-title">{editingHouse ? '✏️ Edit House' : '🏡 New House'}</div>
+                <div className="trip-form-grid">
+                  <label className="form-label">Name
+                    <input className="form-input" placeholder="e.g. Home" value={hForm.name} onChange={e => hs('name', e.target.value)} />
+                  </label>
+                  <label className="form-label">Address
+                    <input className="form-input" placeholder="e.g. 12 MG Road" value={hForm.address} onChange={e => hs('address', e.target.value)} />
+                  </label>
+                  <label className="form-label">Ownership
+                    <select className="form-input" value={hForm.ownership} onChange={e => hs('ownership', e.target.value)}>
+                      <option value="owned">Owned</option>
+                      <option value="rented">Renting (I pay rent)</option>
+                      <option value="leased_out">Leased Out (I collect rent)</option>
+                    </select>
+                  </label>
+                  <label className="form-label">Move-in Date
+                    <input type="date" className="form-input" value={hForm.moveInDate} onChange={e => hs('moveInDate', e.target.value)} />
+                  </label>
+                  {hForm.ownership !== 'owned' && (
+                    <>
+                      <label className="form-label">Rent Amount (₹) {hForm.ownership === 'leased_out' ? '— collected' : '— paid'}
+                        <input type="number" min="0" className="form-input" placeholder="e.g. 25000" value={hForm.rentAmount} onChange={e => hs('rentAmount', e.target.value)} />
+                      </label>
+                      <label className="form-label">Rent Due Day
+                        <input type="number" min="1" max="28" className="form-input" placeholder="e.g. 5" value={hForm.rentDueDay} onChange={e => hs('rentDueDay', e.target.value)} />
+                      </label>
+                    </>
+                  )}
+                  <label className="form-label">Electricity Bill Due Day (optional)
+                    <input type="number" min="1" max="28" className="form-input" placeholder="e.g. 10" value={hForm.electricityDueDay} onChange={e => hs('electricityDueDay', e.target.value)} />
+                  </label>
+                  <label className="form-label">Maintenance Due Day (optional)
+                    <input type="number" min="1" max="28" className="form-input" placeholder="e.g. 1" value={hForm.maintenanceDueDay} onChange={e => hs('maintenanceDueDay', e.target.value)} />
+                  </label>
+                  <label className="form-label trip-notes-label">Notes (optional)
+                    <input className="form-input" value={hForm.notes} onChange={e => hs('notes', e.target.value)} />
+                  </label>
+                </div>
+                <div className="trip-form-actions">
+                  <button className="btn-primary" onClick={submitHouseForm} disabled={!hForm.name.trim()}>
+                    {editingHouse ? 'Save changes' : 'Add house'}
+                  </button>
+                  <button className="btn-ghost" onClick={() => { setShowHouseForm(false); setEditingHouse(null) }}>Cancel</button>
+                </div>
+              </div>
+            )}
+
+            {housesWithData.length === 0 ? (
+              <div className="empty-state empty-state-sm">
+                <div className="empty-icon">🏡</div>
+                <h3>No houses yet</h3>
+                <p>Add a property to start tracking spend, rent, and due-date reminders.</p>
+              </div>
+            ) : (
+              <div className="trips-grid">
+                {housesWithData.map(house => {
+                  const rentVerb = house.ownership === 'leased_out' ? 'collect' : 'due'
+                  const soonestDays = [house.daysToRentDue, house.daysToElectricityDue, house.daysToMaintenanceDue]
+                    .filter(d => d != null).sort((a, b) => a - b)[0]
+                  const dueLabel = soonestDays == null ? null : soonestDays <= 3 ? `Due in ${soonestDays}d` : `${soonestDays}d to due`
+                  const dueClass = soonestDays == null ? '' : soonestDays <= 3 ? 'trip-badge-active' : soonestDays <= 10 ? 'trip-badge-upcoming' : 'trip-badge-done'
+                  return (
+                    <div key={house.id} className="trip-card">
+                      <div className="trip-card-top">
+                        <div className="trip-card-title-row">
+                          <span className="trip-card-name">🏡 {house.name}</span>
+                          {dueLabel && <span className={`trip-status-badge ${dueClass}`}>{dueLabel}</span>}
+                        </div>
+                        <div className="trip-card-meta">
+                          <span>{HOUSE_OWNERSHIP_LABEL[house.ownership] || 'Owned'}</span>
+                          {house.address && <><span className="trip-meta-dot">·</span><span>{house.address}</span></>}
+                        </div>
+                      </div>
+                      <div className="trip-card-body">
+                        <div className="trip-total-sub">
+                          <span>{fmtINR(house.totalSpend)} tagged spend</span>
+                          {house.ownership !== 'owned' && house.rentAmount > 0 && <><span className="trip-meta-dot">·</span><span>{fmtINR(house.rentAmount)}/mo rent</span></>}
+                        </div>
+                        {house.rentDue && (
+                          <button className="btn-ghost btn-sm" onClick={() => downloadIcsReminder({
+                            uid: `rent-due-${house.id}`,
+                            date: toISODate(house.rentDue),
+                            summary: `Rent ${rentVerb} - ${house.name}`,
+                            description: `Rent to ${rentVerb} for ${house.name}${house.address ? ' (' + house.address + ')' : ''}.`,
+                          })}>📅 Download rent reminder</button>
+                        )}
+                        {house.electricityDue && (
+                          <button className="btn-ghost btn-sm" onClick={() => downloadIcsReminder({
+                            uid: `electricity-due-${house.id}`,
+                            date: toISODate(house.electricityDue),
+                            summary: `Electricity bill due - ${house.name}`,
+                            description: `Electricity bill due for ${house.name}${house.address ? ' (' + house.address + ')' : ''}.`,
+                          })}>⚡ Download electricity reminder</button>
+                        )}
+                        {house.maintenanceDue && (
+                          <button className="btn-ghost btn-sm" onClick={() => downloadIcsReminder({
+                            uid: `maintenance-due-${house.id}`,
+                            date: toISODate(house.maintenanceDue),
+                            summary: `Maintenance due - ${house.name}`,
+                            description: `Maintenance/society fee due for ${house.name}${house.address ? ' (' + house.address + ')' : ''}.`,
+                          })}>🔧 Download maintenance reminder</button>
+                        )}
+                      </div>
+                      <div className="trip-card-actions">
+                        <button className="btn-ghost btn-sm" onClick={() => openEditHouse(house)}>✏️ Edit</button>
+                        <button className="btn-danger btn-sm" style={{ marginLeft: 'auto' }} onClick={() => deleteHouse(house.id)}>🗑️</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {unassignedHouseExps.length > 0 && (
+              <div className="card" style={{ marginTop: 16 }}>
+                <div className="card-title">Unassigned housing &amp; utilities expenses ({unassignedHouseExps.length})</div>
+                {unassignedHouseExps.map(e => (
+                  <div key={e.id} className="settings-row">
+                    <div className="settings-row-label">
+                      <strong>{e.description}</strong>
+                      <span>{fmtDate(e.date)} · {e.subcategory || e.category} · {fmtINR(toINR(e))}</span>
+                    </div>
+                    <select value="" onChange={ev => ev.target.value && editExpense({ ...e, assetType: 'house', assetId: ev.target.value })}>
+                      <option value="" disabled>Assign to…</option>
+                      {houses.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {tab === 'phones' && (
           <div className="empty-state empty-state-sm">
-            <div className="empty-icon">{tab === 'houses' ? '🏡' : '📱'}</div>
+            <div className="empty-icon">📱</div>
             <h3>Coming soon</h3>
-            <p>
-              {tab === 'houses' && 'Track rent, utilities, and maintenance per property.'}
-              {tab === 'phones' && 'Track warranty, EMI, and upgrade reminders per device.'}
-            </p>
+            <p>Track warranty, EMI, and upgrade reminders per device.</p>
           </div>
         )}
       </div>
@@ -2495,7 +2696,7 @@ function CommandPalette({ open, onClose, commands }) {
 export default function Tracker({ session }) {
   const userId = session.user.id
   const {
-    expenses, income, budgets, goals, contributions, trips, vehicles, creditCards,
+    expenses, income, budgets, goals, contributions, trips, vehicles, creditCards, houses,
     loading, error,
     pendingCount, syncing, online, realtimeStatus,
     conflicts, resolveConflict, dismissConflict,
@@ -2506,6 +2707,7 @@ export default function Tracker({ session }) {
     addTrip, editTrip, deleteTrip,
     addVehicle, editVehicle, deleteVehicle,
     addCreditCard, editCreditCard, deleteCreditCard,
+    addHouse, editHouse, deleteHouse,
     bulkAddExpenses, bulkAddIncome,
     clearExpenses, clearIncome, clearAll, factoryReset,
   } = useStorage(userId)
@@ -6475,8 +6677,8 @@ export default function Tracker({ session }) {
 
       {/* ── Modals ── */}
       <CommandPalette open={showCmd} onClose={() => setShowCmd(false)} commands={cmdCommands} />
-      {showEF && <ExpenseForm initialData={editExpTarget} onSubmit={editExpTarget ? handleEditExpense : handleAddExpense} onClose={() => { setShowEF(false); setEditExpTarget(null) }} rateData={rateData} vehicles={vehicles} creditCards={creditCards} />}
-      {showPersonalize && <PersonalizeModal onClose={() => setShowPersonalize(false)} vehicles={vehicles} creditCards={creditCards} expenses={expenses} addVehicle={addVehicle} editVehicle={editVehicle} deleteVehicle={deleteVehicle} addCreditCard={addCreditCard} editCreditCard={editCreditCard} deleteCreditCard={deleteCreditCard} editExpense={editExpense} />}
+      {showEF && <ExpenseForm initialData={editExpTarget} onSubmit={editExpTarget ? handleEditExpense : handleAddExpense} onClose={() => { setShowEF(false); setEditExpTarget(null) }} rateData={rateData} vehicles={vehicles} creditCards={creditCards} houses={houses} />}
+      {showPersonalize && <PersonalizeModal onClose={() => setShowPersonalize(false)} vehicles={vehicles} creditCards={creditCards} houses={houses} expenses={expenses} addVehicle={addVehicle} editVehicle={editVehicle} deleteVehicle={deleteVehicle} addCreditCard={addCreditCard} editCreditCard={editCreditCard} deleteCreditCard={deleteCreditCard} addHouse={addHouse} editHouse={editHouse} deleteHouse={deleteHouse} editExpense={editExpense} />}
       {showIF && <IncomeForm  initialData={editIncTarget} onSubmit={editIncTarget ? handleEditIncome  : handleAddIncome}  onClose={() => { setShowIF(false); setEditIncTarget(null) }} rateData={rateData} />}
       {delTarget && <ConfirmDialog message={delTarget.many ? `Permanently delete ${Object.keys(delTarget.ids).length} expenses?` : `Delete this ${delTarget.type}? Cannot be undone.`} onConfirm={handleDelete} onCancel={() => setDelTarget(null)} />}
       {confirmAction && (
