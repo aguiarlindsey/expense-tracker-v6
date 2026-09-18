@@ -1,6 +1,6 @@
 # Combined To-Do List — V8 Upgrade (Personalization + Household/Multi-User + Financial Planning)
 
-**Status** (updated 2026-09-19): Epic A is fully built and shipped (Phases 0-4 — see below). Epic B and Epic C remain fully scoped but not started. Epic B's schema/RLS design has been pressure-tested by a Plan agent and spot-verified against the actual codebase (see verification notes at the top of Epic B). Epic C scoped directly against existing code (`cashFlowForecast`, EMI/loan fields, OCR `ocr_corrections` precedent) with the user picking the lean version of all three sub-features. Ready for implementation to begin whenever the user picks one.
+**Status** (updated 2026-09-19): Epic A is fully built and shipped (Phases 0-4 — see below). Epic C1 (Long-Term Forecast) is now built and shipped. Epic B and the rest of Epic C (C2, C3) remain fully scoped but not started. Epic B's schema/RLS design has been pressure-tested by a Plan agent and spot-verified against the actual codebase (see verification notes at the top of Epic B). Epic C scoped directly against existing code (`cashFlowForecast`, EMI/loan fields, OCR `ocr_corrections` precedent) with the user picking the lean version of all three sub-features. Ready for implementation to begin whenever the user picks one.
 
 **Now starting: Epic A, Phase 0 + Phase 1 (Vehicles)** — user go-ahead given 2026-09-17. Phases 0-4 (shared infra, Vehicles, Credit Cards, Houses, Other Assets) done as of 2026-09-19. Epic A is now fully shipped; Epic B or C is next whenever the user picks one.
 
@@ -220,15 +220,16 @@ All three are pure client-side computation (no external APIs, no ML) — consist
 
 These three sub-features are independent of each other and of Epics A/B — can be built in any order, or interleaved.
 
-## C1 — Long-Term Forecast (extends existing Cash Flow Forecast)
+## C1 — Long-Term Forecast (extends existing Cash Flow Forecast) ✅ done 2026-09-19
 
-**Reuses**: `cashFlowForecast` useMemo (`Tracker.jsx:3386-3448`), which already computes `netDailyRate` (income − expenses, blending recurring + variable rates). No new Supabase table needed — this is a pure projection over existing data plus one new user-set assumption.
+**Reuses**: `cashFlowForecast` useMemo (`Tracker.jsx`), which already computes `netDailyRate` (income − expenses, blending recurring + variable rates). No new Supabase table needed — this is a pure projection over existing data plus one new user-set assumption.
 
-- [ ] Add `assumedAnnualReturn` setting (simple number input, e.g. defaults to 0% — "just show where my current savings rate leads," user can raise it to model investment growth) — persist alongside other simple settings (`localStorage` or `user_metadata`, matching how `baseCurrency`/`display_name` are stored today)
-- [ ] New `longRangeForecast` useMemo, sibling to `cashFlowForecast`: `netAnnualRate = netDailyRate * 365.25`, then compound year-by-year: `balance = balance * (1 + assumedAnnualReturn/100) + netAnnualRate` for 1/5/10/20/30-year horizons (or a retirement-age-driven horizon if the user has a birthdate — skip birthdate collection for v1, just offer fixed horizons)
-- [ ] Overlay existing Goals (`targetDate`/`target`) as markers on the same projection chart — reuses the already-fetched `goals` array, no new query
-- [ ] UI: new "Long-Term" view inside the existing Forecast sub-tab (Analytics tab) — a horizon selector (1/5/10/20/30yr) + line chart (reuse the existing chart component pattern, e.g. `LineChart`) + the assumed-return input
-- [ ] Copy note in the UI: "Projection assumes your current income/spending pattern continues — not a guarantee" (avoid the classic financial-calculator overconfidence trap)
+- [x] `assumedAnnualReturn` setting (number input, default 0%) — persisted to `localStorage` (`et_v6_forecast_return`), same pattern as `baseCurrency`
+- [x] `longRangeForecast` useMemo, sibling to `cashFlowForecast`: `netAnnualRate = netDailyRate * 365.25`, compounds year-by-year (`balance = balance * (1 + assumedAnnualReturn/100) + netAnnualRate`) for a full 30-year array, with 1/5/10/20/30-year checkpoints pulled out for the tiles
+- [x] Goal overlay: each goal's `target` checked against the yearly balance array → "years away" (or "beyond 30y at this pace") — shown as a list under the chart rather than on-chart markers, to avoid modifying the shared `LineChart` component
+- [x] UI: "📈 Long-Term Forecast" card inside the existing Forecast sub-tab (Analytics tab) — horizon selector (reused `.theme-seg`), 5 projection tiles (reused `.fcst-tile`), line chart (reused `LineChart`, sampled to ~11 points regardless of horizon so labels don't crowd), assumed-return input. Gated on `incDailyRate > 0`, matching the existing tiles' net-savings gating
+- [x] Disclaimer copy: "Projection assumes your current income/spending pattern continues — not a guarantee"
+- Verified: `npm run build` clean; assert-based check of the compounding math (0% return = exactly linear, 10% compounds faster than linear by year 5, negative net rate stays negative not clamped). Full signed-in browser check not done in-session (no browser automation tool available, magic-link-only auth can't be completed headlessly) — user to eyeball in-browser after deploy.
 
 ## C2 — Debt Payoff Planner
 

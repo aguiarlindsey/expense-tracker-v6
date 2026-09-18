@@ -4262,6 +4262,14 @@ export default function Tracker({ session }) {
     return { spentSoFar, dailyRate, projected, prevTotal, trend, projectedInc, projectedSavings, daysInMonth, dayOfMonth, prevMonthStr }
   }, [expenses, income, monthStr, todayStr])
 
+  // ── Long-Term Forecast (V8 Epic C1) ─────────────────
+  const [assumedAnnualReturn, setAssumedAnnualReturn] = useState(() => {
+    const stored = parseFloat(localStorage.getItem('et_v6_forecast_return'))
+    return Number.isFinite(stored) ? stored : 0
+  })
+  useEffect(() => { localStorage.setItem('et_v6_forecast_return', String(assumedAnnualReturn)) }, [assumedAnnualReturn])
+  const [forecastHorizon, setForecastHorizon] = useState(10)
+
   // ── Cash Flow Forecast (Phase 7.6) ──────────────────
   const cashFlowForecast = useMemo(() => {
     const today = new Date(todayStr + 'T12:00:00')
@@ -4326,6 +4334,24 @@ export default function Tracker({ session }) {
       proj, upcoming: upcoming.slice(0, 15), pastData,
     }
   }, [expenses, income, todayStr])
+
+  // Year-by-year compounding of net savings rate — "where does current pace lead."
+  const longRangeForecast = useMemo(() => {
+    const netAnnualRate = cashFlowForecast.netDailyRate * 365.25
+    const r = assumedAnnualReturn / 100
+    const yearly = [{ year: 0, balance: 0 }]
+    let balance = 0
+    for (let y = 1; y <= 30; y++) {
+      balance = balance * (1 + r) + netAnnualRate
+      yearly.push({ year: y, balance })
+    }
+    const horizons = [1, 5, 10, 20, 30].map(y => ({ year: y, balance: yearly[y].balance }))
+    const goalHits = goals.filter(g => g.target > 0).map(g => ({
+      id: g.id, name: g.name, target: g.target,
+      yearsToReach: (yearly.find(pt => pt.year > 0 && pt.balance >= g.target) || {}).year || null,
+    }))
+    return { netAnnualRate, yearly, horizons, goalHits }
+  }, [cashFlowForecast, assumedAnnualReturn, goals])
 
   // ── Per-vehicle analytics (Analytics → Vehicles tab) ──
   const vehicleAnalytics = useMemo(() => {
@@ -5707,6 +5733,67 @@ export default function Tracker({ session }) {
                 </div>
               </div>
             )}
+
+            {/* Long-Term Forecast */}
+            {incDailyRate > 0 && (() => {
+              const step = forecastHorizon <= 10 ? 1 : forecastHorizon <= 20 ? 2 : 3
+              const chartData = longRangeForecast.yearly
+                .filter(pt => pt.year <= forecastHorizon && pt.year % step === 0)
+                .map(pt => ({ value: Math.round(pt.balance), label: `Y${pt.year}` }))
+              return (
+                <div className="chart-card" style={{ marginBottom: '1rem' }}>
+                  <div className="chart-title-row">
+                    <span className="chart-title">📈 Long-Term Forecast</span>
+                    <div className="theme-seg">
+                      {[1, 5, 10, 20, 30].map(y => (
+                        <button key={y} className={'theme-seg-btn' + (forecastHorizon === y ? ' active' : '')}
+                          onClick={() => setForecastHorizon(y)}>{y}y</button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="fcst-tiles">
+                    {longRangeForecast.horizons.map(h => (
+                      <div key={h.year} className="fcst-tile">
+                        <div className="fcst-tile-days">{h.year}y</div>
+                        <div className="fcst-tile-exp">{incognito ? '••••' : fmtINR(Math.round(h.balance))}</div>
+                        <div className="fcst-tile-sub">projected net savings</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.75rem 0' }}>
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>Assumed annual return</span>
+                    <input type="number" className="fx-conv-input" style={{ width: '80px', fontSize: 'var(--text-md)', padding: '0.35rem 0.6rem' }}
+                      value={assumedAnnualReturn} step="0.5"
+                      onChange={e => setAssumedAnnualReturn(parseFloat(e.target.value) || 0)} />
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>%</span>
+                  </div>
+
+                  <LineChart data={chartData} incognito={incognito} />
+
+                  {longRangeForecast.goalHits.length > 0 && (
+                    <div className="fcst-upcoming" style={{ marginTop: '0.75rem' }}>
+                      {longRangeForecast.goalHits.map(g => (
+                        <div key={g.id} className="fcst-upcoming-row">
+                          <span className="fcst-upcoming-icon">🎯</span>
+                          <div className="fcst-upcoming-info">
+                            <span className="fcst-upcoming-desc">{g.name}</span>
+                          </div>
+                          <span className="fcst-upcoming-amt">
+                            {g.yearsToReach ? `~${g.yearsToReach}y away` : 'beyond 30y at this pace'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: '0.75rem' }}>
+                    Projection assumes your current income/spending pattern continues — not a guarantee.
+                  </p>
+                </div>
+              )
+            })()}
 
             {expenses.length === 0 && (
               <div className="empty-state">
