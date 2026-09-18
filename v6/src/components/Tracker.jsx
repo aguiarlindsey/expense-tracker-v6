@@ -793,7 +793,7 @@ function useBottomSheet(onClose) {
 
 // ─── Expense Form ─────────────────────────────────────────
 
-function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [] }) {
+function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], creditCards = [] }) {
   const today = new Date().toISOString().split('T')[0]
   const [form, setForm] = useState(initialData ? {
     useCatAlloc: !!(initialData.categoryAllocations && Object.keys(initialData.categoryAllocations || {}).length),
@@ -812,7 +812,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [] }
     taxAmount: 0, taxBreakdown: {},
     fuelRate: '', fuelQuantity: '', fuelType: '', odoReading: '', tripA: '', tripB: '', tripSelected: '',
     vehicleCurrentKm: '', vehicleNextServiceKm: '',
-    vehicleId: '', serviceParts: [],
+    vehicleId: '', serviceParts: [], cardId: '',
     useCatAlloc: false, categoryAllocations: {},
   })
   const [showPalette, setShowPalette] = useState(false)
@@ -989,6 +989,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [] }
       assetType: form.vehicleId ? 'vehicle' : null,
       assetId:   form.vehicleId || null,
       serviceParts: (form.serviceParts || []).filter(p => p.part && p.part.trim()),
+      cardId: form.paymentMethod === 'Credit Card' ? (form.cardId || null) : null,
     })
     if (!initialData && emailReceipt && receiptImageB64) {
       try {
@@ -1314,6 +1315,15 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [] }
               <label htmlFor="ef-wallet">Wallet</label>
               <select id="ef-wallet" value={form.paymentDescription || ''} onChange={e => s('paymentDescription', e.target.value)}>
                 {WALLET_APPS.map(a => <option key={a} value={a}>{a || '— Select wallet —'}</option>)}
+              </select>
+            </div>
+          )}
+          {form.paymentMethod === 'Credit Card' && creditCards.length > 0 && (
+            <div className="form-group">
+              <label htmlFor="ef-card">Card</label>
+              <select id="ef-card" value={form.cardId || ''} onChange={e => s('cardId', e.target.value)}>
+                <option value="">Unassigned</option>
+                {creditCards.map(c => <option key={c.id} value={c.id}>{c.name}{c.last4 ? ` ••${c.last4}` : ''}</option>)}
               </select>
             </div>
           )}
@@ -1801,13 +1811,37 @@ function AddContributionModal({ goal, goalContribs, onSave, onClose }) {
 
 const EMPTY_VFORM = { name: '', type: 'car', fuelType: 'petrol', regNumber: '', purchaseDate: '', nextPucDate: '', notes: '' }
 const VEHICLE_TYPE_ICON = { car: '🚗', bike: '🏍️', scooter: '🛵' }
+const EMPTY_CFORM = { name: '', bank: '', last4: '', creditLimit: '', billingCycleDay: '', dueDay: '', notes: '' }
 
-function PersonalizeModal({ onClose, vehicles, expenses, addVehicle, editVehicle, deleteVehicle, editExpense }) {
+// Cycle window [start, end) containing today, for a statement that resets on `billingCycleDay` each month.
+function cycleWindowFor(billingCycleDay) {
+  const day = billingCycleDay || 1
+  const now = new Date()
+  let cycleStart = new Date(now.getFullYear(), now.getMonth(), day)
+  if (now.getDate() < day) cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, day)
+  const cycleEnd = new Date(cycleStart)
+  cycleEnd.setMonth(cycleEnd.getMonth() + 1)
+  return { cycleStart, cycleEnd }
+}
+function nextDueDateFor(dueDay) {
+  if (!dueDay) return null
+  const now = new Date()
+  let due = new Date(now.getFullYear(), now.getMonth(), dueDay)
+  if (due < now) due = new Date(now.getFullYear(), now.getMonth() + 1, dueDay)
+  return due
+}
+const toISODate = d => d.toISOString().split('T')[0]
+
+function PersonalizeModal({ onClose, vehicles, creditCards, expenses, addVehicle, editVehicle, deleteVehicle, addCreditCard, editCreditCard, deleteCreditCard, editExpense }) {
   const [tab, setTab] = useState('vehicles')
   const [showVehicleForm, setShowVehicleForm] = useState(false)
   const [editingVehicle, setEditingVehicle] = useState(null)
   const [vForm, setVForm] = useState(EMPTY_VFORM)
   const vs = (k, v) => setVForm(f => ({ ...f, [k]: v }))
+  const [showCardForm, setShowCardForm] = useState(false)
+  const [editingCard, setEditingCard] = useState(null)
+  const [cForm, setCForm] = useState(EMPTY_CFORM)
+  const cs = (k, v) => setCForm(f => ({ ...f, [k]: v }))
 
   const vehiclesWithData = useMemo(() => {
     const todayStr = new Date().toISOString().split('T')[0]
@@ -1831,7 +1865,7 @@ function PersonalizeModal({ onClose, vehicles, expenses, addVehicle, editVehicle
       const kmToService = nextServiceKm && latestOdo ? nextServiceKm - latestOdo : null
 
       const ageYears = veh.purchaseDate
-        ? (Date.now() - new Date(veh.purchaseDate + 'T00:00:00').getTime()) / (365.25 * 864e5)
+        ? (new Date(todayStr + 'T00:00:00').getTime() - new Date(veh.purchaseDate + 'T00:00:00').getTime()) / (365.25 * 864e5)
         : null
 
       const pucDays = veh.nextPucDate
@@ -1852,6 +1886,25 @@ function PersonalizeModal({ onClose, vehicles, expenses, addVehicle, editVehicle
       .sort((a, b) => b.date.localeCompare(a.date))
   }, [expenses])
 
+  const creditCardsWithData = useMemo(() => {
+    return creditCards.map(card => {
+      const { cycleStart, cycleEnd } = cycleWindowFor(card.billingCycleDay)
+      const cycleStartStr = toISODate(cycleStart), cycleEndStr = toISODate(cycleEnd)
+      const cycleExps = expenses.filter(e => e.cardId === card.id && e.date >= cycleStartStr && e.date < cycleEndStr)
+      const cycleSpend = cycleExps.reduce((s, e) => s + toINR(e), 0)
+      const utilization = card.creditLimit ? (cycleSpend / card.creditLimit) * 100 : null
+      const nextDue = nextDueDateFor(card.dueDay)
+      const daysToDue = nextDue ? Math.round((nextDue - new Date()) / 864e5) : null
+      return { ...card, cycleSpend, utilization, nextDue, daysToDue }
+    })
+  }, [creditCards, expenses])
+
+  const unassignedCardExps = useMemo(() => {
+    return expenses
+      .filter(e => e.paymentMethod === 'Credit Card' && !e.cardId)
+      .sort((a, b) => b.date.localeCompare(a.date))
+  }, [expenses])
+
   const openAddVehicle = () => { setEditingVehicle(null); setVForm(EMPTY_VFORM); setShowVehicleForm(true) }
   const openEditVehicle = (veh) => {
     setEditingVehicle(veh)
@@ -1865,6 +1918,25 @@ function PersonalizeModal({ onClose, vehicles, expenses, addVehicle, editVehicle
     else addVehicle({ id: stableId({}), ...clean })
     setShowVehicleForm(false)
     setEditingVehicle(null)
+  }
+
+  const openAddCard = () => { setEditingCard(null); setCForm(EMPTY_CFORM); setShowCardForm(true) }
+  const openEditCard = (card) => {
+    setEditingCard(card)
+    setCForm({
+      name: card.name, bank: card.bank || '', last4: card.last4 || '',
+      creditLimit: card.creditLimit || '', billingCycleDay: card.billingCycleDay || '', dueDay: card.dueDay || '',
+      notes: card.notes || '',
+    })
+    setShowCardForm(true)
+  }
+  const submitCardForm = () => {
+    if (!cForm.name.trim()) return
+    const clean = { ...cForm, name: cForm.name.trim(), bank: cForm.bank.trim(), last4: cForm.last4.trim(), notes: cForm.notes.trim() }
+    if (editingCard) editCreditCard({ ...editingCard, ...clean })
+    else addCreditCard({ id: stableId({}), ...clean })
+    setShowCardForm(false)
+    setEditingCard(null)
   }
 
   return (
@@ -2022,12 +2094,123 @@ function PersonalizeModal({ onClose, vehicles, expenses, addVehicle, editVehicle
           </>
         )}
 
-        {tab !== 'vehicles' && (
+        {tab === 'cards' && (
+          <>
+            <div className="settings-row" style={{ marginBottom: '0.75rem' }}>
+              <div className="settings-row-label">
+                <strong>Your credit cards</strong>
+                <span>Tag Credit Card expenses to a card to see billing-cycle spend, utilization, and due-date reminders.</span>
+              </div>
+              <button className="btn-primary" onClick={openAddCard}>+ Add Card</button>
+            </div>
+
+            {showCardForm && (
+              <div className="card trip-form-card" style={{ marginBottom: '0.75rem' }}>
+                <div className="card-title">{editingCard ? '✏️ Edit Card' : '💳 New Card'}</div>
+                <div className="trip-form-grid">
+                  <label className="form-label">Name
+                    <input className="form-input" placeholder="e.g. HDFC Regalia" value={cForm.name} onChange={e => cs('name', e.target.value)} />
+                  </label>
+                  <label className="form-label">Bank
+                    <input className="form-input" placeholder="e.g. HDFC" value={cForm.bank} onChange={e => cs('bank', e.target.value)} />
+                  </label>
+                  <label className="form-label">Last 4 Digits
+                    <input className="form-input" maxLength={4} placeholder="e.g. 4521" value={cForm.last4} onChange={e => cs('last4', e.target.value)} />
+                  </label>
+                  <label className="form-label">Credit Limit (₹)
+                    <input type="number" min="0" className="form-input" placeholder="e.g. 200000" value={cForm.creditLimit} onChange={e => cs('creditLimit', e.target.value)} />
+                  </label>
+                  <label className="form-label">Billing Cycle Start Day
+                    <input type="number" min="1" max="28" className="form-input" placeholder="e.g. 5" value={cForm.billingCycleDay} onChange={e => cs('billingCycleDay', e.target.value)} />
+                  </label>
+                  <label className="form-label">Payment Due Day
+                    <input type="number" min="1" max="28" className="form-input" placeholder="e.g. 20" value={cForm.dueDay} onChange={e => cs('dueDay', e.target.value)} />
+                  </label>
+                  <label className="form-label trip-notes-label">Notes (optional)
+                    <input className="form-input" value={cForm.notes} onChange={e => cs('notes', e.target.value)} />
+                  </label>
+                </div>
+                <div className="trip-form-actions">
+                  <button className="btn-primary" onClick={submitCardForm} disabled={!cForm.name.trim()}>
+                    {editingCard ? 'Save changes' : 'Add card'}
+                  </button>
+                  <button className="btn-ghost" onClick={() => { setShowCardForm(false); setEditingCard(null) }}>Cancel</button>
+                </div>
+              </div>
+            )}
+
+            {creditCardsWithData.length === 0 ? (
+              <div className="empty-state empty-state-sm">
+                <div className="empty-icon">💳</div>
+                <h3>No cards yet</h3>
+                <p>Add a credit card to start tracking billing-cycle spend, utilization, and due dates.</p>
+              </div>
+            ) : (
+              <div className="trips-grid">
+                {creditCardsWithData.map(card => {
+                  const dueLabel = card.daysToDue == null ? null : card.daysToDue <= 3 ? `Due in ${card.daysToDue}d` : `${card.daysToDue}d to due`
+                  const dueClass = card.daysToDue == null ? '' : card.daysToDue <= 3 ? 'trip-badge-active' : card.daysToDue <= 10 ? 'trip-badge-upcoming' : 'trip-badge-done'
+                  return (
+                    <div key={card.id} className="trip-card">
+                      <div className="trip-card-top">
+                        <div className="trip-card-title-row">
+                          <span className="trip-card-name">💳 {card.name}</span>
+                          {dueLabel && <span className={`trip-status-badge ${dueClass}`}>{dueLabel}</span>}
+                        </div>
+                        <div className="trip-card-meta">
+                          {card.bank && <span>{card.bank}</span>}
+                          {card.last4 && <><span className="trip-meta-dot">·</span><span>••{card.last4}</span></>}
+                        </div>
+                      </div>
+                      <div className="trip-card-body">
+                        <div className="trip-total-sub">
+                          <span>{fmtINR(card.cycleSpend)} this cycle</span>
+                          {card.utilization != null && <><span className="trip-meta-dot">·</span><span>{card.utilization.toFixed(0)}% utilized</span></>}
+                        </div>
+                        {card.nextDue && (
+                          <button className="btn-ghost btn-sm" onClick={() => downloadIcsReminder({
+                            uid: `card-due-${card.id}`,
+                            date: toISODate(card.nextDue),
+                            summary: `Payment due - ${card.name}`,
+                            description: `Credit card payment due for ${card.name}${card.last4 ? ' (••' + card.last4 + ')' : ''}.`,
+                          })}>📅 Download due-date reminder</button>
+                        )}
+                      </div>
+                      <div className="trip-card-actions">
+                        <button className="btn-ghost btn-sm" onClick={() => openEditCard(card)}>✏️ Edit</button>
+                        <button className="btn-danger btn-sm" style={{ marginLeft: 'auto' }} onClick={() => deleteCreditCard(card.id)}>🗑️</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {unassignedCardExps.length > 0 && (
+              <div className="card" style={{ marginTop: 16 }}>
+                <div className="card-title">Unassigned card expenses ({unassignedCardExps.length})</div>
+                {unassignedCardExps.map(e => (
+                  <div key={e.id} className="settings-row">
+                    <div className="settings-row-label">
+                      <strong>{e.description}</strong>
+                      <span>{fmtDate(e.date)} · {fmtINR(toINR(e))}</span>
+                    </div>
+                    <select value="" onChange={ev => ev.target.value && editExpense({ ...e, cardId: ev.target.value })}>
+                      <option value="" disabled>Assign to…</option>
+                      {creditCards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {tab !== 'vehicles' && tab !== 'cards' && (
           <div className="empty-state empty-state-sm">
-            <div className="empty-icon">{tab === 'cards' ? '💳' : tab === 'houses' ? '🏡' : '📱'}</div>
+            <div className="empty-icon">{tab === 'houses' ? '🏡' : '📱'}</div>
             <h3>Coming soon</h3>
             <p>
-              {tab === 'cards'  && 'Track spending, due dates, and utilization per credit card.'}
               {tab === 'houses' && 'Track rent, utilities, and maintenance per property.'}
               {tab === 'phones' && 'Track warranty, EMI, and upgrade reminders per device.'}
             </p>
@@ -2312,7 +2495,7 @@ function CommandPalette({ open, onClose, commands }) {
 export default function Tracker({ session }) {
   const userId = session.user.id
   const {
-    expenses, income, budgets, goals, contributions, trips, vehicles,
+    expenses, income, budgets, goals, contributions, trips, vehicles, creditCards,
     loading, error,
     pendingCount, syncing, online, realtimeStatus,
     conflicts, resolveConflict, dismissConflict,
@@ -2322,6 +2505,7 @@ export default function Tracker({ session }) {
     addGoal, deleteGoal, addContribution, deleteContribution,
     addTrip, editTrip, deleteTrip,
     addVehicle, editVehicle, deleteVehicle,
+    addCreditCard, editCreditCard, deleteCreditCard,
     bulkAddExpenses, bulkAddIncome,
     clearExpenses, clearIncome, clearAll, factoryReset,
   } = useStorage(userId)
@@ -6291,8 +6475,8 @@ export default function Tracker({ session }) {
 
       {/* ── Modals ── */}
       <CommandPalette open={showCmd} onClose={() => setShowCmd(false)} commands={cmdCommands} />
-      {showEF && <ExpenseForm initialData={editExpTarget} onSubmit={editExpTarget ? handleEditExpense : handleAddExpense} onClose={() => { setShowEF(false); setEditExpTarget(null) }} rateData={rateData} vehicles={vehicles} />}
-      {showPersonalize && <PersonalizeModal onClose={() => setShowPersonalize(false)} vehicles={vehicles} expenses={expenses} addVehicle={addVehicle} editVehicle={editVehicle} deleteVehicle={deleteVehicle} editExpense={editExpense} />}
+      {showEF && <ExpenseForm initialData={editExpTarget} onSubmit={editExpTarget ? handleEditExpense : handleAddExpense} onClose={() => { setShowEF(false); setEditExpTarget(null) }} rateData={rateData} vehicles={vehicles} creditCards={creditCards} />}
+      {showPersonalize && <PersonalizeModal onClose={() => setShowPersonalize(false)} vehicles={vehicles} creditCards={creditCards} expenses={expenses} addVehicle={addVehicle} editVehicle={editVehicle} deleteVehicle={deleteVehicle} addCreditCard={addCreditCard} editCreditCard={editCreditCard} deleteCreditCard={deleteCreditCard} editExpense={editExpense} />}
       {showIF && <IncomeForm  initialData={editIncTarget} onSubmit={editIncTarget ? handleEditIncome  : handleAddIncome}  onClose={() => { setShowIF(false); setEditIncTarget(null) }} rateData={rateData} />}
       {delTarget && <ConfirmDialog message={delTarget.many ? `Permanently delete ${Object.keys(delTarget.ids).length} expenses?` : `Delete this ${delTarget.type}? Cannot be undone.`} onConfirm={handleDelete} onCancel={() => setDelTarget(null)} />}
       {confirmAction && (

@@ -51,6 +51,7 @@ function expenseToDb(e, userId) {
     asset_type:              e.assetType || null,
     asset_id:                e.assetId || null,
     service_parts:           Array.isArray(e.serviceParts) && e.serviceParts.length ? e.serviceParts : null,
+    card_id:                 e.cardId || null,
     fingerprint:             e._fp || null,
     migrated_from:       e.migratedFrom || null,
     imported_from:       e.importedFrom || null,
@@ -96,6 +97,7 @@ function expenseFromDb(row) {
     assetType:           row.asset_type || null,
     assetId:             row.asset_id || null,
     serviceParts:        row.service_parts || [],
+    cardId:              row.card_id || null,
     _fp:                 row.fingerprint || '',
     migratedFrom:       row.migrated_from || '',
     importedFrom:       row.imported_from || '',
@@ -206,6 +208,37 @@ function vehicleFromDb(row) {
   }
 }
 
+// ── Credit card mappers ───────────────────────────────────
+
+function cardToDb(c, userId) {
+  return {
+    id:                c.id,
+    user_id:           userId,
+    name:              c.name,
+    bank:              c.bank || null,
+    last4:             c.last4 || null,
+    credit_limit:      c.creditLimit ? parseFloat(c.creditLimit) : null,
+    billing_cycle_day: c.billingCycleDay ? parseInt(c.billingCycleDay, 10) : null,
+    due_day:           c.dueDay ? parseInt(c.dueDay, 10) : null,
+    notes:             c.notes || null,
+  }
+}
+
+function cardFromDb(row) {
+  return {
+    id:               row.id,
+    name:             row.name,
+    bank:             row.bank || '',
+    last4:            row.last4 || '',
+    creditLimit:      row.credit_limit ? parseFloat(row.credit_limit) : null,
+    billingCycleDay:  row.billing_cycle_day || null,
+    dueDay:           row.due_day || null,
+    notes:            row.notes || '',
+    createdAt:        row.created_at || '',
+    _rowVersion:      row.row_version || 1,
+  }
+}
+
 // ── Hook ─────────────────────────────────────────────────
 
 export function useStorage(userId) {
@@ -216,6 +249,7 @@ export function useStorage(userId) {
   const [contributions, setContributions] = useState([])
   const [trips,         setTrips]         = useState([])
   const [vehicles,      setVehicles]      = useState([])
+  const [creditCards,   setCreditCards]   = useState([])
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState(null)
   const [syncing,         setSyncing]         = useState(false)
@@ -260,7 +294,8 @@ export function useStorage(userId) {
       supabase.from('goal_contributions').select('*').eq('user_id', userId).order('date', { ascending: false }),
       supabase.from('trips').select('*').eq('user_id', userId).order('start_date', { ascending: false }),
       supabase.from('vehicles').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-    ]).then(([expRes, incRes, budRes, gRes, cRes, tRes, vRes]) => {
+      supabase.from('credit_cards').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+    ]).then(([expRes, incRes, budRes, gRes, cRes, tRes, vRes, ccRes]) => {
       if (!mounted) return
       if (expRes.error) setError(expRes.error.message)
       if (incRes.error) setError(incRes.error.message)
@@ -288,6 +323,7 @@ export function useStorage(userId) {
       })))
       setTrips((tRes.data || []).map(tripFromDb))
       setVehicles((vRes.data || []).map(vehicleFromDb))
+      setCreditCards((ccRes.data || []).map(cardFromDb))
       setLoading(false)
     })
     return () => { mounted = false }
@@ -419,6 +455,22 @@ export function useStorage(userId) {
     }
   }
 
+  function handleCardEvent(payload) {
+    if (payload.eventType === 'INSERT') {
+      const incoming = cardFromDb(payload.new)
+      setCreditCards(prev => {
+        if (prev.some(c => c.id === incoming.id && !c._pending)) return prev
+        const hasPending = prev.some(c => c.id === incoming.id && c._pending)
+        if (hasPending) return prev.map(c => c.id === incoming.id ? incoming : c)
+        return [incoming, ...prev]
+      })
+    } else if (payload.eventType === 'UPDATE') {
+      setCreditCards(prev => prev.map(c => c.id === payload.new.id ? cardFromDb(payload.new) : c))
+    } else if (payload.eventType === 'DELETE') {
+      setCreditCards(prev => prev.filter(c => c.id !== payload.old.id))
+    }
+  }
+
   // ── Realtime subscription ─────────────────────────────────
   useEffect(() => {
     if (!userId) return
@@ -437,6 +489,7 @@ export function useStorage(userId) {
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'goal_contributions', filter: `user_id=eq.${userId}` }, p => handleContributionEvent(p))
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'trips',              filter: `user_id=eq.${userId}` }, p => handleTripEvent(p))
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'vehicles',           filter: `user_id=eq.${userId}` }, p => handleVehicleEvent(p))
+      .on('postgres_changes', { event: '*',      schema: 'public', table: 'credit_cards',        filter: `user_id=eq.${userId}` }, p => handleCardEvent(p))
       .subscribe(status => {
         if (status === 'SUBSCRIBED')    setRealtimeStatus('live')
         else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setRealtimeStatus('error')
@@ -524,6 +577,32 @@ export function useStorage(userId) {
       }
       case 'deleteVehicle': {
         const { error: err } = await supabase.from('vehicles').delete().eq('id', payload.id)
+        if (err) throw new Error(err.message)
+        break
+      }
+      case 'addCreditCard': {
+        const { data, error: err } = await supabase.from('credit_cards').insert(cardToDb(payload, userId)).select().single()
+        if (err) throw new Error(err.message)
+        setCreditCards(prev => prev.map(c => c.id === payload.id ? cardFromDb(data) : c))
+        break
+      }
+      case 'editCreditCard': {
+        const rowVersion = payload._rowVersion || 1
+        const { data, error: err } = await supabase
+          .from('credit_cards').update(cardToDb(payload, userId))
+          .eq('id', payload.id).eq('row_version', rowVersion).select()
+        if (err) throw new Error(err.message)
+        if (!data || data.length === 0) {
+          const { data: dbRow } = await supabase.from('credit_cards').select('*').eq('id', payload.id).single()
+          if (dbRow) addConflict('credit_cards', payload, cardFromDb(dbRow))
+          else setError('This card was deleted on another device.')
+          break
+        }
+        setCreditCards(prev => prev.map(c => c.id === payload.id ? cardFromDb(data[0]) : c))
+        break
+      }
+      case 'deleteCreditCard': {
+        const { error: err } = await supabase.from('credit_cards').delete().eq('id', payload.id)
         if (err) throw new Error(err.message)
         break
       }
@@ -865,6 +944,54 @@ export function useStorage(userId) {
     else if (err) setError(err.message)
   }, [userId, enqueue])
 
+  // ── Credit Cards ─────────────────────────────────────────
+  const addCreditCard = useCallback(async (card) => {
+    setCreditCards(prev => [{ ...card, _pending: true }, ...prev])
+    if (!navigator.onLine) { enqueue('addCreditCard', card); return }
+    const { data, error: err } = await supabase.from('credit_cards').insert(cardToDb(card, userId)).select().single()
+    if (err) {
+      if (isNetworkError(err)) { enqueue('addCreditCard', card) }
+      else { setError(err.message); setCreditCards(prev => prev.filter(c => c.id !== card.id)) }
+      return
+    }
+    setCreditCards(prev => prev.map(c => c.id === card.id ? cardFromDb(data) : c))
+  }, [userId, enqueue])
+
+  const editCreditCard = useCallback(async (card) => {
+    setCreditCards(prev => prev.map(c => c.id === card.id ? { ...card, _pending: true } : c))
+    const deps = () => loadQueueSnapshot().filter(i => i.op === 'addCreditCard' && i.payload.id === card.id).map(i => i.id)
+    if (!navigator.onLine) { enqueue('editCreditCard', card, deps()); return }
+    const rowVersion = card._rowVersion || 1
+    const { data, error: err } = await supabase
+      .from('credit_cards')
+      .update(cardToDb(card, userId))
+      .eq('id', card.id)
+      .eq('row_version', rowVersion)
+      .select()
+    if (err) {
+      if (isNetworkError(err)) { enqueue('editCreditCard', card, deps()) }
+      else { setError(err.message) }
+      return
+    }
+    if (!data || data.length === 0) {
+      const { data: dbRow } = await supabase.from('credit_cards').select('*').eq('id', card.id).single()
+      if (dbRow) addConflict('credit_cards', card, cardFromDb(dbRow))
+      else setError('This card was deleted on another device.')
+      setCreditCards(prev => prev.map(c => c.id === card.id ? { ...c, _pending: false } : c))
+      return
+    }
+    setCreditCards(prev => prev.map(c => c.id === card.id ? cardFromDb(data[0]) : c))
+  }, [userId, enqueue]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const deleteCreditCard = useCallback(async (id) => {
+    setCreditCards(prev => prev.filter(c => c.id !== id))
+    const deps = () => loadQueueSnapshot().filter(i => ['addCreditCard','editCreditCard'].includes(i.op) && i.payload.id === id).map(i => i.id)
+    if (!navigator.onLine) { enqueue('deleteCreditCard', { id }, deps()); return }
+    const { error: err } = await supabase.from('credit_cards').delete().eq('id', id)
+    if (err && isNetworkError(err)) enqueue('deleteCreditCard', { id }, deps())
+    else if (err) setError(err.message)
+  }, [userId, enqueue])
+
   // ── Bulk import ──────────────────────────────────────────
   const bulkAddExpenses = useCallback(async (exps) => {
     if (!exps.length) return { added: 0, errors: 0 }
@@ -899,6 +1026,7 @@ export function useStorage(userId) {
       if (conflict.table === 'income')   setIncome(is => is.map(i => i.id === conflict.remote.id ? conflict.remote : i))
       if (conflict.table === 'trips')    setTrips(ts => ts.map(t => t.id === conflict.remote.id ? conflict.remote : t))
       if (conflict.table === 'vehicles') setVehicles(vs => vs.map(v => v.id === conflict.remote.id ? conflict.remote : v))
+      if (conflict.table === 'credit_cards') setCreditCards(cs => cs.map(c => c.id === conflict.remote.id ? conflict.remote : c))
     } else {
       // 'mine' or 'merge' — re-attempt write using remote's current row_version
       const base = resolution === 'merge' && mergedData ? mergedData : conflict.local
@@ -907,8 +1035,9 @@ export function useStorage(userId) {
       if (conflict.table === 'income')   await editIncome(forceWrite)
       if (conflict.table === 'trips')    await editTrip(forceWrite)
       if (conflict.table === 'vehicles') await editVehicle(forceWrite)
+      if (conflict.table === 'credit_cards') await editCreditCard(forceWrite)
     }
-  }, [editExpense, editIncome, editTrip, editVehicle]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [editExpense, editIncome, editTrip, editVehicle, editCreditCard]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const dismissConflict = useCallback((conflictId) => {
     setConflicts(prev => prev.filter(c => c.id !== conflictId))
@@ -945,6 +1074,7 @@ export function useStorage(userId) {
       supabase.from('goal_contributions').delete().eq('user_id', userId),
       supabase.from('trips').delete().eq('user_id', userId),
       supabase.from('vehicles').delete().eq('user_id', userId),
+      supabase.from('credit_cards').delete().eq('user_id', userId),
     ])
     setExpenses([])
     setIncome([])
@@ -953,13 +1083,14 @@ export function useStorage(userId) {
     setContributions([])
     setTrips([])
     setVehicles([])
+    setCreditCards([])
     try {
       ['et_v6_rates', 'et_v6_dark', 'et_v6_cb', 'et_v6_base', 'et_v6_retry_queue'].forEach(k => localStorage.removeItem(k))
     } catch {}
   }, [userId])
 
   return {
-    expenses, income, budgets, goals, contributions, trips, vehicles,
+    expenses, income, budgets, goals, contributions, trips, vehicles, creditCards,
     loading, error,
     pendingCount: queue.length,
     syncing,
@@ -972,6 +1103,7 @@ export function useStorage(userId) {
     addGoal, deleteGoal, addContribution, deleteContribution,
     addTrip, editTrip, deleteTrip,
     addVehicle, editVehicle, deleteVehicle,
+    addCreditCard, editCreditCard, deleteCreditCard,
     bulkAddExpenses, bulkAddIncome,
     clearExpenses, clearIncome, clearAll, factoryReset,
   }

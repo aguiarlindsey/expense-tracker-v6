@@ -66,11 +66,15 @@ A second shared building block: a generic `.ics` calendar-reminder download help
 - [x] Vehicles tab content inside `PersonalizeModal`: add/edit form, vehicle cards (metrics, Edit/Delete — no confirm dialog, matches existing `deleteTrip` precedent), "Download PUC reminder (.ics)" button, "Unassigned expenses" panel with inline per-row vehicle assign dropdown
 - [ ] *(stretch, optional)* `receiptParser.js` vehicleReg/vehicleModel → auto-match against saved vehicles to auto-fill `vehicleId` on OCR scan
 
-### Phase 2 — Credit Cards (scoped now at medium detail; full field/metric design happens when this phase starts)
-- [ ] `credit_cards` table: `id, user_id, name, bank, last4, credit_limit, billing_cycle_day, due_day, notes, row_version, updated_at, created_at` — same RLS/realtime/row-version treatment as vehicles
-- [ ] Expenses tag via existing generic `asset_type='credit_card'` / `asset_id` — likely auto-suggested from `paymentMethod` matching a saved card's name/last4, not just manual picking
-- [ ] Metrics: spend this billing cycle, utilization % (`cycle spend / credit_limit`), days to due date, "Download due-date reminder (.ics)" via the shared helper
-- [ ] Credit Cards pill in the Personalize section, cloned from the Vehicles card-list shape
+### Phase 2 — Credit Cards ✅ done 2026-09-18
+**Design correction made when this phase started (2026-09-18)**: credit cards do NOT reuse `asset_type`/`asset_id`. That pair is for "this expense is about vehicle/house/phone X" (single-select, one tag). A credit card is orthogonal to that — a fuel expense might need to be tagged to a vehicle (mileage) AND tagged to a credit card (spend/utilization) simultaneously, which the single generic pair can't hold. Credit Cards gets its own dedicated nullable `card_id` column on `expenses` instead, so it composes cleanly with any other asset tag.
+
+- [x] `supabase/add_credit_cards.sql`: `credit_cards` table (`id text pk`, `user_id`, `name`, `bank`, `last4`, `credit_limit`, `billing_cycle_day` [1-28], `due_day` [1-28], `notes`, `row_version`, `updated_at`, `created_at`) + RLS + realtime + row-version trigger, same shape as `vehicles`; plus `alter table expenses add column if not exists card_id text` (no FK, matches existing convention)
+- [x] `useStorage.js`: `cardToDb`/`cardFromDb`, `creditCards` state/CRUD (`addCreditCard`/`editCreditCard`/`deleteCreditCard`, offline-queue + conflict resolution), `card_id`/`cardId` mapped in `expenseToDb`/`expenseFromDb`, wired into initial load/realtime/factoryReset/return
+- [x] `ExpenseForm`: card picker shown whenever `form.paymentMethod === 'Credit Card'` (not gated by category/subcategory like the vehicle picker — a card can pay for anything)
+- [x] Metrics (`creditCardsWithData` memo in `PersonalizeModal`): current billing-cycle spend (expenses with `cardId` matching, dated within the cycle window derived from `billing_cycle_day`), utilization % (`cycle spend / credit_limit`), days to next due date (derived from `due_day`), "Download due-date reminder (.ics)"
+- [x] Credit Cards tab content in `PersonalizeModal`, cloned from the Vehicles card-list shape, plus its own "Unassigned card expenses" panel (`paymentMethod === 'Credit Card' && !cardId`)
+- [ ] *(explicitly deferred)* auto-suggesting a card from `paymentMethod`/last4 matching — manual picking only for v1
 
 ### Phase 3 — Houses (scoped now at medium detail)
 - [ ] `houses` table: `id, user_id, name, address, ownership [owned|rented], move_in_date, rent_amount, notes, row_version, updated_at, created_at`
