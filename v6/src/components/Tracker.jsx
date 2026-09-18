@@ -1722,6 +1722,46 @@ function AddContributionModal({ goal, goalContribs, onSave, onClose }) {
   )
 }
 
+function PersonalizeModal({ onClose }) {
+  const [tab, setTab] = useState('vehicles')
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <h2>🏠 Personalize</h2>
+          <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <div className="sub-nav-wrap">
+          <div className="sub-nav" role="tablist">
+            <button role="tab" aria-selected={tab === 'vehicles'}
+              className={'sub-nav-btn' + (tab === 'vehicles' ? ' active' : '')}
+              onClick={() => setTab('vehicles')}>🚗 Vehicles</button>
+            <button role="tab" aria-selected={tab === 'cards'}
+              className={'sub-nav-btn' + (tab === 'cards' ? ' active' : '')}
+              onClick={() => setTab('cards')}>💳 Credit Cards</button>
+            <button role="tab" aria-selected={tab === 'houses'}
+              className={'sub-nav-btn' + (tab === 'houses' ? ' active' : '')}
+              onClick={() => setTab('houses')}>🏡 Houses</button>
+            <button role="tab" aria-selected={tab === 'phones'}
+              className={'sub-nav-btn' + (tab === 'phones' ? ' active' : '')}
+              onClick={() => setTab('phones')}>📱 Phones</button>
+          </div>
+        </div>
+        <div className="empty-state empty-state-sm">
+          <div className="empty-icon">{tab === 'vehicles' ? '🚗' : tab === 'cards' ? '💳' : tab === 'houses' ? '🏡' : '📱'}</div>
+          <h3>Coming soon</h3>
+          <p>
+            {tab === 'vehicles' && 'Register your cars and bikes to track mileage, fuel cost, service due dates, and PUC renewal reminders.'}
+            {tab === 'cards'    && 'Track spending, due dates, and utilization per credit card.'}
+            {tab === 'houses'   && 'Track rent, utilities, and maintenance per property.'}
+            {tab === 'phones'   && 'Track warranty, EMI, and upgrade reminders per device.'}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Expense / Income Items ───────────────────────────────
 
 const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSelected, onToggleSelect }) {
@@ -2029,7 +2069,7 @@ export default function Tracker({ session }) {
     const p = new URLSearchParams(window.location.search).get('ptab')
     return p === 'goals' ? 'goals' : 'budgets'
   })
-  const [personalizeTab, setPersonalizeTab] = useState('vehicles')
+  const [showPersonalize, setShowPersonalize] = useState(false)
   const [budgetDraft, setBudgetDraft]     = useState(null)
   const [focusedBudget, setFocusedBudget] = useState(null)
   const [dark, setDark]                   = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s !== null ? s === '1' : window.matchMedia('(prefers-color-scheme: dark)').matches })
@@ -5466,31 +5506,12 @@ export default function Tracker({ session }) {
           {/* Personalize */}
           <div className="settings-section">
             <h3><span aria-hidden="true">🏠</span> Personalize</h3>
-            <div className="sub-nav-wrap">
-              <div className="sub-nav" role="tablist">
-                <button role="tab" aria-selected={personalizeTab === 'vehicles'}
-                  className={'sub-nav-btn' + (personalizeTab === 'vehicles' ? ' active' : '')}
-                  onClick={() => setPersonalizeTab('vehicles')}>🚗 Vehicles</button>
-                <button role="tab" aria-selected={personalizeTab === 'cards'}
-                  className={'sub-nav-btn' + (personalizeTab === 'cards' ? ' active' : '')}
-                  onClick={() => setPersonalizeTab('cards')}>💳 Credit Cards</button>
-                <button role="tab" aria-selected={personalizeTab === 'houses'}
-                  className={'sub-nav-btn' + (personalizeTab === 'houses' ? ' active' : '')}
-                  onClick={() => setPersonalizeTab('houses')}>🏡 Houses</button>
-                <button role="tab" aria-selected={personalizeTab === 'phones'}
-                  className={'sub-nav-btn' + (personalizeTab === 'phones' ? ' active' : '')}
-                  onClick={() => setPersonalizeTab('phones')}>📱 Phones</button>
+            <div className="settings-row">
+              <div className="settings-row-label">
+                <strong>Your vehicles, cards, houses & phones</strong>
+                <span>Register the things in your life that expenses relate to, and track mileage, spend, and reminders per item.</span>
               </div>
-            </div>
-            <div className="empty-state empty-state-sm">
-              <div className="empty-icon">{personalizeTab === 'vehicles' ? '🚗' : personalizeTab === 'cards' ? '💳' : personalizeTab === 'houses' ? '🏡' : '📱'}</div>
-              <h3>Coming soon</h3>
-              <p>
-                {personalizeTab === 'vehicles' && 'Register your cars and bikes to track mileage, fuel cost, service due dates, and PUC renewal reminders.'}
-                {personalizeTab === 'cards'    && 'Track spending, due dates, and utilization per credit card.'}
-                {personalizeTab === 'houses'   && 'Track rent, utilities, and maintenance per property.'}
-                {personalizeTab === 'phones'   && 'Track warranty, EMI, and upgrade reminders per device.'}
-              </p>
+              <button className="btn-primary" onClick={() => setShowPersonalize(true)}>Open Personalize</button>
             </div>
           </div>
 
@@ -6010,6 +6031,7 @@ export default function Tracker({ session }) {
       {/* ── Modals ── */}
       <CommandPalette open={showCmd} onClose={() => setShowCmd(false)} commands={cmdCommands} />
       {showEF && <ExpenseForm initialData={editExpTarget} onSubmit={editExpTarget ? handleEditExpense : handleAddExpense} onClose={() => { setShowEF(false); setEditExpTarget(null) }} rateData={rateData} />}
+      {showPersonalize && <PersonalizeModal onClose={() => setShowPersonalize(false)} />}
       {showIF && <IncomeForm  initialData={editIncTarget} onSubmit={editIncTarget ? handleEditIncome  : handleAddIncome}  onClose={() => { setShowIF(false); setEditIncTarget(null) }} rateData={rateData} />}
       {delTarget && <ConfirmDialog message={delTarget.many ? `Permanently delete ${Object.keys(delTarget.ids).length} expenses?` : `Delete this ${delTarget.type}? Cannot be undone.`} onConfirm={handleDelete} onCancel={() => setDelTarget(null)} />}
       {confirmAction && (
