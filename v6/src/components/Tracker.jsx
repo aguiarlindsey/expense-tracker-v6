@@ -6758,7 +6758,7 @@ export default function Tracker({ session }) {
           <div className="settings-section" style={{ marginTop: 16 }}>
             <h3>ℹ️ About</h3>
             <div className="about-card">
-              <div className="about-title" style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}><Zap size={18} color="var(--primary)" />Expense Tracker V7</div>
+              <div className="about-title" style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}><Zap size={18} color="var(--primary)" />Expense Tracker V8</div>
               <div className="about-meta">
                 <span className="about-badge">v8.0.0</span>
                 <span className="about-badge">Epic A: Personalization</span>
