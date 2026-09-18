@@ -4368,16 +4368,31 @@ export default function Tracker({ session }) {
       // Odometer reading as of the last fill-up — the vehicle's actual total mileage.
       const latestOdo = fuelExps.reduce((max, e) => e.odoReading ? Math.max(max, Number(e.odoReading)) : max, 0) || null
 
-      // This-year KMs, from the odometer itself rather than bucketing fill-up
-      // deltas by date — a week/month bucket is unreliable unless you happen to
-      // fuel twice within that exact window, but "odometer now minus odometer at
-      // the last fill-up before this year" is exact regardless of fill-up gaps.
-      // If there's no reading from before this year (e.g. the vehicle was bought
-      // this year), the baseline is 0, so "this year" == the full odometer total.
+      // This-year KMs = latest odometer minus the odometer at the start of this
+      // year. That start-of-year baseline comes from one of three places:
+      //  1. An actual reading logged before Jan 1 this year — exact.
+      //  2. No such reading, but the vehicle was purchased this year — there's no
+      //     prior mileage to subtract, so baseline is 0 (this year == everything).
+      //  3. No such reading and the vehicle predates this year (e.g. bought in
+      //     2019, just started logging it now) — we don't actually know what the
+      //     odometer read on Jan 1, so it can't be computed yet. Falls back to the
+      //     delta between the earliest and latest fill-ups logged *this year*,
+      //     which is null (shown as "—") until there are two of them — i.e. it
+      //     becomes accurate as of the next refuel, not before.
       const yearStart = todayStr.slice(0, 4) + '-01-01'
       const priorYearReadings = sortedFuel.filter(e => e.odoReading && e.date < yearStart)
-      const baselineOdo = priorYearReadings.length ? Number(priorYearReadings[priorYearReadings.length - 1].odoReading) : 0
-      const kmThisYear = latestOdo != null ? Math.max(0, latestOdo - baselineOdo) : null
+      let kmThisYear
+      if (priorYearReadings.length) {
+        const baselineOdo = Number(priorYearReadings[priorYearReadings.length - 1].odoReading)
+        kmThisYear = latestOdo != null ? Math.max(0, latestOdo - baselineOdo) : null
+      } else if (veh.purchaseDate && veh.purchaseDate >= yearStart) {
+        kmThisYear = latestOdo
+      } else {
+        const thisYearReadings = sortedFuel.filter(e => e.odoReading && e.date >= yearStart)
+        kmThisYear = thisYearReadings.length >= 2
+          ? Math.max(0, Number(thisYearReadings[thisYearReadings.length - 1].odoReading) - Number(thisYearReadings[0].odoReading))
+          : null
+      }
 
       const serviceHistory = maintExps.map(e => ({
         id: e.id, date: e.date, cost: toINR(e),
