@@ -1845,7 +1845,7 @@ function nextDueDateFor(dueDay) {
 const toISODate = d => d.toISOString().split('T')[0]
 
 function PersonalizeModal({ onClose, vehicles, creditCards, houses, expenses, addVehicle, editVehicle, deleteVehicle, addCreditCard, editCreditCard, deleteCreditCard, addHouse, editHouse, deleteHouse, editExpense }) {
-  const [tab, setTab] = useState('vehicles')
+  const [tab, setTab] = useState(null)
   const [showVehicleForm, setShowVehicleForm] = useState(false)
   const [editingVehicle, setEditingVehicle] = useState(null)
   const [vForm, setVForm] = useState(EMPTY_VFORM)
@@ -2021,6 +2021,14 @@ function PersonalizeModal({ onClose, vehicles, creditCards, houses, expenses, ad
               onClick={() => setTab('phones')}>📱 Phones</button>
           </div>
         </div>
+
+        {tab === null && (
+          <div className="empty-state empty-state-sm">
+            <div className="empty-icon">🏠</div>
+            <h3>Pick a category</h3>
+            <p>Choose Vehicles, Credit Cards, Houses, or Phones above to see and manage that section.</p>
+          </div>
+        )}
 
         {tab === 'vehicles' && (
           <>
