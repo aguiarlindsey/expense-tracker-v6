@@ -4338,21 +4338,25 @@ export default function Tracker({ session }) {
       const totalFuelSpend = fuelExps.reduce((s, e) => s + toINR(e), 0)
       const totalMaintSpend = maintExps.reduce((s, e) => s + toINR(e), 0)
 
-      // Distance per fill-up: prefer the odometer delta since the previous fill-up
-      // (recorded every refuel, so it's the ground truth) — fall back to the
-      // logged trip-meter reading only when odo data is missing (e.g. the first
-      // fill-up ever, or a gap where the odo wasn't noted).
+      // Distance per fill-up: Trip A/B is reset at each refuel and directly
+      // records "km covered since the last fill-up" — that's the authoritative
+      // number, logged at every fill-up. The odometer delta between two logged
+      // fill-ups is only a fallback for a fill-up where the trip meter wasn't
+      // noted (it also requires a valid previous odo reading to diff against,
+      // which the very first logged fill-up never has).
       const sortedFuel = [...fuelExps].sort((a, b) => a.date.localeCompare(b.date) || (Number(a.odoReading) || 0) - (Number(b.odoReading) || 0))
       let totalDistance = 0, totalQty = 0
       const kmEntries = [] // [{ date, km }] — one entry per fill-up with a known distance
       sortedFuel.forEach((e, i) => {
-        const prev = sortedFuel[i - 1]
+        const trip = e.tripSelected === 'B' ? e.tripB : e.tripSelected === 'A' ? e.tripA : (e.tripA || e.tripB)
         let km = null
-        if (prev && e.odoReading && prev.odoReading && Number(e.odoReading) > Number(prev.odoReading)) {
-          km = Number(e.odoReading) - Number(prev.odoReading)
+        if (trip) {
+          km = Number(trip)
         } else {
-          const trip = e.tripSelected === 'B' ? e.tripB : e.tripSelected === 'A' ? e.tripA : (e.tripA || e.tripB)
-          if (trip) km = Number(trip)
+          const prev = sortedFuel[i - 1]
+          if (prev && e.odoReading && prev.odoReading && Number(e.odoReading) > Number(prev.odoReading)) {
+            km = Number(e.odoReading) - Number(prev.odoReading)
+          }
         }
         if (km != null) {
           totalDistance += km
