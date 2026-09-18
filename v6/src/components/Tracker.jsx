@@ -4367,9 +4367,17 @@ export default function Tracker({ session }) {
       // distinct from totalDistance (which only counts km driven since tracking started).
       const latestOdo = fuelExps.reduce((max, e) => e.odoReading ? Math.max(max, Number(e.odoReading)) : max, 0) || null
 
-      const kmThisWeek  = kmEntries.filter(k => k.date >= weekStart).reduce((s, k) => s + k.km, 0)
-      const kmThisMonth = kmEntries.filter(k => k.date.startsWith(todayStr.slice(0, 7))).reduce((s, k) => s + k.km, 0)
-      const kmThisYear  = kmEntries.filter(k => k.date.startsWith(todayStr.slice(0, 4))).reduce((s, k) => s + k.km, 0)
+      // This-year KMs, from the odometer itself rather than bucketing fill-up
+      // deltas by date — a week/month bucket is unreliable unless you happen to
+      // fuel twice within that exact window, but "odometer now minus odometer at
+      // the last fill-up before this year" is exact regardless of fill-up gaps.
+      // If there's no reading from before this year (e.g. the vehicle was bought
+      // this year), the baseline is 0, so "this year" == the full odometer total.
+      const yearStart = todayStr.slice(0, 4) + '-01-01'
+      const priorYearReadings = sortedFuel.filter(e => e.odoReading && e.date < yearStart)
+      const baselineOdo = priorYearReadings.length ? Number(priorYearReadings[priorYearReadings.length - 1].odoReading) : 0
+      const kmThisYear = latestOdo != null ? Math.max(0, latestOdo - baselineOdo) : null
+
       const kmByMonth = {}
       kmEntries.forEach(k => { const m = k.date.slice(0, 7); kmByMonth[m] = (kmByMonth[m] || 0) + k.km })
       const kmMonthly = Object.entries(kmByMonth).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 12)
@@ -4386,10 +4394,10 @@ export default function Tracker({ session }) {
       return {
         ...veh, totalFuelSpend, totalMaintSpend, totalSpend: totalFuelSpend + totalMaintSpend,
         avgEfficiency, costPerKm, totalDistance, latestOdo, serviceHistory,
-        kmThisWeek, kmThisMonth, kmThisYear, kmMonthly,
+        kmThisYear, kmMonthly,
       }
     })
-  }, [vehicles, expenses, todayStr, weekStart])
+  }, [vehicles, expenses, todayStr])
 
   // ── Subscription zombie detection ────────────────────
   const SUB_SUBS = new Set(['OTT/Streaming', 'Streaming', 'Subscriptions', 'Software', 'Gaming', 'Cable'])
@@ -5717,17 +5725,11 @@ export default function Tracker({ session }) {
                   <div className="summary-card"><div className="summary-label">Total Spend</div><div className="summary-amount">{incognito ? '••••' : fmtINR(veh.totalSpend)}</div></div>
                   <div className="summary-card"><div className="summary-label">Fuel Spend</div><div className="summary-amount">{incognito ? '••••' : fmtINR(veh.totalFuelSpend)}</div></div>
                   <div className="summary-card"><div className="summary-label">Maintenance Spend</div><div className="summary-amount">{incognito ? '••••' : fmtINR(veh.totalMaintSpend)}</div></div>
-                  <div className="summary-card"><div className="summary-label">Odometer (Last Fill-up)</div><div className="summary-amount">{veh.latestOdo != null ? `${veh.latestOdo.toLocaleString('en-IN')} km` : '—'}</div></div>
+                  <div className="summary-card"><div className="summary-label">Total KMs</div><div className="summary-amount">{veh.latestOdo != null ? `${veh.latestOdo.toLocaleString('en-IN')} km` : '—'}</div></div>
+                  <div className="summary-card"><div className="summary-label">KMs This Year</div><div className="summary-amount">{veh.kmThisYear > 0 ? `${veh.kmThisYear.toLocaleString('en-IN')} km` : '—'}</div></div>
                   <div className="summary-card"><div className="summary-label">KMs Driven (Tracked)</div><div className="summary-amount">{veh.totalDistance > 0 ? veh.totalDistance.toLocaleString('en-IN') : '—'}</div></div>
                   <div className="summary-card"><div className="summary-label">Avg Efficiency</div><div className="summary-amount">{veh.avgEfficiency != null ? `${veh.avgEfficiency.toFixed(2)} ${FUEL_UNIT[veh.fuelType] || 'km/L'}` : '—'}</div></div>
                   <div className="summary-card"><div className="summary-label">Cost / KM</div><div className="summary-amount">{veh.costPerKm != null ? fmtINR(veh.costPerKm) : '—'}</div></div>
-                </div>
-
-                <div className="card-title">📊 KMs Driven — updated from odometer readings each fill-up</div>
-                <div className="summary-grid">
-                  <div className="summary-card"><div className="summary-label">This Week</div><div className="summary-amount">{veh.kmThisWeek > 0 ? `${veh.kmThisWeek.toLocaleString('en-IN')} km` : '—'}</div></div>
-                  <div className="summary-card"><div className="summary-label">This Month</div><div className="summary-amount">{veh.kmThisMonth > 0 ? `${veh.kmThisMonth.toLocaleString('en-IN')} km` : '—'}</div></div>
-                  <div className="summary-card"><div className="summary-label">This Year</div><div className="summary-amount">{veh.kmThisYear > 0 ? `${veh.kmThisYear.toLocaleString('en-IN')} km` : '—'}</div></div>
                 </div>
 
                 {veh.kmMonthly.length > 0 && (
