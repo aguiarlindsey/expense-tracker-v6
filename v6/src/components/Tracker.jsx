@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef, memo, Fragment } from 'react'
-import { Zap, LayoutDashboard, DollarSign, TrendingUp, ClipboardList, RefreshCw, Settings, Home, Menu, Plane, ArrowLeftRight, Euro, PoundSterling, JapaneseYen, IndianRupee, RussianRuble, SwissFranc, PhilippinePeso, Bitcoin, Lightbulb, Store, Calendar, Wallet, Target, PlusCircle, Sun, Moon, EyeOff, Eye, Command, Search, FileDown, Mail } from 'lucide-react'
+import { Zap, LayoutDashboard, DollarSign, TrendingUp, ClipboardList, RefreshCw, Settings, Home, Menu, Plane, ArrowLeftRight, Euro, PoundSterling, JapaneseYen, IndianRupee, RussianRuble, SwissFranc, PhilippinePeso, Bitcoin, Lightbulb, Store, Calendar, Wallet, Target, PlusCircle, Sun, Moon, EyeOff, Eye, Command, Search, FileDown, Mail, Car } from 'lucide-react'
 import { useStorage } from '../hooks/useStorage'
 import { useDebounce } from '../hooks/useDebounce'
 import { CATS, CM, CG, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS, FALLBACK_RATES, IncomePhIcon } from '../utils/constants'
@@ -1301,10 +1301,12 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
                       onChange={e => { const next = [...form.serviceParts]; next[i] = { ...p, part: e.target.value }; s('serviceParts', next) }} />
                     <input type="number" placeholder="Due at km" value={p.dueKm || ''}
                       onChange={e => { const next = [...form.serviceParts]; next[i] = { ...p, dueKm: e.target.value }; s('serviceParts', next) }} />
+                    <input type="date" title="Warranty until" value={p.warrantyUntil || ''}
+                      onChange={e => { const next = [...form.serviceParts]; next[i] = { ...p, warrantyUntil: e.target.value }; s('serviceParts', next) }} />
                     <button type="button" className="btn-ghost btn-sm" onClick={() => s('serviceParts', form.serviceParts.filter((_, j) => j !== i))}>✕</button>
                   </div>
                 ))}
-                <button type="button" className="btn-ghost btn-sm" onClick={() => s('serviceParts', [...(form.serviceParts || []), { part: '', dueKm: '' }])}>+ Add part</button>
+                <button type="button" className="btn-ghost btn-sm" onClick={() => s('serviceParts', [...(form.serviceParts || []), { part: '', dueKm: '', warrantyUntil: '' }])}>+ Add part</button>
               </div>
             </div>
           )}
@@ -2898,7 +2900,7 @@ export default function Tracker({ session }) {
   })
   const [analyticsTab, setAnalyticsTab]   = useState(() => {
     const p = new URLSearchParams(window.location.search).get('tab')
-    return p === 'trends' ? 'trends' : p === 'merchants' ? 'merchants' : p === 'forecast' ? 'forecast' : 'insights'
+    return p === 'trends' ? 'trends' : p === 'merchants' ? 'merchants' : p === 'forecast' ? 'forecast' : p === 'vehicles' ? 'vehicles' : 'insights'
   })
   const [selectedMerchant, setSelectedMerchant] = useState(null)
   const [planningTab, setPlanningTab]     = useState(() => {
@@ -3388,6 +3390,7 @@ export default function Tracker({ session }) {
     { id: 'nav-trends',     group: 'Go to',   icon: <TrendingUp size={15} />,      label: 'Analytics — Trends',    keywords: ['analytics','monthly','comparison','mom'],  action: () => { setTab('analytics'); setAnalyticsTab('trends') } },
     { id: 'nav-merchants',  group: 'Go to',   icon: <Store size={15} />,           label: 'Analytics — Merchants', keywords: ['merchants','top spend','vendor','shop','order'], action: () => { setTab('analytics'); setAnalyticsTab('merchants'); setSelectedMerchant(null) } },
     { id: 'nav-forecast',   group: 'Go to',   icon: <Calendar size={15} />,        label: 'Analytics — Forecast',  keywords: ['forecast','cashflow','cash flow','projection','runway','30 day','60 day','90 day'], action: () => { setTab('analytics'); setAnalyticsTab('forecast') } },
+    { id: 'nav-veh-analytics', group: 'Go to', icon: <Car size={15} />,            label: 'Analytics — Vehicles',  keywords: ['vehicles','fuel','mileage','service','maintenance','warranty','parts'], action: () => { setTab('analytics'); setAnalyticsTab('vehicles') } },
     { id: 'nav-budgets',    group: 'Go to',   icon: <Wallet size={15} />,          label: 'Planning — Budgets',    keywords: ['planning','budget','limit','category'],   action: () => { setTab('planning'); setPlanningTab('budgets') } },
     { id: 'nav-goals',      group: 'Go to',   icon: <Target size={15} />,          label: 'Planning — Goals',      keywords: ['planning','savings','targets','milestone'],action: () => { setTab('planning'); setPlanningTab('goals') } },
     { id: 'nav-recurring',  group: 'Go to',   icon: <RefreshCw size={15} />,       label: 'Recurring',             keywords: ['subscriptions','repeat','monthly','emi'],  action: () => setTab('recurring') },
@@ -4324,6 +4327,40 @@ export default function Tracker({ session }) {
     }
   }, [expenses, income, todayStr])
 
+  // ── Per-vehicle analytics (Analytics → Vehicles tab) ──
+  const vehicleAnalytics = useMemo(() => {
+    const todayD = new Date(todayStr + 'T00:00:00')
+    return vehicles.map(veh => {
+      const fuelExps = expenses.filter(e => e.assetType === 'vehicle' && e.assetId === veh.id && e.subcategory === 'Fuel')
+      const maintExps = expenses.filter(e => e.assetType === 'vehicle' && e.assetId === veh.id && e.subcategory === 'Vehicle Maintenance')
+        .sort((a, b) => b.date.localeCompare(a.date))
+
+      const totalFuelSpend = fuelExps.reduce((s, e) => s + toINR(e), 0)
+      const totalMaintSpend = maintExps.reduce((s, e) => s + toINR(e), 0)
+      let totalDistance = 0, totalQty = 0
+      fuelExps.forEach(e => {
+        const trip = e.tripSelected === 'B' ? e.tripB : e.tripSelected === 'A' ? e.tripA : (e.tripA || e.tripB)
+        if (trip && e.fuelQuantity) { totalDistance += Number(trip); totalQty += Number(e.fuelQuantity) }
+      })
+      const avgEfficiency = totalQty > 0 ? totalDistance / totalQty : null
+      const costPerKm = totalDistance > 0 ? totalFuelSpend / totalDistance : null
+
+      const serviceHistory = maintExps.map(e => ({
+        id: e.id, date: e.date, cost: toINR(e),
+        currentKm: e.vehicleCurrentKm, nextServiceKm: e.vehicleNextServiceKm,
+        parts: (e.serviceParts || []).map(p => ({
+          ...p,
+          warrantyDays: p.warrantyUntil ? Math.round((new Date(p.warrantyUntil + 'T00:00:00') - todayD) / 864e5) : null,
+        })),
+      }))
+
+      return {
+        ...veh, totalFuelSpend, totalMaintSpend, totalSpend: totalFuelSpend + totalMaintSpend,
+        avgEfficiency, costPerKm, totalDistance, serviceHistory,
+      }
+    })
+  }, [vehicles, expenses, todayStr])
+
   // ── Subscription zombie detection ────────────────────
   const SUB_SUBS = new Set(['OTT/Streaming', 'Streaming', 'Subscriptions', 'Software', 'Gaming', 'Cable'])
   const subZombieData = useMemo(() => {
@@ -5157,6 +5194,9 @@ export default function Tracker({ session }) {
             <button role="tab" aria-selected={analyticsTab === 'forecast'}
               className={'sub-nav-btn' + (analyticsTab === 'forecast' ? ' active' : '')}
               onClick={() => setAnalyticsTab('forecast')}>📅 Forecast</button>
+            <button role="tab" aria-selected={analyticsTab === 'vehicles'}
+              className={'sub-nav-btn' + (analyticsTab === 'vehicles' ? ' active' : '')}
+              onClick={() => setAnalyticsTab('vehicles')}>🚗 Vehicles</button>
           </div>
         </div>
       )}
@@ -5630,6 +5670,64 @@ export default function Tracker({ session }) {
           </section>
         )
       })()}
+
+      {tab === 'analytics' && analyticsTab === 'vehicles' && (
+        <section role="tabpanel" className="tab-content-active">
+          {vehicleAnalytics.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">🚗</div>
+              <h3>No vehicles yet</h3>
+              <p>Add a vehicle in Settings → Personalize to see fuel spend, mileage, and service history here.</p>
+            </div>
+          ) : (
+            vehicleAnalytics.map(veh => (
+              <div key={veh.id} className="chart-card" style={{ marginBottom: '1rem' }}>
+                <div className="chart-title">{VEHICLE_TYPE_ICON[veh.type] || '🚗'} {veh.name}{veh.regNumber ? ` · ${veh.regNumber}` : ''}</div>
+                <div className="summary-grid">
+                  <div className="summary-card"><div className="summary-label">Total Spend</div><div className="summary-amount">{incognito ? '••••' : fmtINR(veh.totalSpend)}</div></div>
+                  <div className="summary-card"><div className="summary-label">Fuel Spend</div><div className="summary-amount">{incognito ? '••••' : fmtINR(veh.totalFuelSpend)}</div></div>
+                  <div className="summary-card"><div className="summary-label">Maintenance Spend</div><div className="summary-amount">{incognito ? '••••' : fmtINR(veh.totalMaintSpend)}</div></div>
+                  <div className="summary-card"><div className="summary-label">KMs Driven</div><div className="summary-amount">{veh.totalDistance > 0 ? veh.totalDistance.toLocaleString('en-IN') : '—'}</div></div>
+                  <div className="summary-card"><div className="summary-label">Avg Efficiency</div><div className="summary-amount">{veh.avgEfficiency != null ? `${veh.avgEfficiency.toFixed(2)} ${FUEL_UNIT[veh.fuelType] || 'km/L'}` : '—'}</div></div>
+                  <div className="summary-card"><div className="summary-label">Cost / KM</div><div className="summary-amount">{veh.costPerKm != null ? fmtINR(veh.costPerKm) : '—'}</div></div>
+                </div>
+
+                {veh.serviceHistory.length === 0 ? (
+                  <p className="budget-hint">No service history yet — tag a Vehicle Maintenance expense to this vehicle to see it here.</p>
+                ) : (
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <div className="card-title">🔧 Service History</div>
+                    {veh.serviceHistory.map(svc => (
+                      <div key={svc.id} className="settings-row" style={{ alignItems: 'flex-start' }}>
+                        <div className="settings-row-label">
+                          <strong>{fmtDate(svc.date)} · {fmtINR(svc.cost)}</strong>
+                          <span>
+                            {svc.currentKm != null && `${svc.currentKm.toLocaleString('en-IN')} km`}
+                            {svc.nextServiceKm != null && ` · next due ${svc.nextServiceKm.toLocaleString('en-IN')} km`}
+                          </span>
+                          {svc.parts.filter(p => p.part).length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                              {svc.parts.filter(p => p.part).map((p, i) => {
+                                const badgeClass = p.warrantyDays == null ? '' : p.warrantyDays < 0 ? 'trip-badge-active' : p.warrantyDays <= 30 ? 'trip-badge-upcoming' : 'trip-badge-done'
+                                const warrantyLabel = p.warrantyDays == null ? null : p.warrantyDays < 0 ? 'warranty expired' : `warranty ${p.warrantyDays}d left`
+                                return (
+                                  <span key={i} className={`trip-status-badge ${badgeClass}`}>
+                                    {p.part}{p.dueKm ? ` · due ${Number(p.dueKm).toLocaleString('en-IN')}km` : ''}{warrantyLabel ? ` · ${warrantyLabel}` : ''}
+                                  </span>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </section>
+      )}
 
       {/* ══════════ PLANNING sub-nav ══════════ */}
       {tab === 'planning' && (
