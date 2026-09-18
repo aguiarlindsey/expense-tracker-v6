@@ -5037,11 +5037,11 @@ export default function Tracker({ session }) {
                   const pad = n => String(n).padStart(2, '0')
                   const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
                   const presets = [
-                    { label: 'This month', from: fmt(new Date(now.getFullYear(), now.getMonth(), 1)),     to: today },
+                    { label: 'This month', from: fmt(new Date(now.getFullYear(), now.getMonth(), 1)),     to: todayStr },
                     { label: 'Last month', from: fmt(new Date(now.getFullYear(), now.getMonth()-1, 1)),   to: fmt(new Date(now.getFullYear(), now.getMonth(), 0)) },
-                    { label: 'Last 3m',    from: fmt(new Date(now.getFullYear(), now.getMonth()-2, 1)),   to: today },
-                    { label: 'Last 6m',    from: fmt(new Date(now.getFullYear(), now.getMonth()-5, 1)),   to: today },
-                    { label: 'This year',  from: `${now.getFullYear()}-01-01`,                            to: today },
+                    { label: 'Last 3m',    from: fmt(new Date(now.getFullYear(), now.getMonth()-2, 1)),   to: todayStr },
+                    { label: 'Last 6m',    from: fmt(new Date(now.getFullYear(), now.getMonth()-5, 1)),   to: todayStr },
+                    { label: 'This year',  from: `${now.getFullYear()}-01-01`,                            to: todayStr },
                     { label: 'Last year',  from: `${now.getFullYear()-1}-01-01`,                          to: `${now.getFullYear()-1}-12-31` },
                   ]
                   return presets.map(p => (
