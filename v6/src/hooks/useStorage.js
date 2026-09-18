@@ -274,6 +274,41 @@ function houseFromDb(row) {
   }
 }
 
+// ── Other Asset mappers ────────────────────────────────────
+
+function otherAssetToDb(o, userId) {
+  return {
+    id:             o.id,
+    user_id:        userId,
+    name:           o.name,
+    category:       o.category || 'Other',
+    purchase_date:  o.purchaseDate || null,
+    purchase_price: o.purchasePrice ? parseFloat(o.purchasePrice) : null,
+    reminder_label: o.reminderLabel || null,
+    reminder_date:  o.reminderDate || null,
+    emi_amount:     o.emiAmount ? parseFloat(o.emiAmount) : null,
+    emi_due_day:    o.emiDueDay ? parseInt(o.emiDueDay, 10) : null,
+    notes:          o.notes || null,
+  }
+}
+
+function otherAssetFromDb(row) {
+  return {
+    id:             row.id,
+    name:           row.name,
+    category:       row.category || 'Other',
+    purchaseDate:   row.purchase_date || '',
+    purchasePrice:  row.purchase_price ? parseFloat(row.purchase_price) : null,
+    reminderLabel:  row.reminder_label || '',
+    reminderDate:   row.reminder_date || '',
+    emiAmount:      row.emi_amount ? parseFloat(row.emi_amount) : null,
+    emiDueDay:      row.emi_due_day || null,
+    notes:          row.notes || '',
+    createdAt:      row.created_at || '',
+    _rowVersion:    row.row_version || 1,
+  }
+}
+
 // ── Hook ─────────────────────────────────────────────────
 
 export function useStorage(userId) {
@@ -286,6 +321,7 @@ export function useStorage(userId) {
   const [vehicles,      setVehicles]      = useState([])
   const [creditCards,   setCreditCards]   = useState([])
   const [houses,        setHouses]        = useState([])
+  const [otherAssets,   setOtherAssets]   = useState([])
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState(null)
   const [syncing,         setSyncing]         = useState(false)
@@ -332,7 +368,8 @@ export function useStorage(userId) {
       supabase.from('vehicles').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
       supabase.from('credit_cards').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
       supabase.from('houses').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-    ]).then(([expRes, incRes, budRes, gRes, cRes, tRes, vRes, ccRes, hRes]) => {
+      supabase.from('other_assets').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+    ]).then(([expRes, incRes, budRes, gRes, cRes, tRes, vRes, ccRes, hRes, oaRes]) => {
       if (!mounted) return
       if (expRes.error) setError(expRes.error.message)
       if (incRes.error) setError(incRes.error.message)
@@ -362,6 +399,8 @@ export function useStorage(userId) {
       setVehicles((vRes.data || []).map(vehicleFromDb))
       setCreditCards((ccRes.data || []).map(cardFromDb))
       setHouses((hRes.data || []).map(houseFromDb))
+      if (oaRes.error) setError(oaRes.error.message)
+      setOtherAssets((oaRes.data || []).map(otherAssetFromDb))
       setLoading(false)
     })
     return () => { mounted = false }
@@ -525,6 +564,22 @@ export function useStorage(userId) {
     }
   }
 
+  function handleOtherAssetEvent(payload) {
+    if (payload.eventType === 'INSERT') {
+      const incoming = otherAssetFromDb(payload.new)
+      setOtherAssets(prev => {
+        if (prev.some(o => o.id === incoming.id && !o._pending)) return prev
+        const hasPending = prev.some(o => o.id === incoming.id && o._pending)
+        if (hasPending) return prev.map(o => o.id === incoming.id ? incoming : o)
+        return [incoming, ...prev]
+      })
+    } else if (payload.eventType === 'UPDATE') {
+      setOtherAssets(prev => prev.map(o => o.id === payload.new.id ? otherAssetFromDb(payload.new) : o))
+    } else if (payload.eventType === 'DELETE') {
+      setOtherAssets(prev => prev.filter(o => o.id !== payload.old.id))
+    }
+  }
+
   // ── Realtime subscription ─────────────────────────────────
   useEffect(() => {
     if (!userId) return
@@ -545,6 +600,7 @@ export function useStorage(userId) {
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'vehicles',           filter: `user_id=eq.${userId}` }, p => handleVehicleEvent(p))
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'credit_cards',        filter: `user_id=eq.${userId}` }, p => handleCardEvent(p))
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'houses',              filter: `user_id=eq.${userId}` }, p => handleHouseEvent(p))
+      .on('postgres_changes', { event: '*',      schema: 'public', table: 'other_assets',        filter: `user_id=eq.${userId}` }, p => handleOtherAssetEvent(p))
       .subscribe(status => {
         if (status === 'SUBSCRIBED')    setRealtimeStatus('live')
         else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setRealtimeStatus('error')
@@ -684,6 +740,32 @@ export function useStorage(userId) {
       }
       case 'deleteHouse': {
         const { error: err } = await supabase.from('houses').delete().eq('id', payload.id)
+        if (err) throw new Error(err.message)
+        break
+      }
+      case 'addOtherAsset': {
+        const { data, error: err } = await supabase.from('other_assets').insert(otherAssetToDb(payload, userId)).select().single()
+        if (err) throw new Error(err.message)
+        setOtherAssets(prev => prev.map(o => o.id === payload.id ? otherAssetFromDb(data) : o))
+        break
+      }
+      case 'editOtherAsset': {
+        const rowVersion = payload._rowVersion || 1
+        const { data, error: err } = await supabase
+          .from('other_assets').update(otherAssetToDb(payload, userId))
+          .eq('id', payload.id).eq('row_version', rowVersion).select()
+        if (err) throw new Error(err.message)
+        if (!data || data.length === 0) {
+          const { data: dbRow } = await supabase.from('other_assets').select('*').eq('id', payload.id).single()
+          if (dbRow) addConflict('other_assets', payload, otherAssetFromDb(dbRow))
+          else setError('This item was deleted on another device.')
+          break
+        }
+        setOtherAssets(prev => prev.map(o => o.id === payload.id ? otherAssetFromDb(data[0]) : o))
+        break
+      }
+      case 'deleteOtherAsset': {
+        const { error: err } = await supabase.from('other_assets').delete().eq('id', payload.id)
         if (err) throw new Error(err.message)
         break
       }
@@ -1121,6 +1203,54 @@ export function useStorage(userId) {
     else if (err) setError(err.message)
   }, [userId, enqueue])
 
+  // ── Other Assets ─────────────────────────────────────────
+  const addOtherAsset = useCallback(async (item) => {
+    setOtherAssets(prev => [{ ...item, _pending: true }, ...prev])
+    if (!navigator.onLine) { enqueue('addOtherAsset', item); return }
+    const { data, error: err } = await supabase.from('other_assets').insert(otherAssetToDb(item, userId)).select().single()
+    if (err) {
+      if (isNetworkError(err)) { enqueue('addOtherAsset', item) }
+      else { setError(err.message); setOtherAssets(prev => prev.filter(o => o.id !== item.id)) }
+      return
+    }
+    setOtherAssets(prev => prev.map(o => o.id === item.id ? otherAssetFromDb(data) : o))
+  }, [userId, enqueue])
+
+  const editOtherAsset = useCallback(async (item) => {
+    setOtherAssets(prev => prev.map(o => o.id === item.id ? { ...item, _pending: true } : o))
+    const deps = () => loadQueueSnapshot().filter(i => i.op === 'addOtherAsset' && i.payload.id === item.id).map(i => i.id)
+    if (!navigator.onLine) { enqueue('editOtherAsset', item, deps()); return }
+    const rowVersion = item._rowVersion || 1
+    const { data, error: err } = await supabase
+      .from('other_assets')
+      .update(otherAssetToDb(item, userId))
+      .eq('id', item.id)
+      .eq('row_version', rowVersion)
+      .select()
+    if (err) {
+      if (isNetworkError(err)) { enqueue('editOtherAsset', item, deps()) }
+      else { setError(err.message) }
+      return
+    }
+    if (!data || data.length === 0) {
+      const { data: dbRow } = await supabase.from('other_assets').select('*').eq('id', item.id).single()
+      if (dbRow) addConflict('other_assets', item, otherAssetFromDb(dbRow))
+      else setError('This item was deleted on another device.')
+      setOtherAssets(prev => prev.map(o => o.id === item.id ? { ...o, _pending: false } : o))
+      return
+    }
+    setOtherAssets(prev => prev.map(o => o.id === item.id ? otherAssetFromDb(data[0]) : o))
+  }, [userId, enqueue]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const deleteOtherAsset = useCallback(async (id) => {
+    setOtherAssets(prev => prev.filter(o => o.id !== id))
+    const deps = () => loadQueueSnapshot().filter(i => ['addOtherAsset','editOtherAsset'].includes(i.op) && i.payload.id === id).map(i => i.id)
+    if (!navigator.onLine) { enqueue('deleteOtherAsset', { id }, deps()); return }
+    const { error: err } = await supabase.from('other_assets').delete().eq('id', id)
+    if (err && isNetworkError(err)) enqueue('deleteOtherAsset', { id }, deps())
+    else if (err) setError(err.message)
+  }, [userId, enqueue])
+
   // ── Bulk import ──────────────────────────────────────────
   const bulkAddExpenses = useCallback(async (exps) => {
     if (!exps.length) return { added: 0, errors: 0 }
@@ -1157,6 +1287,7 @@ export function useStorage(userId) {
       if (conflict.table === 'vehicles') setVehicles(vs => vs.map(v => v.id === conflict.remote.id ? conflict.remote : v))
       if (conflict.table === 'credit_cards') setCreditCards(cs => cs.map(c => c.id === conflict.remote.id ? conflict.remote : c))
       if (conflict.table === 'houses') setHouses(hs => hs.map(h => h.id === conflict.remote.id ? conflict.remote : h))
+      if (conflict.table === 'other_assets') setOtherAssets(oas => oas.map(o => o.id === conflict.remote.id ? conflict.remote : o))
     } else {
       // 'mine' or 'merge' — re-attempt write using remote's current row_version
       const base = resolution === 'merge' && mergedData ? mergedData : conflict.local
@@ -1167,8 +1298,9 @@ export function useStorage(userId) {
       if (conflict.table === 'vehicles') await editVehicle(forceWrite)
       if (conflict.table === 'credit_cards') await editCreditCard(forceWrite)
       if (conflict.table === 'houses') await editHouse(forceWrite)
+      if (conflict.table === 'other_assets') await editOtherAsset(forceWrite)
     }
-  }, [editExpense, editIncome, editTrip, editVehicle, editCreditCard, editHouse]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [editExpense, editIncome, editTrip, editVehicle, editCreditCard, editHouse, editOtherAsset]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const dismissConflict = useCallback((conflictId) => {
     setConflicts(prev => prev.filter(c => c.id !== conflictId))
@@ -1207,6 +1339,7 @@ export function useStorage(userId) {
       supabase.from('vehicles').delete().eq('user_id', userId),
       supabase.from('credit_cards').delete().eq('user_id', userId),
       supabase.from('houses').delete().eq('user_id', userId),
+      supabase.from('other_assets').delete().eq('user_id', userId),
     ])
     setExpenses([])
     setIncome([])
@@ -1217,13 +1350,14 @@ export function useStorage(userId) {
     setVehicles([])
     setCreditCards([])
     setHouses([])
+    setOtherAssets([])
     try {
       ['et_v6_rates', 'et_v6_dark', 'et_v6_cb', 'et_v6_base', 'et_v6_retry_queue'].forEach(k => localStorage.removeItem(k))
     } catch {}
   }, [userId])
 
   return {
-    expenses, income, budgets, goals, contributions, trips, vehicles, creditCards, houses,
+    expenses, income, budgets, goals, contributions, trips, vehicles, creditCards, houses, otherAssets,
     loading, error,
     pendingCount: queue.length,
     syncing,
@@ -1238,6 +1372,7 @@ export function useStorage(userId) {
     addVehicle, editVehicle, deleteVehicle,
     addCreditCard, editCreditCard, deleteCreditCard,
     addHouse, editHouse, deleteHouse,
+    addOtherAsset, editOtherAsset, deleteOtherAsset,
     bulkAddExpenses, bulkAddIncome,
     clearExpenses, clearIncome, clearAll, factoryReset,
   }

@@ -793,13 +793,14 @@ function useBottomSheet(onClose) {
 
 // ─── Expense Form ─────────────────────────────────────────
 
-function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], creditCards = [], houses = [] }) {
+function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], creditCards = [], houses = [], otherAssets = [] }) {
   const today = new Date().toISOString().split('T')[0]
   const [form, setForm] = useState(initialData ? {
     useCatAlloc: !!(initialData.categoryAllocations && Object.keys(initialData.categoryAllocations || {}).length),
     categoryAllocations: initialData.categoryAllocations || {},
     vehicleId: initialData.assetType === 'vehicle' ? (initialData.assetId || '') : '',
     houseId: initialData.assetType === 'house' ? (initialData.assetId || '') : '',
+    otherAssetId: initialData.assetType === 'other' ? (initialData.assetId || '') : '',
     serviceParts: Array.isArray(initialData.serviceParts) ? initialData.serviceParts : [],
     ...initialData,
   } : {
@@ -813,7 +814,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
     taxAmount: 0, taxBreakdown: {},
     fuelRate: '', fuelQuantity: '', fuelType: '', odoReading: '', tripA: '', tripB: '', tripSelected: '',
     vehicleCurrentKm: '', vehicleNextServiceKm: '',
-    vehicleId: '', houseId: '', serviceParts: [], cardId: '',
+    vehicleId: '', houseId: '', otherAssetId: '', serviceParts: [], cardId: '',
     useCatAlloc: false, categoryAllocations: {},
   })
   const [showPalette, setShowPalette] = useState(false)
@@ -987,8 +988,8 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
       tripA:        form.tripA    ? parseFloat(form.tripA)    || null : null,
       tripB:        form.tripB    ? parseFloat(form.tripB)    || null : null,
       tripSelected: form.tripSelected || null,
-      assetType: form.vehicleId ? 'vehicle' : form.houseId ? 'house' : null,
-      assetId:   form.vehicleId || form.houseId || null,
+      assetType: form.vehicleId ? 'vehicle' : form.houseId ? 'house' : form.otherAssetId ? 'other' : null,
+      assetId:   form.vehicleId || form.houseId || form.otherAssetId || null,
       serviceParts: (form.serviceParts || []).filter(p => p.part && p.part.trim()),
       cardId: form.paymentMethod === 'Credit Card' ? (form.cardId || null) : null,
     })
@@ -1136,6 +1137,15 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
               <select id="ef-house" value={form.houseId || ''} onChange={e => s('houseId', e.target.value)}>
                 <option value="">Unassigned</option>
                 {houses.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
+              </select>
+            </div>
+          )}
+          {otherAssets.length > 0 && (
+            <div className="form-group">
+              <label htmlFor="ef-other">Tag to an item</label>
+              <select id="ef-other" value={form.otherAssetId || ''} onChange={e => s('otherAssetId', e.target.value)}>
+                <option value="">Unassigned</option>
+                {otherAssets.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
               </select>
             </div>
           )}
@@ -1824,6 +1834,8 @@ const VEHICLE_TYPE_ICON = { car: '🚗', bike: '🏍️', scooter: '🛵' }
 const EMPTY_CFORM = { name: '', bank: '', last4: '', creditLimit: '', billingCycleDay: '', dueDay: '', notes: '' }
 const EMPTY_HFORM = { name: '', address: '', ownership: 'owned', moveInDate: '', rentAmount: '', rentDueDay: '', electricityDueDay: '', maintenanceDueDay: '', notes: '' }
 const HOUSE_OWNERSHIP_LABEL = { owned: 'Owned', rented: 'Renting (I pay rent)', leased_out: 'Leased Out (I collect rent)' }
+const EMPTY_OFORM = { name: '', category: 'Other', purchaseDate: '', purchasePrice: '', reminderLabel: '', reminderDate: '', emiAmount: '', emiDueDay: '', notes: '' }
+const OTHER_ASSET_CATEGORY_CHIPS = ['Laptop', 'Tablet', 'Camera', 'Watch', 'Appliance', 'Furniture', 'Jewelry', 'Instrument', 'Boat', 'Aircraft', 'Other']
 
 // Cycle window [start, end) containing today, for a statement that resets on `billingCycleDay` each month.
 function cycleWindowFor(billingCycleDay) {
@@ -1844,7 +1856,7 @@ function nextDueDateFor(dueDay) {
 }
 const toISODate = d => d.toISOString().split('T')[0]
 
-function PersonalizeModal({ onClose, vehicles, creditCards, houses, expenses, addVehicle, editVehicle, deleteVehicle, addCreditCard, editCreditCard, deleteCreditCard, addHouse, editHouse, deleteHouse, editExpense }) {
+function PersonalizeModal({ onClose, vehicles, creditCards, houses, otherAssets, expenses, addVehicle, editVehicle, deleteVehicle, addCreditCard, editCreditCard, deleteCreditCard, addHouse, editHouse, deleteHouse, addOtherAsset, editOtherAsset, deleteOtherAsset, editExpense }) {
   const [tab, setTab] = useState(null)
   const [showVehicleForm, setShowVehicleForm] = useState(false)
   const [editingVehicle, setEditingVehicle] = useState(null)
@@ -1858,6 +1870,10 @@ function PersonalizeModal({ onClose, vehicles, creditCards, houses, expenses, ad
   const [editingHouse, setEditingHouse] = useState(null)
   const [hForm, setHForm] = useState(EMPTY_HFORM)
   const hs = (k, v) => setHForm(f => ({ ...f, [k]: v }))
+  const [showOtherForm, setShowOtherForm] = useState(false)
+  const [editingOther, setEditingOther] = useState(null)
+  const [oForm, setOForm] = useState(EMPTY_OFORM)
+  const os = (k, v) => setOForm(f => ({ ...f, [k]: v }))
 
   const vehiclesWithData = useMemo(() => {
     const todayStr = new Date().toISOString().split('T')[0]
@@ -1944,6 +1960,20 @@ function PersonalizeModal({ onClose, vehicles, creditCards, houses, expenses, ad
       .sort((a, b) => b.date.localeCompare(a.date))
   }, [expenses])
 
+  const otherAssetsWithData = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0]
+    return otherAssets.map(item => {
+      const itemExps = expenses.filter(e => e.assetType === 'other' && e.assetId === item.id)
+      const totalSpend = itemExps.reduce((s, e) => s + toINR(e), 0)
+      const reminderDays = item.reminderDate
+        ? Math.round((new Date(item.reminderDate + 'T00:00:00') - new Date(todayStr + 'T00:00:00')) / 864e5)
+        : null
+      const emiDue = nextDueDateFor(item.emiDueDay)
+      const daysToEmiDue = emiDue ? Math.round((emiDue - new Date()) / 864e5) : null
+      return { ...item, totalSpend, reminderDays, emiDue, daysToEmiDue }
+    })
+  }, [otherAssets, expenses])
+
   const openAddVehicle = () => { setEditingVehicle(null); setVForm(EMPTY_VFORM); setShowVehicleForm(true) }
   const openEditVehicle = (veh) => {
     setEditingVehicle(veh)
@@ -1998,6 +2028,27 @@ function PersonalizeModal({ onClose, vehicles, creditCards, houses, expenses, ad
     setEditingHouse(null)
   }
 
+  const openAddOther = () => { setEditingOther(null); setOForm(EMPTY_OFORM); setShowOtherForm(true) }
+  const openEditOther = (item) => {
+    setEditingOther(item)
+    setOForm({
+      name: item.name, category: item.category || 'Other',
+      purchaseDate: item.purchaseDate || '', purchasePrice: item.purchasePrice || '',
+      reminderLabel: item.reminderLabel || '', reminderDate: item.reminderDate || '',
+      emiAmount: item.emiAmount || '', emiDueDay: item.emiDueDay || '',
+      notes: item.notes || '',
+    })
+    setShowOtherForm(true)
+  }
+  const submitOtherForm = () => {
+    if (!oForm.name.trim()) return
+    const clean = { ...oForm, name: oForm.name.trim(), category: (oForm.category || 'Other').trim() || 'Other', notes: oForm.notes.trim() }
+    if (editingOther) editOtherAsset({ ...editingOther, ...clean })
+    else addOtherAsset({ id: stableId({}), ...clean })
+    setShowOtherForm(false)
+    setEditingOther(null)
+  }
+
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
@@ -2016,9 +2067,9 @@ function PersonalizeModal({ onClose, vehicles, creditCards, houses, expenses, ad
             <button role="tab" aria-selected={tab === 'houses'}
               className={'sub-nav-btn' + (tab === 'houses' ? ' active' : '')}
               onClick={() => setTab('houses')}>🏡 Houses</button>
-            <button role="tab" aria-selected={tab === 'phones'}
-              className={'sub-nav-btn' + (tab === 'phones' ? ' active' : '')}
-              onClick={() => setTab('phones')}>📱 Phones</button>
+            <button role="tab" aria-selected={tab === 'other'}
+              className={'sub-nav-btn' + (tab === 'other' ? ' active' : '')}
+              onClick={() => setTab('other')}>📦 Other Assets</button>
           </div>
         </div>
 
@@ -2026,7 +2077,7 @@ function PersonalizeModal({ onClose, vehicles, creditCards, houses, expenses, ad
           <div className="empty-state empty-state-sm">
             <div className="empty-icon">🏠</div>
             <h3>Pick a category</h3>
-            <p>Choose Vehicles, Credit Cards, Houses, or Phones above to see and manage that section.</p>
+            <p>Choose Vehicles, Credit Cards, Houses, or Other Assets above to see and manage that section.</p>
           </div>
         )}
 
@@ -2418,12 +2469,118 @@ function PersonalizeModal({ onClose, vehicles, creditCards, houses, expenses, ad
           </>
         )}
 
-        {tab === 'phones' && (
-          <div className="empty-state empty-state-sm">
-            <div className="empty-icon">📱</div>
-            <h3>Coming soon</h3>
-            <p>Track warranty, EMI, and upgrade reminders per device.</p>
-          </div>
+        {tab === 'other' && (
+          <>
+            <div className="settings-row" style={{ marginBottom: '0.75rem' }}>
+              <div className="settings-row-label">
+                <strong>Your other assets</strong>
+                <span>Add anything — a laptop, a boat, jewelry, an aircraft — and tag expenses to it from any category.</span>
+              </div>
+              <button className="btn-primary" onClick={openAddOther}>+ Add Item</button>
+            </div>
+
+            {showOtherForm && (
+              <div className="card trip-form-card" style={{ marginBottom: '0.75rem' }}>
+                <div className="card-title">{editingOther ? '✏️ Edit Item' : '📦 New Item'}</div>
+                <div className="trip-form-grid">
+                  <label className="form-label">Name
+                    <input className="form-input" placeholder="e.g. MacBook Pro" value={oForm.name} onChange={e => os('name', e.target.value)} />
+                  </label>
+                  <label className="form-label trip-notes-label">Category
+                    <input className="form-input" placeholder="e.g. Laptop" value={oForm.category} onChange={e => os('category', e.target.value)} />
+                    <div className="tags-container" style={{ marginTop: 6 }}>
+                      {OTHER_ASSET_CATEGORY_CHIPS.map(c => (
+                        <button type="button" key={c} className="tag-btn" onClick={() => os('category', c)}>{c}</button>
+                      ))}
+                    </div>
+                  </label>
+                  <label className="form-label">Purchase Date
+                    <input type="date" className="form-input" value={oForm.purchaseDate} onChange={e => os('purchaseDate', e.target.value)} />
+                  </label>
+                  <label className="form-label">Purchase Price (₹)
+                    <input type="number" min="0" className="form-input" placeholder="e.g. 150000" value={oForm.purchasePrice} onChange={e => os('purchasePrice', e.target.value)} />
+                  </label>
+                  <label className="form-label">Reminder Label (optional)
+                    <input className="form-input" placeholder="e.g. Warranty expires" value={oForm.reminderLabel} onChange={e => os('reminderLabel', e.target.value)} />
+                  </label>
+                  <label className="form-label">Reminder Date (optional)
+                    <input type="date" className="form-input" value={oForm.reminderDate} onChange={e => os('reminderDate', e.target.value)} />
+                  </label>
+                  <label className="form-label">EMI Amount (₹, optional)
+                    <input type="number" min="0" className="form-input" placeholder="e.g. 5000" value={oForm.emiAmount} onChange={e => os('emiAmount', e.target.value)} />
+                  </label>
+                  <label className="form-label">EMI Due Day (optional)
+                    <input type="number" min="1" max="28" className="form-input" placeholder="e.g. 5" value={oForm.emiDueDay} onChange={e => os('emiDueDay', e.target.value)} />
+                  </label>
+                  <label className="form-label trip-notes-label">Notes (optional)
+                    <input className="form-input" placeholder="Serial number, registration, policy number…" value={oForm.notes} onChange={e => os('notes', e.target.value)} />
+                  </label>
+                </div>
+                <div className="trip-form-actions">
+                  <button className="btn-primary" onClick={submitOtherForm} disabled={!oForm.name.trim()}>
+                    {editingOther ? 'Save changes' : 'Add item'}
+                  </button>
+                  <button className="btn-ghost" onClick={() => { setShowOtherForm(false); setEditingOther(null) }}>Cancel</button>
+                </div>
+              </div>
+            )}
+
+            {otherAssetsWithData.length === 0 ? (
+              <div className="empty-state empty-state-sm">
+                <div className="empty-icon">📦</div>
+                <h3>No items yet</h3>
+                <p>Add a laptop, boat, jewelry, or anything else you want to track spend and reminders for.</p>
+              </div>
+            ) : (
+              <div className="trips-grid">
+                {otherAssetsWithData.map(item => {
+                  const soonestDays = [item.reminderDays, item.daysToEmiDue].filter(d => d != null).sort((a, b) => a - b)[0]
+                  const dueLabel = soonestDays == null ? null : soonestDays <= 3 ? `Due in ${soonestDays}d` : `${soonestDays}d to due`
+                  const dueClass = soonestDays == null ? '' : soonestDays <= 3 ? 'trip-badge-active' : soonestDays <= 10 ? 'trip-badge-upcoming' : 'trip-badge-done'
+                  return (
+                    <div key={item.id} className="trip-card">
+                      <div className="trip-card-top">
+                        <div className="trip-card-title-row">
+                          <span className="trip-card-name">📦 {item.name}</span>
+                          {dueLabel && <span className={`trip-status-badge ${dueClass}`}>{dueLabel}</span>}
+                        </div>
+                        <div className="trip-card-meta">
+                          <span>{item.category}</span>
+                          {item.purchasePrice > 0 && <><span className="trip-meta-dot">·</span><span>{fmtINR(item.purchasePrice)}</span></>}
+                        </div>
+                      </div>
+                      <div className="trip-card-body">
+                        <div className="trip-total-sub">
+                          <span>{fmtINR(item.totalSpend)} tagged spend</span>
+                          {item.emiAmount > 0 && <><span className="trip-meta-dot">·</span><span>{fmtINR(item.emiAmount)}/mo EMI</span></>}
+                        </div>
+                        {item.reminderDate && (
+                          <button className="btn-ghost btn-sm" onClick={() => downloadIcsReminder({
+                            uid: `other-reminder-${item.id}`,
+                            date: item.reminderDate,
+                            summary: `${item.reminderLabel || 'Reminder'} - ${item.name}`,
+                            description: `${item.reminderLabel || 'Reminder'} for ${item.name}.`,
+                          })}>📅 Download reminder</button>
+                        )}
+                        {item.emiDue && (
+                          <button className="btn-ghost btn-sm" onClick={() => downloadIcsReminder({
+                            uid: `other-emi-${item.id}`,
+                            date: toISODate(item.emiDue),
+                            summary: `EMI due - ${item.name}`,
+                            description: `EMI installment due for ${item.name}.`,
+                          })}>💳 Download EMI reminder</button>
+                        )}
+                      </div>
+                      <div className="trip-card-actions">
+                        <button className="btn-ghost btn-sm" onClick={() => openEditOther(item)}>✏️ Edit</button>
+                        <button className="btn-danger btn-sm" style={{ marginLeft: 'auto' }} onClick={() => deleteOtherAsset(item.id)}>🗑️</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -2704,7 +2861,7 @@ function CommandPalette({ open, onClose, commands }) {
 export default function Tracker({ session }) {
   const userId = session.user.id
   const {
-    expenses, income, budgets, goals, contributions, trips, vehicles, creditCards, houses,
+    expenses, income, budgets, goals, contributions, trips, vehicles, creditCards, houses, otherAssets,
     loading, error,
     pendingCount, syncing, online, realtimeStatus,
     conflicts, resolveConflict, dismissConflict,
@@ -2716,6 +2873,7 @@ export default function Tracker({ session }) {
     addVehicle, editVehicle, deleteVehicle,
     addCreditCard, editCreditCard, deleteCreditCard,
     addHouse, editHouse, deleteHouse,
+    addOtherAsset, editOtherAsset, deleteOtherAsset,
     bulkAddExpenses, bulkAddIncome,
     clearExpenses, clearIncome, clearAll, factoryReset,
   } = useStorage(userId)
@@ -6163,7 +6321,7 @@ export default function Tracker({ session }) {
             <h3><span aria-hidden="true">🏠</span> Personalize</h3>
             <div className="settings-row">
               <div className="settings-row-label">
-                <strong>Your vehicles, cards, houses & phones</strong>
+                <strong>Your vehicles, cards, houses & other items</strong>
                 <span>Register the things in your life that expenses relate to, and track mileage, spend, and reminders per item.</span>
               </div>
               <button className="btn-primary" onClick={() => setShowPersonalize(true)}>Open Personalize</button>
@@ -6685,8 +6843,8 @@ export default function Tracker({ session }) {
 
       {/* ── Modals ── */}
       <CommandPalette open={showCmd} onClose={() => setShowCmd(false)} commands={cmdCommands} />
-      {showEF && <ExpenseForm initialData={editExpTarget} onSubmit={editExpTarget ? handleEditExpense : handleAddExpense} onClose={() => { setShowEF(false); setEditExpTarget(null) }} rateData={rateData} vehicles={vehicles} creditCards={creditCards} houses={houses} />}
-      {showPersonalize && <PersonalizeModal onClose={() => setShowPersonalize(false)} vehicles={vehicles} creditCards={creditCards} houses={houses} expenses={expenses} addVehicle={addVehicle} editVehicle={editVehicle} deleteVehicle={deleteVehicle} addCreditCard={addCreditCard} editCreditCard={editCreditCard} deleteCreditCard={deleteCreditCard} addHouse={addHouse} editHouse={editHouse} deleteHouse={deleteHouse} editExpense={editExpense} />}
+      {showEF && <ExpenseForm initialData={editExpTarget} onSubmit={editExpTarget ? handleEditExpense : handleAddExpense} onClose={() => { setShowEF(false); setEditExpTarget(null) }} rateData={rateData} vehicles={vehicles} creditCards={creditCards} houses={houses} otherAssets={otherAssets} />}
+      {showPersonalize && <PersonalizeModal onClose={() => setShowPersonalize(false)} vehicles={vehicles} creditCards={creditCards} houses={houses} otherAssets={otherAssets} expenses={expenses} addVehicle={addVehicle} editVehicle={editVehicle} deleteVehicle={deleteVehicle} addCreditCard={addCreditCard} editCreditCard={editCreditCard} deleteCreditCard={deleteCreditCard} addHouse={addHouse} editHouse={editHouse} deleteHouse={deleteHouse} addOtherAsset={addOtherAsset} editOtherAsset={editOtherAsset} deleteOtherAsset={deleteOtherAsset} editExpense={editExpense} />}
       {showIF && <IncomeForm  initialData={editIncTarget} onSubmit={editIncTarget ? handleEditIncome  : handleAddIncome}  onClose={() => { setShowIF(false); setEditIncTarget(null) }} rateData={rateData} />}
       {delTarget && <ConfirmDialog message={delTarget.many ? `Permanently delete ${Object.keys(delTarget.ids).length} expenses?` : `Delete this ${delTarget.type}? Cannot be undone.`} onConfirm={handleDelete} onCancel={() => setDelTarget(null)} />}
       {confirmAction && (
