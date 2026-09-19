@@ -17,7 +17,7 @@ import ConflictModal from './ConflictModal'
 import ReceiptScanner from './ReceiptScanner'
 import { generateMonthlyPDF } from '../utils/generatePDF'
 import { parseNLQuery } from '../utils/parseNLQuery'
-import { calcMonthlyPayment, generateSchedule, simulateExtraPayment } from '../utils/debtHelpers'
+import { calcMonthlyPayment, generateSchedule, totalInterest, previewExtraPayment } from '../utils/debtHelpers'
 
 // ─── Currency icon map ───────────────────────────────────
 const CURRENCY_ICON_MAP = {
@@ -2598,6 +2598,16 @@ function addMonthsToDate(dateStr, months) {
 }
 
 function DebtScheduleModal({ debt, onClose }) {
+  const renderRows = (rows) => rows.map(row => (
+    <tr key={row.month}>
+      <td>{row.month}</td>
+      <td>{fmtINR(Math.round(row.payment))}</td>
+      <td>{fmtINR(Math.round(row.principalPaid))}</td>
+      <td>{fmtINR(Math.round(row.interest))}</td>
+      <td>{row.extraApplied > 0 ? fmtINR(Math.round(row.extraApplied)) : '—'}</td>
+      <td>{fmtINR(Math.round(row.balance))}</td>
+    </tr>
+  ))
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
@@ -2606,20 +2616,22 @@ function DebtScheduleModal({ debt, onClose }) {
           <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
         <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
-          <table className="sub-table">
-            <thead><tr><th>Month</th><th>Installment</th><th>Principal</th><th>Interest</th><th>Balance Remaining</th></tr></thead>
-            <tbody>
-              {debt.schedule.map(row => (
-                <tr key={row.month}>
-                  <td>{row.month}</td>
-                  <td>{fmtINR(Math.round(row.payment))}</td>
-                  <td>{fmtINR(Math.round(row.principalPaid))}</td>
-                  <td>{fmtINR(Math.round(row.interest))}</td>
-                  <td>{fmtINR(Math.round(row.balance))}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {debt.historyRows.length > 0 && (
+            <>
+              <div className="sub-section-title">✅ History — Payments Made ({debt.historyRows.length})</div>
+              <table className="sub-table">
+                <thead><tr><th>Month</th><th>Installment</th><th>Principal</th><th>Interest</th><th>Extra</th><th>Balance</th></tr></thead>
+                <tbody>{renderRows(debt.historyRows)}</tbody>
+              </table>
+            </>
+          )}
+          <div className="sub-section-title">📅 Remaining — Projected ({debt.remainingRows.length})</div>
+          {debt.remainingRows.length > 0 ? (
+            <table className="sub-table">
+              <thead><tr><th>Month</th><th>Installment</th><th>Principal</th><th>Interest</th><th>Extra</th><th>Balance</th></tr></thead>
+              <tbody>{renderRows(debt.remainingRows)}</tbody>
+            </table>
+          ) : <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Fully paid off — nothing left.</p>}
         </div>
       </div>
     </div>
@@ -2631,26 +2643,47 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt }) {
   const [editingDebt, setEditingDebt] = useState(null)
   const [dForm, setDForm] = useState(EMPTY_DFORM)
   const ds = (k, v) => setDForm(f => ({ ...f, [k]: v }))
-  const [extraByDebt, setExtraByDebt] = useState({})
+  const [extraFormByDebt, setExtraFormByDebt] = useState({})
   const [scheduleDebt, setScheduleDebt] = useState(null)
 
   const suggestedEmi = calcMonthlyPayment(parseFloat(dForm.principal) || 0, parseFloat(dForm.interestRate) || 0, parseInt(dForm.termMonths, 10) || 0)
 
   const debtsWithData = useMemo(() => {
     return debts.map(debt => {
-      const payment = debt.minimumPayment || calcMonthlyPayment(debt.principal, debt.interestRate, debt.termMonths)
-      const { schedule, stalled, payoffMonths } = generateSchedule(debt.principal, debt.interestRate, payment)
-      const totalInterest = schedule.reduce((s, r) => s + r.interest, 0)
+      const basePayment = debt.minimumPayment || calcMonthlyPayment(debt.principal, debt.interestRate, debt.termMonths)
+      const extraPayments = debt.extraPayments || []
+      const monthsPaid = debt.monthsPaid || 0
+      const { schedule, stalled, payoffMonths } = generateSchedule(debt.principal, debt.interestRate, basePayment, { extraPayments, termMonths: debt.termMonths })
+      const totalInterestPaid = totalInterest(schedule)
       const payoffDate = !stalled && schedule.length ? addMonthsToDate(debt.startDate, payoffMonths) : null
+      const historyRows = schedule.slice(0, monthsPaid)
+      const remainingRows = schedule.slice(monthsPaid)
+      const monthsRemaining = Math.max(0, payoffMonths - monthsPaid)
+      const isPaidOff = !stalled && payoffMonths > 0 && monthsRemaining === 0
+      const payment = remainingRows[0]?.payment ?? schedule[schedule.length - 1]?.payment ?? basePayment
       const step = Math.max(1, Math.ceil(schedule.length / 12))
       const chartData = schedule
         .filter((r, i) => i % step === 0 || i === schedule.length - 1)
         .map(r => ({ value: Math.round(r.balance), label: `M${r.month}` }))
-      const extra = parseFloat(extraByDebt[debt.id]) || 0
-      const sim = extra > 0 ? simulateExtraPayment(debt.principal, debt.interestRate, payment, extra) : null
-      return { ...debt, payment, schedule, stalled, payoffMonths, totalInterest, payoffDate, chartData, sim }
+      const draft = extraFormByDebt[debt.id] || {}
+      const draftAmount = parseFloat(draft.amount) || 0
+      const preview = draftAmount > 0 && !stalled
+        ? previewExtraPayment(debt.principal, debt.interestRate, basePayment, debt.termMonths, extraPayments, { atMonth: monthsPaid + 1, amount: draftAmount, mode: draft.mode || 'tenure' })
+        : null
+      return { ...debt, payment, schedule, stalled, payoffMonths, monthsPaid, monthsRemaining, isPaidOff, historyRows, remainingRows, totalInterest: totalInterestPaid, payoffDate, chartData, preview }
     })
-  }, [debts, extraByDebt])
+  }, [debts, extraFormByDebt])
+
+  const markPaid = (debt) => editDebt({ ...debt, monthsPaid: (debt.monthsPaid || 0) + 1 })
+
+  const applyExtraPayment = (debt) => {
+    const draft = extraFormByDebt[debt.id] || {}
+    const amount = parseFloat(draft.amount) || 0
+    if (amount <= 0) return
+    const candidate = { atMonth: debt.monthsPaid + 1, amount, mode: draft.mode || 'tenure' }
+    editDebt({ ...debt, extraPayments: [...(debt.extraPayments || []), candidate] })
+    setExtraFormByDebt(prev => ({ ...prev, [debt.id]: { amount: '', mode: 'tenure' } }))
+  }
 
   const openAdd = () => { setEditingDebt(null); setDForm(EMPTY_DFORM); setShowForm(true) }
   const openEdit = (debt) => {
@@ -2737,7 +2770,9 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt }) {
                     <span className="trip-card-name">💳 {debt.name}</span>
                     {debt.stalled
                       ? <span className="trip-status-badge trip-badge-active">⚠️ Never pays off</span>
-                      : <span className="trip-status-badge trip-badge-upcoming">{debt.payoffMonths}mo left</span>}
+                      : debt.isPaidOff
+                      ? <span className="trip-status-badge trip-badge-done">🎉 Paid off</span>
+                      : <span className="trip-status-badge trip-badge-upcoming">{debt.monthsRemaining}mo left</span>}
                   </div>
                   <div className="trip-card-meta">
                     <span>{fmtINR(debt.principal)}</span>
@@ -2757,18 +2792,40 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt }) {
                         {debt.payoffDate && <><span className="trip-meta-dot">·</span><span>payoff {fmtDate(debt.payoffDate)}</span></>}
                       </div>
                       {debt.chartData.length >= 2 && <LineChart data={debt.chartData} />}
-                      <div className="form-label" style={{ marginTop: '0.5rem' }}>
-                        Extra payment (₹/mo)
-                        <input type="number" min="0" className="form-input" placeholder="e.g. 2000"
-                          value={extraByDebt[debt.id] || ''}
-                          onChange={e => setExtraByDebt(prev => ({ ...prev, [debt.id]: e.target.value }))} />
-                      </div>
-                      {debt.sim && (
-                        <div className="fcst-surplus-banner">
-                          {debt.sim.monthsSaved > 0
-                            ? `✅ ${debt.sim.monthsSaved} months faster · ${fmtINR(Math.round(debt.sim.interestSaved))} interest saved`
-                            : 'Enter an amount to see the payoff speed-up.'}
-                        </div>
+
+                      {!debt.isPaidOff && (
+                        <>
+                          <button className="btn-ghost btn-sm" style={{ marginTop: '0.5rem' }} onClick={() => markPaid(debt)}>✅ Mark month {debt.monthsPaid + 1}'s EMI paid</button>
+
+                          <div className="trip-form-grid" style={{ marginTop: '0.5rem' }}>
+                            <label className="form-label">Extra payment (₹, one-time)
+                              <input type="number" min="0" className="form-input" placeholder="e.g. 20000"
+                                value={extraFormByDebt[debt.id]?.amount || ''}
+                                onChange={e => setExtraFormByDebt(prev => ({ ...prev, [debt.id]: { ...prev[debt.id], amount: e.target.value } }))} />
+                            </label>
+                            <label className="form-label">Apply it to
+                              <div className="theme-seg">
+                                {[['tenure', 'Reduce Tenure'], ['emi', 'Reduce EMI']].map(([m, label]) => (
+                                  <button type="button" key={m}
+                                    className={'theme-seg-btn' + ((extraFormByDebt[debt.id]?.mode || 'tenure') === m ? ' active' : '')}
+                                    onClick={() => setExtraFormByDebt(prev => ({ ...prev, [debt.id]: { ...prev[debt.id], mode: m } }))}>{label}</button>
+                                ))}
+                              </div>
+                            </label>
+                          </div>
+                          {debt.preview && (
+                            <div className="fcst-surplus-banner">
+                              {debt.preview.monthsSaved > 0 || debt.preview.newPayment < debt.payment
+                                ? (extraFormByDebt[debt.id]?.mode === 'emi'
+                                  ? `✅ New EMI would be ${fmtINR(Math.round(debt.preview.newPayment))}/mo · ${fmtINR(Math.round(debt.preview.interestSaved))} interest saved`
+                                  : `✅ ${debt.preview.monthsSaved} months faster · ${fmtINR(Math.round(debt.preview.interestSaved))} interest saved`)
+                                : 'Enter an amount to preview the effect.'}
+                            </div>
+                          )}
+                          <button className="btn-primary btn-sm" style={{ marginTop: '0.5rem' }}
+                            disabled={!(parseFloat(extraFormByDebt[debt.id]?.amount) > 0)}
+                            onClick={() => applyExtraPayment(debt)}>Apply Payment</button>
+                        </>
                       )}
                       <button className="btn-ghost btn-sm" style={{ marginTop: '0.5rem' }} onClick={() => setScheduleDebt(debt)}>📋 Full schedule ({debt.schedule.length}mo)</button>
                     </>

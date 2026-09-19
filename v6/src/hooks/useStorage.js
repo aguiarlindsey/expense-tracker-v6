@@ -322,6 +322,8 @@ function debtToDb(d, userId) {
     minimum_payment: parseFloat(d.minimumPayment) || 0,
     start_date:      d.startDate || null,
     notes:           d.notes || null,
+    months_paid:     parseInt(d.monthsPaid, 10) || 0,
+    extra_payments:  d.extraPayments || [],
   }
 }
 
@@ -335,6 +337,8 @@ function debtFromDb(row) {
     minimumPayment: parseFloat(row.minimum_payment) || 0,
     startDate:      row.start_date || '',
     notes:          row.notes || '',
+    monthsPaid:     row.months_paid || 0,
+    extraPayments:  row.extra_payments || [],
     createdAt:      row.created_at || '',
     _rowVersion:    row.row_version || 1,
   }
