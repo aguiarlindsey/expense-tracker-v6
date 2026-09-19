@@ -309,6 +309,37 @@ function otherAssetFromDb(row) {
   }
 }
 
+// ── Debt mappers ───────────────────────────────────────────
+
+function debtToDb(d, userId) {
+  return {
+    id:              d.id,
+    user_id:         userId,
+    name:            d.name,
+    principal:       parseFloat(d.principal) || 0,
+    interest_rate:   parseFloat(d.interestRate) || 0,
+    term_months:     parseInt(d.termMonths, 10) || 0,
+    minimum_payment: parseFloat(d.minimumPayment) || 0,
+    start_date:      d.startDate || null,
+    notes:           d.notes || null,
+  }
+}
+
+function debtFromDb(row) {
+  return {
+    id:             row.id,
+    name:           row.name,
+    principal:      parseFloat(row.principal) || 0,
+    interestRate:   parseFloat(row.interest_rate) || 0,
+    termMonths:     row.term_months || 0,
+    minimumPayment: parseFloat(row.minimum_payment) || 0,
+    startDate:      row.start_date || '',
+    notes:          row.notes || '',
+    createdAt:      row.created_at || '',
+    _rowVersion:    row.row_version || 1,
+  }
+}
+
 // ── Hook ─────────────────────────────────────────────────
 
 export function useStorage(userId) {
@@ -322,6 +353,7 @@ export function useStorage(userId) {
   const [creditCards,   setCreditCards]   = useState([])
   const [houses,        setHouses]        = useState([])
   const [otherAssets,   setOtherAssets]   = useState([])
+  const [debts,         setDebts]         = useState([])
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState(null)
   const [syncing,         setSyncing]         = useState(false)
@@ -369,7 +401,8 @@ export function useStorage(userId) {
       supabase.from('credit_cards').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
       supabase.from('houses').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
       supabase.from('other_assets').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-    ]).then(([expRes, incRes, budRes, gRes, cRes, tRes, vRes, ccRes, hRes, oaRes]) => {
+      supabase.from('debts').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+    ]).then(([expRes, incRes, budRes, gRes, cRes, tRes, vRes, ccRes, hRes, oaRes, dRes]) => {
       if (!mounted) return
       if (expRes.error) setError(expRes.error.message)
       if (incRes.error) setError(incRes.error.message)
@@ -401,6 +434,8 @@ export function useStorage(userId) {
       setHouses((hRes.data || []).map(houseFromDb))
       if (oaRes.error) setError(oaRes.error.message)
       setOtherAssets((oaRes.data || []).map(otherAssetFromDb))
+      if (dRes.error) setError(dRes.error.message)
+      setDebts((dRes.data || []).map(debtFromDb))
       setLoading(false)
     })
     return () => { mounted = false }
@@ -580,6 +615,22 @@ export function useStorage(userId) {
     }
   }
 
+  function handleDebtEvent(payload) {
+    if (payload.eventType === 'INSERT') {
+      const incoming = debtFromDb(payload.new)
+      setDebts(prev => {
+        if (prev.some(d => d.id === incoming.id && !d._pending)) return prev
+        const hasPending = prev.some(d => d.id === incoming.id && d._pending)
+        if (hasPending) return prev.map(d => d.id === incoming.id ? incoming : d)
+        return [incoming, ...prev]
+      })
+    } else if (payload.eventType === 'UPDATE') {
+      setDebts(prev => prev.map(d => d.id === payload.new.id ? debtFromDb(payload.new) : d))
+    } else if (payload.eventType === 'DELETE') {
+      setDebts(prev => prev.filter(d => d.id !== payload.old.id))
+    }
+  }
+
   // ── Realtime subscription ─────────────────────────────────
   useEffect(() => {
     if (!userId) return
@@ -601,6 +652,7 @@ export function useStorage(userId) {
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'credit_cards',        filter: `user_id=eq.${userId}` }, p => handleCardEvent(p))
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'houses',              filter: `user_id=eq.${userId}` }, p => handleHouseEvent(p))
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'other_assets',        filter: `user_id=eq.${userId}` }, p => handleOtherAssetEvent(p))
+      .on('postgres_changes', { event: '*',      schema: 'public', table: 'debts',                filter: `user_id=eq.${userId}` }, p => handleDebtEvent(p))
       .subscribe(status => {
         if (status === 'SUBSCRIBED')    setRealtimeStatus('live')
         else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setRealtimeStatus('error')
@@ -766,6 +818,32 @@ export function useStorage(userId) {
       }
       case 'deleteOtherAsset': {
         const { error: err } = await supabase.from('other_assets').delete().eq('id', payload.id)
+        if (err) throw new Error(err.message)
+        break
+      }
+      case 'addDebt': {
+        const { data, error: err } = await supabase.from('debts').insert(debtToDb(payload, userId)).select().single()
+        if (err) throw new Error(err.message)
+        setDebts(prev => prev.map(d => d.id === payload.id ? debtFromDb(data) : d))
+        break
+      }
+      case 'editDebt': {
+        const rowVersion = payload._rowVersion || 1
+        const { data, error: err } = await supabase
+          .from('debts').update(debtToDb(payload, userId))
+          .eq('id', payload.id).eq('row_version', rowVersion).select()
+        if (err) throw new Error(err.message)
+        if (!data || data.length === 0) {
+          const { data: dbRow } = await supabase.from('debts').select('*').eq('id', payload.id).single()
+          if (dbRow) addConflict('debts', payload, debtFromDb(dbRow))
+          else setError('This debt was deleted on another device.')
+          break
+        }
+        setDebts(prev => prev.map(d => d.id === payload.id ? debtFromDb(data[0]) : d))
+        break
+      }
+      case 'deleteDebt': {
+        const { error: err } = await supabase.from('debts').delete().eq('id', payload.id)
         if (err) throw new Error(err.message)
         break
       }
@@ -1251,6 +1329,54 @@ export function useStorage(userId) {
     else if (err) setError(err.message)
   }, [userId, enqueue])
 
+  // ── Debts ────────────────────────────────────────────────
+  const addDebt = useCallback(async (debt) => {
+    setDebts(prev => [{ ...debt, _pending: true }, ...prev])
+    if (!navigator.onLine) { enqueue('addDebt', debt); return }
+    const { data, error: err } = await supabase.from('debts').insert(debtToDb(debt, userId)).select().single()
+    if (err) {
+      if (isNetworkError(err)) { enqueue('addDebt', debt) }
+      else { setError(err.message); setDebts(prev => prev.filter(d => d.id !== debt.id)) }
+      return
+    }
+    setDebts(prev => prev.map(d => d.id === debt.id ? debtFromDb(data) : d))
+  }, [userId, enqueue])
+
+  const editDebt = useCallback(async (debt) => {
+    setDebts(prev => prev.map(d => d.id === debt.id ? { ...debt, _pending: true } : d))
+    const deps = () => loadQueueSnapshot().filter(i => i.op === 'addDebt' && i.payload.id === debt.id).map(i => i.id)
+    if (!navigator.onLine) { enqueue('editDebt', debt, deps()); return }
+    const rowVersion = debt._rowVersion || 1
+    const { data, error: err } = await supabase
+      .from('debts')
+      .update(debtToDb(debt, userId))
+      .eq('id', debt.id)
+      .eq('row_version', rowVersion)
+      .select()
+    if (err) {
+      if (isNetworkError(err)) { enqueue('editDebt', debt, deps()) }
+      else { setError(err.message) }
+      return
+    }
+    if (!data || data.length === 0) {
+      const { data: dbRow } = await supabase.from('debts').select('*').eq('id', debt.id).single()
+      if (dbRow) addConflict('debts', debt, debtFromDb(dbRow))
+      else setError('This debt was deleted on another device.')
+      setDebts(prev => prev.map(d => d.id === debt.id ? { ...d, _pending: false } : d))
+      return
+    }
+    setDebts(prev => prev.map(d => d.id === debt.id ? debtFromDb(data[0]) : d))
+  }, [userId, enqueue]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const deleteDebt = useCallback(async (id) => {
+    setDebts(prev => prev.filter(d => d.id !== id))
+    const deps = () => loadQueueSnapshot().filter(i => ['addDebt','editDebt'].includes(i.op) && i.payload.id === id).map(i => i.id)
+    if (!navigator.onLine) { enqueue('deleteDebt', { id }, deps()); return }
+    const { error: err } = await supabase.from('debts').delete().eq('id', id)
+    if (err && isNetworkError(err)) enqueue('deleteDebt', { id }, deps())
+    else if (err) setError(err.message)
+  }, [userId, enqueue])
+
   // ── Bulk import ──────────────────────────────────────────
   const bulkAddExpenses = useCallback(async (exps) => {
     if (!exps.length) return { added: 0, errors: 0 }
@@ -1288,6 +1414,7 @@ export function useStorage(userId) {
       if (conflict.table === 'credit_cards') setCreditCards(cs => cs.map(c => c.id === conflict.remote.id ? conflict.remote : c))
       if (conflict.table === 'houses') setHouses(hs => hs.map(h => h.id === conflict.remote.id ? conflict.remote : h))
       if (conflict.table === 'other_assets') setOtherAssets(oas => oas.map(o => o.id === conflict.remote.id ? conflict.remote : o))
+      if (conflict.table === 'debts') setDebts(ds => ds.map(d => d.id === conflict.remote.id ? conflict.remote : d))
     } else {
       // 'mine' or 'merge' — re-attempt write using remote's current row_version
       const base = resolution === 'merge' && mergedData ? mergedData : conflict.local
@@ -1299,8 +1426,9 @@ export function useStorage(userId) {
       if (conflict.table === 'credit_cards') await editCreditCard(forceWrite)
       if (conflict.table === 'houses') await editHouse(forceWrite)
       if (conflict.table === 'other_assets') await editOtherAsset(forceWrite)
+      if (conflict.table === 'debts') await editDebt(forceWrite)
     }
-  }, [editExpense, editIncome, editTrip, editVehicle, editCreditCard, editHouse, editOtherAsset]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [editExpense, editIncome, editTrip, editVehicle, editCreditCard, editHouse, editOtherAsset, editDebt]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const dismissConflict = useCallback((conflictId) => {
     setConflicts(prev => prev.filter(c => c.id !== conflictId))
@@ -1340,6 +1468,7 @@ export function useStorage(userId) {
       supabase.from('credit_cards').delete().eq('user_id', userId),
       supabase.from('houses').delete().eq('user_id', userId),
       supabase.from('other_assets').delete().eq('user_id', userId),
+      supabase.from('debts').delete().eq('user_id', userId),
     ])
     setExpenses([])
     setIncome([])
@@ -1351,13 +1480,14 @@ export function useStorage(userId) {
     setCreditCards([])
     setHouses([])
     setOtherAssets([])
+    setDebts([])
     try {
       ['et_v6_rates', 'et_v6_dark', 'et_v6_cb', 'et_v6_base', 'et_v6_retry_queue'].forEach(k => localStorage.removeItem(k))
     } catch {}
   }, [userId])
 
   return {
-    expenses, income, budgets, goals, contributions, trips, vehicles, creditCards, houses, otherAssets,
+    expenses, income, budgets, goals, contributions, trips, vehicles, creditCards, houses, otherAssets, debts,
     loading, error,
     pendingCount: queue.length,
     syncing,
@@ -1373,6 +1503,7 @@ export function useStorage(userId) {
     addCreditCard, editCreditCard, deleteCreditCard,
     addHouse, editHouse, deleteHouse,
     addOtherAsset, editOtherAsset, deleteOtherAsset,
+    addDebt, editDebt, deleteDebt,
     bulkAddExpenses, bulkAddIncome,
     clearExpenses, clearIncome, clearAll, factoryReset,
   }

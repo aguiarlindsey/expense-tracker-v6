@@ -17,6 +17,7 @@ import ConflictModal from './ConflictModal'
 import ReceiptScanner from './ReceiptScanner'
 import { generateMonthlyPDF } from '../utils/generatePDF'
 import { parseNLQuery } from '../utils/parseNLQuery'
+import { calcMonthlyPayment, generateSchedule, simulateExtraPayment } from '../utils/debtHelpers'
 
 // ─── Currency icon map ───────────────────────────────────
 const CURRENCY_ICON_MAP = {
@@ -1838,6 +1839,7 @@ const EMPTY_HFORM = { name: '', address: '', ownership: 'owned', moveInDate: '',
 const HOUSE_OWNERSHIP_LABEL = { owned: 'Owned', rented: 'Renting (I pay rent)', leased_out: 'Leased Out (I collect rent)' }
 const EMPTY_OFORM = { name: '', category: 'Other', purchaseDate: '', purchasePrice: '', reminderLabel: '', reminderDate: '', emiAmount: '', emiDueDay: '', notes: '' }
 const OTHER_ASSET_CATEGORY_CHIPS = ['Laptop', 'Tablet', 'Camera', 'Watch', 'Appliance', 'Furniture', 'Jewelry', 'Instrument', 'Boat', 'Aircraft', 'Other']
+const EMPTY_DFORM = { name: '', principal: '', interestRate: '', termMonths: '', minimumPayment: '', startDate: '', notes: '' }
 
 // Cycle window [start, end) containing today, for a statement that resets on `billingCycleDay` each month.
 function cycleWindowFor(billingCycleDay) {
@@ -2589,6 +2591,177 @@ function PersonalizeModal({ onClose, vehicles, creditCards, houses, otherAssets,
   )
 }
 
+function addMonthsToDate(dateStr, months) {
+  const d = dateStr ? new Date(dateStr + 'T12:00:00') : new Date()
+  d.setMonth(d.getMonth() + months)
+  return d.toISOString().split('T')[0]
+}
+
+function DebtPlannerModal({ onClose, debts, addDebt, editDebt, deleteDebt }) {
+  const [showForm, setShowForm] = useState(false)
+  const [editingDebt, setEditingDebt] = useState(null)
+  const [dForm, setDForm] = useState(EMPTY_DFORM)
+  const ds = (k, v) => setDForm(f => ({ ...f, [k]: v }))
+  const [extraByDebt, setExtraByDebt] = useState({})
+
+  const suggestedEmi = calcMonthlyPayment(parseFloat(dForm.principal) || 0, parseFloat(dForm.interestRate) || 0, parseInt(dForm.termMonths, 10) || 0)
+
+  const debtsWithData = useMemo(() => {
+    return debts.map(debt => {
+      const payment = debt.minimumPayment || calcMonthlyPayment(debt.principal, debt.interestRate, debt.termMonths)
+      const { schedule, stalled, payoffMonths } = generateSchedule(debt.principal, debt.interestRate, payment)
+      const totalInterest = schedule.reduce((s, r) => s + r.interest, 0)
+      const payoffDate = !stalled && schedule.length ? addMonthsToDate(debt.startDate, payoffMonths) : null
+      const step = Math.max(1, Math.ceil(schedule.length / 12))
+      const chartData = schedule
+        .filter((r, i) => i % step === 0 || i === schedule.length - 1)
+        .map(r => ({ value: Math.round(r.balance), label: `M${r.month}` }))
+      const extra = parseFloat(extraByDebt[debt.id]) || 0
+      const sim = extra > 0 ? simulateExtraPayment(debt.principal, debt.interestRate, payment, extra) : null
+      return { ...debt, payment, schedule, stalled, payoffMonths, totalInterest, payoffDate, chartData, sim }
+    })
+  }, [debts, extraByDebt])
+
+  const openAdd = () => { setEditingDebt(null); setDForm(EMPTY_DFORM); setShowForm(true) }
+  const openEdit = (debt) => {
+    setEditingDebt(debt)
+    setDForm({
+      name: debt.name, principal: debt.principal || '', interestRate: debt.interestRate || '',
+      termMonths: debt.termMonths || '', minimumPayment: debt.minimumPayment || '',
+      startDate: debt.startDate || '', notes: debt.notes || '',
+    })
+    setShowForm(true)
+  }
+  const submitForm = () => {
+    if (!dForm.name.trim() || !dForm.principal) return
+    const clean = { ...dForm, name: dForm.name.trim(), notes: dForm.notes.trim() }
+    if (editingDebt) editDebt({ ...editingDebt, ...clean })
+    else addDebt({ id: stableId({}), ...clean })
+    setShowForm(false)
+    setEditingDebt(null)
+  }
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <h2>💳 Debt Payoff Planner</h2>
+          <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+
+        <div className="settings-row" style={{ marginBottom: '0.75rem' }}>
+          <div className="settings-row-label">
+            <strong>Your debts</strong>
+            <span>Track a loan's payoff schedule and see how much time and interest an extra payment would save.</span>
+          </div>
+          <button className="btn-primary" onClick={openAdd}>+ Add Debt</button>
+        </div>
+
+        {showForm && (
+          <div className="card trip-form-card" style={{ marginBottom: '0.75rem' }}>
+            <div className="card-title">{editingDebt ? '✏️ Edit Debt' : '💳 New Debt'}</div>
+            <div className="trip-form-grid">
+              <label className="form-label">Name
+                <input className="form-input" placeholder="e.g. Car Loan" value={dForm.name} onChange={e => ds('name', e.target.value)} />
+              </label>
+              <label className="form-label">Principal (₹)
+                <input type="number" min="0" className="form-input" placeholder="e.g. 500000" value={dForm.principal} onChange={e => ds('principal', e.target.value)} />
+              </label>
+              <label className="form-label">Interest Rate (annual %)
+                <input type="number" min="0" step="0.1" className="form-input" placeholder="e.g. 9.5" value={dForm.interestRate} onChange={e => ds('interestRate', e.target.value)} />
+              </label>
+              <label className="form-label">Term (months)
+                <input type="number" min="1" className="form-input" placeholder="e.g. 60" value={dForm.termMonths} onChange={e => ds('termMonths', e.target.value)} />
+              </label>
+              <label className="form-label">Minimum Payment (₹/mo)
+                <input type="number" min="0" className="form-input" placeholder="e.g. 10500" value={dForm.minimumPayment} onChange={e => ds('minimumPayment', e.target.value)} />
+                {suggestedEmi > 0 && (
+                  <span className="fx-conv-label" style={{ marginTop: 4 }}>
+                    Standard EMI would be {fmtINR(Math.round(suggestedEmi))}
+                    {' '}<button type="button" className="btn-ghost btn-sm" style={{ padding: '0.1rem 0.4rem' }} onClick={() => ds('minimumPayment', Math.round(suggestedEmi).toString())}>Use this</button>
+                  </span>
+                )}
+              </label>
+              <label className="form-label">Start Date (optional)
+                <input type="date" className="form-input" value={dForm.startDate} onChange={e => ds('startDate', e.target.value)} />
+              </label>
+              <label className="form-label trip-notes-label">Notes (optional)
+                <input className="form-input" value={dForm.notes} onChange={e => ds('notes', e.target.value)} />
+              </label>
+            </div>
+            <div className="trip-form-actions">
+              <button className="btn-primary" onClick={submitForm} disabled={!dForm.name.trim() || !dForm.principal}>
+                {editingDebt ? 'Save changes' : 'Add debt'}
+              </button>
+              <button className="btn-ghost" onClick={() => { setShowForm(false); setEditingDebt(null) }}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {debtsWithData.length === 0 ? (
+          <div className="empty-state empty-state-sm">
+            <div className="empty-icon">💳</div>
+            <h3>No debts yet</h3>
+            <p>Add a loan to see its payoff date, total interest, and how an extra payment speeds things up.</p>
+          </div>
+        ) : (
+          <div className="trips-grid">
+            {debtsWithData.map(debt => (
+              <div key={debt.id} className="trip-card">
+                <div className="trip-card-top">
+                  <div className="trip-card-title-row">
+                    <span className="trip-card-name">💳 {debt.name}</span>
+                    {debt.stalled
+                      ? <span className="trip-status-badge trip-badge-active">⚠️ Never pays off</span>
+                      : <span className="trip-status-badge trip-badge-upcoming">{debt.payoffMonths}mo left</span>}
+                  </div>
+                  <div className="trip-card-meta">
+                    <span>{fmtINR(debt.principal)}</span>
+                    <span className="trip-meta-dot">·</span>
+                    <span>{debt.interestRate}% APR</span>
+                    <span className="trip-meta-dot">·</span>
+                    <span>{fmtINR(debt.payment)}/mo</span>
+                  </div>
+                </div>
+                <div className="trip-card-body">
+                  {debt.stalled ? (
+                    <div className="trip-total-sub">This payment doesn't cover the monthly interest — the balance will never reach zero.</div>
+                  ) : (
+                    <>
+                      <div className="trip-total-sub">
+                        <span>{fmtINR(Math.round(debt.totalInterest))} total interest</span>
+                        {debt.payoffDate && <><span className="trip-meta-dot">·</span><span>payoff {fmtDate(debt.payoffDate)}</span></>}
+                      </div>
+                      {debt.chartData.length >= 2 && <LineChart data={debt.chartData} />}
+                      <div className="form-label" style={{ marginTop: '0.5rem' }}>
+                        Extra payment (₹/mo)
+                        <input type="number" min="0" className="form-input" placeholder="e.g. 2000"
+                          value={extraByDebt[debt.id] || ''}
+                          onChange={e => setExtraByDebt(prev => ({ ...prev, [debt.id]: e.target.value }))} />
+                      </div>
+                      {debt.sim && (
+                        <div className="fcst-surplus-banner">
+                          {debt.sim.monthsSaved > 0
+                            ? `✅ ${debt.sim.monthsSaved} months faster · ${fmtINR(Math.round(debt.sim.interestSaved))} interest saved`
+                            : 'Enter an amount to see the payoff speed-up.'}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+                <div className="trip-card-actions">
+                  <button className="btn-ghost btn-sm" onClick={() => openEdit(debt)}>✏️ Edit</button>
+                  <button className="btn-danger btn-sm" style={{ marginLeft: 'auto' }} onClick={() => deleteDebt(debt.id)}>🗑️</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Expense / Income Items ───────────────────────────────
 
 const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSelected, onToggleSelect }) {
@@ -2863,7 +3036,7 @@ function CommandPalette({ open, onClose, commands }) {
 export default function Tracker({ session }) {
   const userId = session.user.id
   const {
-    expenses, income, budgets, goals, contributions, trips, vehicles, creditCards, houses, otherAssets,
+    expenses, income, budgets, goals, contributions, trips, vehicles, creditCards, houses, otherAssets, debts,
     loading, error,
     pendingCount, syncing, online, realtimeStatus,
     conflicts, resolveConflict, dismissConflict,
@@ -2876,6 +3049,7 @@ export default function Tracker({ session }) {
     addCreditCard, editCreditCard, deleteCreditCard,
     addHouse, editHouse, deleteHouse,
     addOtherAsset, editOtherAsset, deleteOtherAsset,
+    addDebt, editDebt, deleteDebt,
     bulkAddExpenses, bulkAddIncome,
     clearExpenses, clearIncome, clearAll, factoryReset,
   } = useStorage(userId)
@@ -2908,6 +3082,7 @@ export default function Tracker({ session }) {
     return p === 'goals' ? 'goals' : 'budgets'
   })
   const [showPersonalize, setShowPersonalize] = useState(false)
+  const [showDebtPlanner, setShowDebtPlanner] = useState(false)
   const [budgetDraft, setBudgetDraft]     = useState(null)
   const [focusedBudget, setFocusedBudget] = useState(null)
   const [dark, setDark]                   = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s !== null ? s === '1' : window.matchMedia('(prefers-color-scheme: dark)').matches })
@@ -6565,6 +6740,18 @@ export default function Tracker({ session }) {
             </div>
           </div>
 
+          {/* Debt Payoff Planner */}
+          <div className="settings-section">
+            <h3><span aria-hidden="true">💳</span> Debt Payoff Planner</h3>
+            <div className="settings-row">
+              <div className="settings-row-label">
+                <strong>Track loans and payoff schedules</strong>
+                <span>Add a loan to see its payoff date, total interest, and how much an extra payment would save.</span>
+              </div>
+              <button className="btn-primary" onClick={() => setShowDebtPlanner(true)}>Open Debt Planner</button>
+            </div>
+          </div>
+
           {/* Appearance */}
           <div className="settings-section">
             <h3><span aria-hidden="true">🎨</span> Appearance</h3>
@@ -7086,6 +7273,7 @@ export default function Tracker({ session }) {
       <CommandPalette open={showCmd} onClose={() => setShowCmd(false)} commands={cmdCommands} />
       {showEF && <ExpenseForm initialData={editExpTarget} onSubmit={editExpTarget ? handleEditExpense : handleAddExpense} onClose={() => { setShowEF(false); setEditExpTarget(null) }} rateData={rateData} vehicles={vehicles} creditCards={creditCards} houses={houses} otherAssets={otherAssets} />}
       {showPersonalize && <PersonalizeModal onClose={() => setShowPersonalize(false)} vehicles={vehicles} creditCards={creditCards} houses={houses} otherAssets={otherAssets} expenses={expenses} addVehicle={addVehicle} editVehicle={editVehicle} deleteVehicle={deleteVehicle} addCreditCard={addCreditCard} editCreditCard={editCreditCard} deleteCreditCard={deleteCreditCard} addHouse={addHouse} editHouse={editHouse} deleteHouse={deleteHouse} addOtherAsset={addOtherAsset} editOtherAsset={editOtherAsset} deleteOtherAsset={deleteOtherAsset} editExpense={editExpense} />}
+      {showDebtPlanner && <DebtPlannerModal onClose={() => setShowDebtPlanner(false)} debts={debts} addDebt={addDebt} editDebt={editDebt} deleteDebt={deleteDebt} />}
       {showIF && <IncomeForm  initialData={editIncTarget} onSubmit={editIncTarget ? handleEditIncome  : handleAddIncome}  onClose={() => { setShowIF(false); setEditIncTarget(null) }} rateData={rateData} />}
       {delTarget && <ConfirmDialog message={delTarget.many ? `Permanently delete ${Object.keys(delTarget.ids).length} expenses?` : `Delete this ${delTarget.type}? Cannot be undone.`} onConfirm={handleDelete} onCancel={() => setDelTarget(null)} />}
       {confirmAction && (
