@@ -2597,7 +2597,7 @@ function addMonthsToDate(dateStr, months) {
   return d.toISOString().split('T')[0]
 }
 
-function DebtPlannerModal({ onClose, debts, addDebt, editDebt, deleteDebt }) {
+function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt }) {
   const [showForm, setShowForm] = useState(false)
   const [editingDebt, setEditingDebt] = useState(null)
   const [dForm, setDForm] = useState(EMPTY_DFORM)
@@ -2642,13 +2642,7 @@ function DebtPlannerModal({ onClose, debts, addDebt, editDebt, deleteDebt }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
-        <div className="modal-header">
-          <h2>💳 Debt Payoff Planner</h2>
-          <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
-        </div>
-
+    <>
         <div className="settings-row" style={{ marginBottom: '0.75rem' }}>
           <div className="settings-row-label">
             <strong>Your debts</strong>
@@ -2757,8 +2751,7 @@ function DebtPlannerModal({ onClose, debts, addDebt, editDebt, deleteDebt }) {
             ))}
           </div>
         )}
-      </div>
-    </div>
+    </>
   )
 }
 
@@ -3079,10 +3072,9 @@ export default function Tracker({ session }) {
   const [selectedMerchant, setSelectedMerchant] = useState(null)
   const [planningTab, setPlanningTab]     = useState(() => {
     const p = new URLSearchParams(window.location.search).get('ptab')
-    return p === 'goals' ? 'goals' : 'budgets'
+    return p === 'goals' ? 'goals' : p === 'debt' ? 'debt' : 'budgets'
   })
   const [showPersonalize, setShowPersonalize] = useState(false)
-  const [showDebtPlanner, setShowDebtPlanner] = useState(false)
   const [budgetDraft, setBudgetDraft]     = useState(null)
   const [focusedBudget, setFocusedBudget] = useState(null)
   const [dark, setDark]                   = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s !== null ? s === '1' : window.matchMedia('(prefers-color-scheme: dark)').matches })
@@ -3568,6 +3560,7 @@ export default function Tracker({ session }) {
     { id: 'nav-veh-analytics', group: 'Go to', icon: <Car size={15} />,            label: 'Analytics — Vehicles',  keywords: ['vehicles','fuel','mileage','service','maintenance','warranty','parts'], action: () => { setTab('analytics'); setAnalyticsTab('vehicles') } },
     { id: 'nav-budgets',    group: 'Go to',   icon: <Wallet size={15} />,          label: 'Planning — Budgets',    keywords: ['planning','budget','limit','category'],   action: () => { setTab('planning'); setPlanningTab('budgets') } },
     { id: 'nav-goals',      group: 'Go to',   icon: <Target size={15} />,          label: 'Planning — Goals',      keywords: ['planning','savings','targets','milestone'],action: () => { setTab('planning'); setPlanningTab('goals') } },
+    { id: 'nav-debt',       group: 'Go to',   icon: <Wallet size={15} />,          label: 'Planning — Debt',       keywords: ['planning','debt','loan','payoff','amortization','emi'], action: () => { setTab('planning'); setPlanningTab('debt') } },
     { id: 'nav-recurring',  group: 'Go to',   icon: <RefreshCw size={15} />,       label: 'Recurring',             keywords: ['subscriptions','repeat','monthly','emi'],  action: () => setTab('recurring') },
     { id: 'nav-trips',      group: 'Go to',   icon: <Plane size={15} />,           label: 'Trips',                 keywords: ['travel','journey','vacation'],            action: () => setTab('trips') },
     { id: 'nav-exchange',   group: 'Go to',   icon: <ArrowLeftRight size={15} />,  label: 'Exchange (FX)',         keywords: ['currency','rates','forex','usd','btc'],   action: () => setTab('exchange') },
@@ -6053,6 +6046,9 @@ export default function Tracker({ session }) {
             <button role="tab" aria-selected={planningTab === 'goals'}
               className={'sub-nav-btn' + (planningTab === 'goals' ? ' active' : '')}
               onClick={() => setPlanningTab('goals')}>🎯 Goals</button>
+            <button role="tab" aria-selected={planningTab === 'debt'}
+              className={'sub-nav-btn' + (planningTab === 'debt' ? ' active' : '')}
+              onClick={() => setPlanningTab('debt')}>💳 Debt</button>
           </div>
         </div>
       )}
@@ -6272,6 +6268,13 @@ export default function Tracker({ session }) {
           </section>
         )
       })()}
+
+      {/* ══════════ DEBT PAYOFF PLANNER ══════════ */}
+      {tab === 'planning' && planningTab === 'debt' && (
+        <section role="tabpanel" className="tab-content-active">
+          <DebtPlannerSection debts={debts} addDebt={addDebt} editDebt={editDebt} deleteDebt={deleteDebt} />
+        </section>
+      )}
 
       {/* ══════════ INSIGHTS ══════════ */}
       {tab === 'analytics' && analyticsTab === 'insights' && (
@@ -6740,18 +6743,6 @@ export default function Tracker({ session }) {
             </div>
           </div>
 
-          {/* Debt Payoff Planner */}
-          <div className="settings-section">
-            <h3><span aria-hidden="true">💳</span> Debt Payoff Planner</h3>
-            <div className="settings-row">
-              <div className="settings-row-label">
-                <strong>Track loans and payoff schedules</strong>
-                <span>Add a loan to see its payoff date, total interest, and how much an extra payment would save.</span>
-              </div>
-              <button className="btn-primary" onClick={() => setShowDebtPlanner(true)}>Open Debt Planner</button>
-            </div>
-          </div>
-
           {/* Appearance */}
           <div className="settings-section">
             <h3><span aria-hidden="true">🎨</span> Appearance</h3>
@@ -7068,7 +7059,7 @@ export default function Tracker({ session }) {
               <div className="about-row"><span>Database</span><span>Supabase Postgres + RLS · SQL views for aggregations · dependency-ordered offline sync</span></div>
               <div className="about-row"><span>Security</span><span>Server-enforced biometric lock · alphanumeric OTP · rate limiting · RLS on all tables · HTTP security headers</span></div>
               <div className="about-row"><span>UI</span><span>Glassmorphism shell · Bento grid dashboard · 30-day sparkline · category tiles · month picker · system / light / dark theme · FOUC prevention · locale-aware number formatting</span></div>
-              <div className="about-row"><span>Navigation</span><span>8 tabs · Analytics sub-nav (Insights | Trends | Merchants | Forecast | Vehicles) · Planning sub-nav (Budgets | Goals) · ⌘K command palette · keyboard shortcuts 1–8</span></div>
+              <div className="about-row"><span>Navigation</span><span>8 tabs · Analytics sub-nav (Insights | Trends | Merchants | Forecast | Vehicles) · Planning sub-nav (Budgets | Goals | Debt) · ⌘K command palette · keyboard shortcuts 1–8</span></div>
               <div className="about-row"><span>Mobile</span><span>Bottom nav + FAB · More sheet · slide-up drawers · swipe to delete/edit · haptic feedback · safe-area insets · iOS zoom fix · touch targets · overscroll containment</span></div>
               <div className="about-row"><span>Analytics</span><span>Financial Health Score (0–100 animated ring, 4 sub-scores) · grouped bar chart · category trends · MoM savings rate · anomaly detection · Merchant Analytics · Cash Flow Forecast (30/60/90d)</span></div>
               <div className="about-row"><span>Planning</span><span>Budget rollover (unused carries to next month, per-category toggle) · goal progress rings · milestone badges (🥉🥈🥇🏆) · contribution timeline · colour-coded countdown</span></div>
@@ -7273,7 +7264,6 @@ export default function Tracker({ session }) {
       <CommandPalette open={showCmd} onClose={() => setShowCmd(false)} commands={cmdCommands} />
       {showEF && <ExpenseForm initialData={editExpTarget} onSubmit={editExpTarget ? handleEditExpense : handleAddExpense} onClose={() => { setShowEF(false); setEditExpTarget(null) }} rateData={rateData} vehicles={vehicles} creditCards={creditCards} houses={houses} otherAssets={otherAssets} />}
       {showPersonalize && <PersonalizeModal onClose={() => setShowPersonalize(false)} vehicles={vehicles} creditCards={creditCards} houses={houses} otherAssets={otherAssets} expenses={expenses} addVehicle={addVehicle} editVehicle={editVehicle} deleteVehicle={deleteVehicle} addCreditCard={addCreditCard} editCreditCard={editCreditCard} deleteCreditCard={deleteCreditCard} addHouse={addHouse} editHouse={editHouse} deleteHouse={deleteHouse} addOtherAsset={addOtherAsset} editOtherAsset={editOtherAsset} deleteOtherAsset={deleteOtherAsset} editExpense={editExpense} />}
-      {showDebtPlanner && <DebtPlannerModal onClose={() => setShowDebtPlanner(false)} debts={debts} addDebt={addDebt} editDebt={editDebt} deleteDebt={deleteDebt} />}
       {showIF && <IncomeForm  initialData={editIncTarget} onSubmit={editIncTarget ? handleEditIncome  : handleAddIncome}  onClose={() => { setShowIF(false); setEditIncTarget(null) }} rateData={rateData} />}
       {delTarget && <ConfirmDialog message={delTarget.many ? `Permanently delete ${Object.keys(delTarget.ids).length} expenses?` : `Delete this ${delTarget.type}? Cannot be undone.`} onConfirm={handleDelete} onCancel={() => setDelTarget(null)} />}
       {confirmAction && (
