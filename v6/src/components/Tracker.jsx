@@ -2597,12 +2597,42 @@ function addMonthsToDate(dateStr, months) {
   return d.toISOString().split('T')[0]
 }
 
+function DebtScheduleModal({ debt, onClose }) {
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <h2>📋 {debt.name} — Full Schedule</h2>
+          <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+          <table className="sub-table">
+            <thead><tr><th>Month</th><th>Installment</th><th>Principal</th><th>Interest</th><th>Balance Remaining</th></tr></thead>
+            <tbody>
+              {debt.schedule.map(row => (
+                <tr key={row.month}>
+                  <td>{row.month}</td>
+                  <td>{fmtINR(Math.round(row.payment))}</td>
+                  <td>{fmtINR(Math.round(row.principalPaid))}</td>
+                  <td>{fmtINR(Math.round(row.interest))}</td>
+                  <td>{fmtINR(Math.round(row.balance))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt }) {
   const [showForm, setShowForm] = useState(false)
   const [editingDebt, setEditingDebt] = useState(null)
   const [dForm, setDForm] = useState(EMPTY_DFORM)
   const ds = (k, v) => setDForm(f => ({ ...f, [k]: v }))
   const [extraByDebt, setExtraByDebt] = useState({})
+  const [scheduleDebt, setScheduleDebt] = useState(null)
 
   const suggestedEmi = calcMonthlyPayment(parseFloat(dForm.principal) || 0, parseFloat(dForm.interestRate) || 0, parseInt(dForm.termMonths, 10) || 0)
 
@@ -2740,6 +2770,7 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt }) {
                             : 'Enter an amount to see the payoff speed-up.'}
                         </div>
                       )}
+                      <button className="btn-ghost btn-sm" style={{ marginTop: '0.5rem' }} onClick={() => setScheduleDebt(debt)}>📋 Full schedule ({debt.schedule.length}mo)</button>
                     </>
                   )}
                 </div>
@@ -2751,6 +2782,7 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt }) {
             ))}
           </div>
         )}
+        {scheduleDebt && <DebtScheduleModal debt={scheduleDebt} onClose={() => setScheduleDebt(null)} />}
     </>
   )
 }
