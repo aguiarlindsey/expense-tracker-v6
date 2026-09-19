@@ -5756,7 +5756,9 @@ export default function Tracker({ session }) {
                     {longRangeForecast.horizons.map(h => (
                       <div key={h.year} className="fcst-tile">
                         <div className="fcst-tile-days">{h.year}y</div>
-                        <div className="fcst-tile-exp">{incognito ? '••••' : fmtINR(Math.round(h.balance))}</div>
+                        <div className="fcst-tile-exp" style={{ color: h.balance >= 0 ? 'var(--color-inc)' : 'var(--color-exp)' }}>
+                          {incognito ? '••••' : fmtINR(Math.round(h.balance))}
+                        </div>
                         <div className="fcst-tile-sub">projected net savings</div>
                       </div>
                     ))}
