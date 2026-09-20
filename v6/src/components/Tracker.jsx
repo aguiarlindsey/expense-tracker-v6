@@ -2685,7 +2685,9 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt, defaultRateM
       const payment = remainingRows[0]?.payment ?? schedule[schedule.length - 1]?.payment ?? basePayment
       const currentRate = remainingRows[0]?.rate ?? schedule[schedule.length - 1]?.rate ?? debt.interestRate
       const nextDueDate = debt.startDate ? addMonthsToDate(debt.startDate, monthsPaid) : null
-      const nextDueLabel = nextDueDate ? monthYearLabel(nextDueDate) : `month ${monthsPaid + 1}`
+      // Always resolve to a real month name — no Start Date/EMI Due Day set yet
+      // just means "today's real calendar month" is the best available anchor.
+      const nextDueLabel = nextDueDate ? monthYearLabel(nextDueDate) : monthYearLabel(new Date().toISOString().split('T')[0])
       const emiDue = debt.emiDueDay ? nextDueDateFor(debt.emiDueDay) : null
       const daysToEmiDue = emiDue ? Math.round((emiDue - new Date()) / 864e5) : null
       const markPaidLabel = emiDue ? monthYearLabel(toISODate(emiDue)) : nextDueLabel
