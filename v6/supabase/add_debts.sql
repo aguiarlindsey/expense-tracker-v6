@@ -15,6 +15,7 @@ create table if not exists debts (
   months_paid      integer     not null default 0,   -- regular EMI installments actually paid so far
   extra_payments   jsonb       not null default '[]'::jsonb, -- [{atMonth, amount, mode: 'tenure'|'emi'}]
   rate_changes     jsonb       not null default '[]'::jsonb, -- [{atMonth, newRate, mode: 'tenure'|'emi'}]
+  rate_method      text        not null default 'monthly',  -- 'monthly' (US) | 'daily' (India/UK, 365-day reducing balance) | 'canadian' (semi-annual compounding)
   row_version      integer     not null default 1,
   updated_at       timestamptz default now(),
   created_at       timestamptz default now()
@@ -24,6 +25,7 @@ create table if not exists debts (
 alter table debts add column if not exists months_paid integer not null default 0;
 alter table debts add column if not exists extra_payments jsonb not null default '[]'::jsonb;
 alter table debts add column if not exists rate_changes jsonb not null default '[]'::jsonb;
+alter table debts add column if not exists rate_method text not null default 'monthly';
 
 alter table debts enable row level security;
 alter table debts replica identity full;

@@ -1839,7 +1839,9 @@ const EMPTY_HFORM = { name: '', address: '', ownership: 'owned', moveInDate: '',
 const HOUSE_OWNERSHIP_LABEL = { owned: 'Owned', rented: 'Renting (I pay rent)', leased_out: 'Leased Out (I collect rent)' }
 const EMPTY_OFORM = { name: '', category: 'Other', purchaseDate: '', purchasePrice: '', reminderLabel: '', reminderDate: '', emiAmount: '', emiDueDay: '', notes: '' }
 const OTHER_ASSET_CATEGORY_CHIPS = ['Laptop', 'Tablet', 'Camera', 'Watch', 'Appliance', 'Furniture', 'Jewelry', 'Instrument', 'Boat', 'Aircraft', 'Other']
-const EMPTY_DFORM = { name: '', principal: '', interestRate: '', termMonths: '', minimumPayment: '', startDate: '', notes: '' }
+const EMPTY_DFORM = { name: '', principal: '', interestRate: '', termMonths: '', minimumPayment: '', startDate: '', notes: '', rateMethod: 'monthly' }
+const RATE_METHOD_LABEL = { monthly: '🇺🇸 Monthly Reducing Balance', daily: '🇮🇳 Daily Reducing Balance', canadian: '🇨🇦 Canadian (Semi-Annual)' }
+const RATE_METHOD_BADGE = { monthly: 'Monthly', daily: 'Daily', canadian: 'Canadian' }
 
 // Cycle window [start, end) containing today, for a statement that resets on `billingCycleDay` each month.
 function cycleWindowFor(billingCycleDay) {
@@ -2652,7 +2654,7 @@ function DebtScheduleModal({ debt, onClose }) {
   )
 }
 
-function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt }) {
+function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt, defaultRateMethod }) {
   const [showForm, setShowForm] = useState(false)
   const [editingDebt, setEditingDebt] = useState(null)
   const [dForm, setDForm] = useState(EMPTY_DFORM)
@@ -2661,15 +2663,16 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt }) {
   const [rateFormByDebt, setRateFormByDebt] = useState({})
   const [scheduleDebt, setScheduleDebt] = useState(null)
 
-  const suggestedEmi = calcMonthlyPayment(parseFloat(dForm.principal) || 0, parseFloat(dForm.interestRate) || 0, parseInt(dForm.termMonths, 10) || 0)
+  const suggestedEmi = calcMonthlyPayment(parseFloat(dForm.principal) || 0, parseFloat(dForm.interestRate) || 0, parseInt(dForm.termMonths, 10) || 0, dForm.rateMethod)
 
   const debtsWithData = useMemo(() => {
     return debts.map(debt => {
-      const basePayment = debt.minimumPayment || calcMonthlyPayment(debt.principal, debt.interestRate, debt.termMonths)
+      const rateMethod = debt.rateMethod || 'monthly'
+      const basePayment = debt.minimumPayment || calcMonthlyPayment(debt.principal, debt.interestRate, debt.termMonths, rateMethod)
       const extraPayments = debt.extraPayments || []
       const rateChanges = debt.rateChanges || []
       const monthsPaid = debt.monthsPaid || 0
-      const { schedule: rawSchedule, stalled, payoffMonths } = generateSchedule(debt.principal, debt.interestRate, basePayment, { extraPayments, rateChanges, termMonths: debt.termMonths })
+      const { schedule: rawSchedule, stalled, payoffMonths } = generateSchedule(debt.principal, debt.interestRate, basePayment, { extraPayments, rateChanges, termMonths: debt.termMonths, rateMethod, startDate: debt.startDate })
       const schedule = debt.startDate
         ? rawSchedule.map(r => ({ ...r, dateLabel: monthYearLabel(addMonthsToDate(debt.startDate, r.month - 1)) }))
         : rawSchedule
@@ -2691,15 +2694,15 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt }) {
       const extraDraftAmount = parseFloat(extraDraft.amount) || 0
       const extraDraftAtMonth = debt.startDate && extraDraft.date ? monthsBetweenDates(debt.startDate, extraDraft.date) + 1 : monthsPaid + 1
       const preview = extraDraftAmount > 0 && !stalled
-        ? previewExtraPayment(debt.principal, debt.interestRate, basePayment, debt.termMonths, extraPayments, { atMonth: Math.max(1, extraDraftAtMonth), amount: extraDraftAmount, mode: extraDraft.mode || 'tenure' })
+        ? previewExtraPayment(debt.principal, debt.interestRate, basePayment, debt.termMonths, extraPayments, { atMonth: Math.max(1, extraDraftAtMonth), amount: extraDraftAmount, mode: extraDraft.mode || 'tenure' }, rateMethod, debt.startDate)
         : null
       const rateDraft = rateFormByDebt[debt.id] || {}
       const rateDraftNewRate = parseFloat(rateDraft.newRate)
       const rateDraftAtMonth = debt.startDate && rateDraft.date ? monthsBetweenDates(debt.startDate, rateDraft.date) + 1 : monthsPaid + 1
       const ratePreview = Number.isFinite(rateDraftNewRate) && rateDraftNewRate >= 0 && !stalled
-        ? previewRateChange(debt.principal, debt.interestRate, basePayment, debt.termMonths, extraPayments, rateChanges, { atMonth: Math.max(1, rateDraftAtMonth), newRate: rateDraftNewRate, mode: rateDraft.mode || 'tenure' })
+        ? previewRateChange(debt.principal, debt.interestRate, basePayment, debt.termMonths, extraPayments, rateChanges, { atMonth: Math.max(1, rateDraftAtMonth), newRate: rateDraftNewRate, mode: rateDraft.mode || 'tenure' }, rateMethod, debt.startDate)
         : null
-      return { ...debt, payment, currentRate, schedule, stalled, payoffMonths, monthsPaid, monthsRemaining, isPaidOff, historyRows, remainingRows, totalInterest: totalInterestPaid, payoffDate, nextDueDate, nextDueLabel, chartData, preview, ratePreview }
+      return { ...debt, rateMethod, payment, currentRate, schedule, stalled, payoffMonths, monthsPaid, monthsRemaining, isPaidOff, historyRows, remainingRows, totalInterest: totalInterestPaid, payoffDate, nextDueDate, nextDueLabel, chartData, preview, ratePreview }
     })
   }, [debts, extraFormByDebt, rateFormByDebt])
 
@@ -2725,13 +2728,13 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt }) {
     setRateFormByDebt(prev => ({ ...prev, [debt.id]: { newRate: '', mode: 'tenure', date: '' } }))
   }
 
-  const openAdd = () => { setEditingDebt(null); setDForm(EMPTY_DFORM); setShowForm(true) }
+  const openAdd = () => { setEditingDebt(null); setDForm({ ...EMPTY_DFORM, rateMethod: defaultRateMethod || 'monthly' }); setShowForm(true) }
   const openEdit = (debt) => {
     setEditingDebt(debt)
     setDForm({
       name: debt.name, principal: debt.principal || '', interestRate: debt.interestRate || '',
       termMonths: debt.termMonths || '', minimumPayment: debt.minimumPayment || '',
-      startDate: debt.startDate || '', notes: debt.notes || '',
+      startDate: debt.startDate || '', notes: debt.notes || '', rateMethod: debt.rateMethod || 'monthly',
     })
     setShowForm(true)
   }
@@ -2782,6 +2785,16 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt }) {
               <label className="form-label">Start Date (optional)
                 <input type="date" className="form-input" value={dForm.startDate} onChange={e => ds('startDate', e.target.value)} />
               </label>
+              <label className="form-label">Calculation Method
+                <select className="form-input" value={dForm.rateMethod} onChange={e => ds('rateMethod', e.target.value)}>
+                  {Object.entries(RATE_METHOD_LABEL).map(([m, label]) => <option key={m} value={m}>{label}</option>)}
+                </select>
+                <span className="fx-conv-label" style={{ marginTop: 4 }}>
+                  {dForm.rateMethod === 'daily' && 'Interest accrues on actual outstanding balance × actual days per month (needs a Start Date for full precision).'}
+                  {dForm.rateMethod === 'canadian' && 'Interest compounds semi-annually per Canadian law, converted to an equivalent monthly rate.'}
+                  {dForm.rateMethod === 'monthly' && 'Flat annual rate ÷ 12 applied each month — the standard US/conventional method.'}
+                </span>
+              </label>
               <label className="form-label trip-notes-label">Notes (optional)
                 <input className="form-input" value={dForm.notes} onChange={e => ds('notes', e.target.value)} />
               </label>
@@ -2820,6 +2833,8 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt }) {
                     <span>{debt.currentRate}% APR{debt.currentRate !== debt.interestRate ? ` (was ${debt.interestRate}%)` : ''}</span>
                     <span className="trip-meta-dot">·</span>
                     <span>{fmtINR(debt.payment)}/mo</span>
+                    <span className="trip-meta-dot">·</span>
+                    <span>{RATE_METHOD_BADGE[debt.rateMethod] || 'Monthly'}</span>
                   </div>
                 </div>
                 <div className="trip-card-body">
@@ -6452,7 +6467,8 @@ export default function Tracker({ session }) {
       {/* ══════════ DEBT PAYOFF PLANNER ══════════ */}
       {tab === 'planning' && planningTab === 'debt' && (
         <section role="tabpanel" className="tab-content-active">
-          <DebtPlannerSection debts={debts} addDebt={addDebt} editDebt={editDebt} deleteDebt={deleteDebt} />
+          <DebtPlannerSection debts={debts} addDebt={addDebt} editDebt={editDebt} deleteDebt={deleteDebt}
+            defaultRateMethod={baseCurrency === 'INR' || baseCurrency === 'GBP' ? 'daily' : baseCurrency === 'CAD' ? 'canadian' : 'monthly'} />
         </section>
       )}
 
