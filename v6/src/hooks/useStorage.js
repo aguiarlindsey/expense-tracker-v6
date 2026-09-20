@@ -326,6 +326,7 @@ function debtToDb(d, userId) {
     extra_payments:  d.extraPayments || [],
     rate_changes:    d.rateChanges || [],
     rate_method:     d.rateMethod || 'monthly',
+    emi_due_day:     d.emiDueDay ? parseInt(d.emiDueDay, 10) : null,
   }
 }
 
@@ -343,6 +344,7 @@ function debtFromDb(row) {
     extraPayments:  row.extra_payments || [],
     rateChanges:    row.rate_changes || [],
     rateMethod:     row.rate_method || 'monthly',
+    emiDueDay:      row.emi_due_day || null,
     createdAt:      row.created_at || '',
     _rowVersion:    row.row_version || 1,
   }

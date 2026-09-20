@@ -1839,7 +1839,7 @@ const EMPTY_HFORM = { name: '', address: '', ownership: 'owned', moveInDate: '',
 const HOUSE_OWNERSHIP_LABEL = { owned: 'Owned', rented: 'Renting (I pay rent)', leased_out: 'Leased Out (I collect rent)' }
 const EMPTY_OFORM = { name: '', category: 'Other', purchaseDate: '', purchasePrice: '', reminderLabel: '', reminderDate: '', emiAmount: '', emiDueDay: '', notes: '' }
 const OTHER_ASSET_CATEGORY_CHIPS = ['Laptop', 'Tablet', 'Camera', 'Watch', 'Appliance', 'Furniture', 'Jewelry', 'Instrument', 'Boat', 'Aircraft', 'Other']
-const EMPTY_DFORM = { name: '', principal: '', interestRate: '', termMonths: '', minimumPayment: '', startDate: '', notes: '', rateMethod: 'monthly' }
+const EMPTY_DFORM = { name: '', principal: '', interestRate: '', termMonths: '', minimumPayment: '', startDate: '', notes: '', rateMethod: 'monthly', emiDueDay: '' }
 const RATE_METHOD_LABEL = { monthly: '🇺🇸 Monthly Reducing Balance', daily: '🇮🇳 Daily Reducing Balance', canadian: '🇨🇦 Canadian (Semi-Annual)' }
 const RATE_METHOD_BADGE = { monthly: 'Monthly', daily: 'Daily', canadian: 'Canadian' }
 
@@ -2686,6 +2686,9 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt, defaultRateM
       const currentRate = remainingRows[0]?.rate ?? schedule[schedule.length - 1]?.rate ?? debt.interestRate
       const nextDueDate = debt.startDate ? addMonthsToDate(debt.startDate, monthsPaid) : null
       const nextDueLabel = nextDueDate ? monthYearLabel(nextDueDate) : `month ${monthsPaid + 1}`
+      const emiDue = debt.emiDueDay ? nextDueDateFor(debt.emiDueDay) : null
+      const daysToEmiDue = emiDue ? Math.round((emiDue - new Date()) / 864e5) : null
+      const markPaidLabel = emiDue ? monthYearLabel(toISODate(emiDue)) : nextDueLabel
       const step = Math.max(1, Math.ceil(schedule.length / 12))
       const chartData = schedule
         .filter((r, i) => i % step === 0 || i === schedule.length - 1)
@@ -2702,7 +2705,7 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt, defaultRateM
       const ratePreview = Number.isFinite(rateDraftNewRate) && rateDraftNewRate >= 0 && !stalled
         ? previewRateChange(debt.principal, debt.interestRate, basePayment, debt.termMonths, extraPayments, rateChanges, { atMonth: Math.max(1, rateDraftAtMonth), newRate: rateDraftNewRate, mode: rateDraft.mode || 'tenure' }, rateMethod, debt.startDate)
         : null
-      return { ...debt, rateMethod, payment, currentRate, schedule, stalled, payoffMonths, monthsPaid, monthsRemaining, isPaidOff, historyRows, remainingRows, totalInterest: totalInterestPaid, payoffDate, nextDueDate, nextDueLabel, chartData, preview, ratePreview }
+      return { ...debt, rateMethod, payment, currentRate, schedule, stalled, payoffMonths, monthsPaid, monthsRemaining, isPaidOff, historyRows, remainingRows, totalInterest: totalInterestPaid, payoffDate, nextDueDate, nextDueLabel, emiDue, daysToEmiDue, markPaidLabel, chartData, preview, ratePreview }
     })
   }, [debts, extraFormByDebt, rateFormByDebt])
 
@@ -2735,6 +2738,7 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt, defaultRateM
       name: debt.name, principal: debt.principal || '', interestRate: debt.interestRate || '',
       termMonths: debt.termMonths || '', minimumPayment: debt.minimumPayment || '',
       startDate: debt.startDate || '', notes: debt.notes || '', rateMethod: debt.rateMethod || 'monthly',
+      emiDueDay: debt.emiDueDay || '',
     })
     setShowForm(true)
   }
@@ -2784,6 +2788,10 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt, defaultRateM
               </label>
               <label className="form-label">Start Date (optional)
                 <input type="date" className="form-input" value={dForm.startDate} onChange={e => ds('startDate', e.target.value)} />
+              </label>
+              <label className="form-label">EMI Due Day (optional)
+                <input type="number" min="1" max="28" className="form-input" placeholder="e.g. 5" value={dForm.emiDueDay} onChange={e => ds('emiDueDay', e.target.value)} />
+                <span className="fx-conv-label" style={{ marginTop: 4 }}>Day of the month your EMI is debited — drives the reminder and the "mark paid" label.</span>
               </label>
               <label className="form-label">Calculation Method
                 <select className="form-input" value={dForm.rateMethod} onChange={e => ds('rateMethod', e.target.value)}>
@@ -2850,7 +2858,17 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt, defaultRateM
 
                       {!debt.isPaidOff && (
                         <>
-                          <button className="btn-ghost btn-sm" style={{ marginTop: '0.5rem' }} onClick={() => markPaid(debt)}>✅ Mark {debt.nextDueLabel}'s EMI paid</button>
+                          <div className="trip-total-sub" style={{ marginTop: '0.5rem' }}>
+                            <button className="btn-ghost btn-sm" onClick={() => markPaid(debt)}>✅ Mark {debt.markPaidLabel}'s EMI paid</button>
+                            {debt.emiDue && (
+                              <button className="btn-ghost btn-sm" onClick={() => downloadIcsReminder({
+                                uid: `debt-emi-${debt.id}`,
+                                date: toISODate(debt.emiDue),
+                                summary: `EMI due — ${debt.name}`,
+                                description: `EMI installment of ${fmtINR(Math.round(debt.payment))} due for ${debt.name}.`,
+                              })}>📅 Download EMI reminder{debt.daysToEmiDue != null ? ` (${debt.daysToEmiDue}d)` : ''}</button>
+                            )}
+                          </div>
 
                           <div className="sub-section-title" style={{ marginTop: '0.75rem' }}>💰 Make a part-payment</div>
                           <div className="trip-form-grid">
