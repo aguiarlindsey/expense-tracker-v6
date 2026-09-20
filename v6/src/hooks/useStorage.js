@@ -324,6 +324,7 @@ function debtToDb(d, userId) {
     notes:           d.notes || null,
     months_paid:     parseInt(d.monthsPaid, 10) || 0,
     extra_payments:  d.extraPayments || [],
+    rate_changes:    d.rateChanges || [],
   }
 }
 
@@ -339,6 +340,7 @@ function debtFromDb(row) {
     notes:          row.notes || '',
     monthsPaid:     row.months_paid || 0,
     extraPayments:  row.extra_payments || [],
+    rateChanges:    row.rate_changes || [],
     createdAt:      row.created_at || '',
     _rowVersion:    row.row_version || 1,
   }
