@@ -50,3 +50,7 @@ drop trigger if exists trg_bump_row_version_debts on debts;
 create trigger trg_bump_row_version_debts
   before update on debts
   for each row execute function bump_row_version();
+
+-- Force Supabase's API layer to pick up new/changed columns immediately
+-- instead of waiting for its schema cache to refresh on its own.
+notify pgrst, 'reload schema';
