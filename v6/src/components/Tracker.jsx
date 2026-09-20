@@ -2597,10 +2597,23 @@ function addMonthsToDate(dateStr, months) {
   return d.toISOString().split('T')[0]
 }
 
+// Whole calendar months between a loan's start date and a later date — 0 if
+// `dateStr` falls in the same calendar month as `startDate`, 1 if one month
+// later, etc. Inverse of addMonthsToDate(startDate, n).
+function monthsBetweenDates(startDate, dateStr) {
+  const s = new Date(startDate + 'T12:00:00')
+  const d = new Date(dateStr + 'T12:00:00')
+  return (d.getFullYear() - s.getFullYear()) * 12 + (d.getMonth() - s.getMonth())
+}
+
+function monthYearLabel(dateStr) {
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+}
+
 function DebtScheduleModal({ debt, onClose }) {
   const renderRows = (rows) => rows.map(row => (
     <tr key={row.month}>
-      <td>{row.month}</td>
+      <td>{row.dateLabel || `Month ${row.month}`}</td>
       <td>{fmtINR(Math.round(row.payment))}</td>
       <td>{fmtINR(Math.round(row.principalPaid))}</td>
       <td>{fmtINR(Math.round(row.interest))}</td>
@@ -2653,7 +2666,10 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt }) {
       const basePayment = debt.minimumPayment || calcMonthlyPayment(debt.principal, debt.interestRate, debt.termMonths)
       const extraPayments = debt.extraPayments || []
       const monthsPaid = debt.monthsPaid || 0
-      const { schedule, stalled, payoffMonths } = generateSchedule(debt.principal, debt.interestRate, basePayment, { extraPayments, termMonths: debt.termMonths })
+      const { schedule: rawSchedule, stalled, payoffMonths } = generateSchedule(debt.principal, debt.interestRate, basePayment, { extraPayments, termMonths: debt.termMonths })
+      const schedule = debt.startDate
+        ? rawSchedule.map(r => ({ ...r, dateLabel: monthYearLabel(addMonthsToDate(debt.startDate, r.month - 1)) }))
+        : rawSchedule
       const totalInterestPaid = totalInterest(schedule)
       const payoffDate = !stalled && schedule.length ? addMonthsToDate(debt.startDate, payoffMonths) : null
       const historyRows = schedule.slice(0, monthsPaid)
@@ -2661,16 +2677,19 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt }) {
       const monthsRemaining = Math.max(0, payoffMonths - monthsPaid)
       const isPaidOff = !stalled && payoffMonths > 0 && monthsRemaining === 0
       const payment = remainingRows[0]?.payment ?? schedule[schedule.length - 1]?.payment ?? basePayment
+      const nextDueDate = debt.startDate ? addMonthsToDate(debt.startDate, monthsPaid) : null
+      const nextDueLabel = nextDueDate ? monthYearLabel(nextDueDate) : `month ${monthsPaid + 1}`
       const step = Math.max(1, Math.ceil(schedule.length / 12))
       const chartData = schedule
         .filter((r, i) => i % step === 0 || i === schedule.length - 1)
         .map(r => ({ value: Math.round(r.balance), label: `M${r.month}` }))
       const draft = extraFormByDebt[debt.id] || {}
       const draftAmount = parseFloat(draft.amount) || 0
+      const draftAtMonth = debt.startDate && draft.date ? monthsBetweenDates(debt.startDate, draft.date) + 1 : monthsPaid + 1
       const preview = draftAmount > 0 && !stalled
-        ? previewExtraPayment(debt.principal, debt.interestRate, basePayment, debt.termMonths, extraPayments, { atMonth: monthsPaid + 1, amount: draftAmount, mode: draft.mode || 'tenure' })
+        ? previewExtraPayment(debt.principal, debt.interestRate, basePayment, debt.termMonths, extraPayments, { atMonth: Math.max(1, draftAtMonth), amount: draftAmount, mode: draft.mode || 'tenure' })
         : null
-      return { ...debt, payment, schedule, stalled, payoffMonths, monthsPaid, monthsRemaining, isPaidOff, historyRows, remainingRows, totalInterest: totalInterestPaid, payoffDate, chartData, preview }
+      return { ...debt, payment, schedule, stalled, payoffMonths, monthsPaid, monthsRemaining, isPaidOff, historyRows, remainingRows, totalInterest: totalInterestPaid, payoffDate, nextDueDate, nextDueLabel, chartData, preview }
     })
   }, [debts, extraFormByDebt])
 
@@ -2680,9 +2699,10 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt }) {
     const draft = extraFormByDebt[debt.id] || {}
     const amount = parseFloat(draft.amount) || 0
     if (amount <= 0) return
-    const candidate = { atMonth: debt.monthsPaid + 1, amount, mode: draft.mode || 'tenure' }
+    const atMonth = debt.startDate && draft.date ? monthsBetweenDates(debt.startDate, draft.date) + 1 : debt.monthsPaid + 1
+    const candidate = { atMonth: Math.max(1, atMonth), amount, mode: draft.mode || 'tenure', date: draft.date || null }
     editDebt({ ...debt, extraPayments: [...(debt.extraPayments || []), candidate] })
-    setExtraFormByDebt(prev => ({ ...prev, [debt.id]: { amount: '', mode: 'tenure' } }))
+    setExtraFormByDebt(prev => ({ ...prev, [debt.id]: { amount: '', mode: 'tenure', date: '' } }))
   }
 
   const openAdd = () => { setEditingDebt(null); setDForm(EMPTY_DFORM); setShowForm(true) }
@@ -2795,7 +2815,7 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt }) {
 
                       {!debt.isPaidOff && (
                         <>
-                          <button className="btn-ghost btn-sm" style={{ marginTop: '0.5rem' }} onClick={() => markPaid(debt)}>✅ Mark month {debt.monthsPaid + 1}'s EMI paid</button>
+                          <button className="btn-ghost btn-sm" style={{ marginTop: '0.5rem' }} onClick={() => markPaid(debt)}>✅ Mark {debt.nextDueLabel}'s EMI paid</button>
 
                           <div className="trip-form-grid" style={{ marginTop: '0.5rem' }}>
                             <label className="form-label">Extra payment (₹, one-time)
@@ -2803,6 +2823,17 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt }) {
                                 value={extraFormByDebt[debt.id]?.amount || ''}
                                 onChange={e => setExtraFormByDebt(prev => ({ ...prev, [debt.id]: { ...prev[debt.id], amount: e.target.value } }))} />
                             </label>
+                            {debt.startDate ? (
+                              <label className="form-label">Date of payment
+                                <input type="date" className="form-input"
+                                  value={extraFormByDebt[debt.id]?.date ?? debt.nextDueDate ?? ''}
+                                  onChange={e => setExtraFormByDebt(prev => ({ ...prev, [debt.id]: { ...prev[debt.id], date: e.target.value } }))} />
+                              </label>
+                            ) : (
+                              <label className="form-label trip-notes-label">
+                                <span className="fx-conv-label">Set this debt's Start Date to enter an exact payment date — otherwise it's applied to the next unpaid month.</span>
+                              </label>
+                            )}
                             <label className="form-label">Apply it to
                               <div className="theme-seg">
                                 {[['tenure', 'Reduce Tenure'], ['emi', 'Reduce EMI']].map(([m, label]) => (
