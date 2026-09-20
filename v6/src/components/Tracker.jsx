@@ -2709,7 +2709,19 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt, defaultRateM
     })
   }, [debts, extraFormByDebt, rateFormByDebt])
 
-  const markPaid = (debt) => editDebt({ ...debt, monthsPaid: (debt.monthsPaid || 0) + 1 })
+  const thisMonthStr = new Date().toISOString().slice(0, 7)
+
+  const markPaid = (debt) => {
+    if (debt.lastMarkedMonth === thisMonthStr) return // already marked this real calendar month
+    editDebt({ ...debt, monthsPaid: (debt.monthsPaid || 0) + 1, lastMarkedMonth: thisMonthStr })
+  }
+
+  // Walks the "paid" count back by one — for undoing accidental repeat clicks.
+  // Also clears the this-month gate so a genuine mistake can be corrected right away.
+  const undoMarkPaid = (debt) => {
+    if (!debt.monthsPaid) return
+    editDebt({ ...debt, monthsPaid: debt.monthsPaid - 1, lastMarkedMonth: null })
+  }
 
   const applyExtraPayment = (debt) => {
     const draft = extraFormByDebt[debt.id] || {}
@@ -2859,7 +2871,14 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt, defaultRateM
                       {!debt.isPaidOff && (
                         <>
                           <div className="trip-total-sub" style={{ marginTop: '0.5rem' }}>
-                            <button className="btn-ghost btn-sm" onClick={() => markPaid(debt)}>✅ Mark {debt.markPaidLabel}'s EMI paid</button>
+                            {debt.lastMarkedMonth === thisMonthStr ? (
+                              <span className="trip-status-badge trip-badge-done">✅ {debt.markPaidLabel} marked paid</span>
+                            ) : (
+                              <button className="btn-ghost btn-sm" onClick={() => markPaid(debt)}>✅ Mark {debt.markPaidLabel}'s EMI paid</button>
+                            )}
+                            {debt.monthsPaid > 0 && (
+                              <button className="btn-ghost btn-sm" onClick={() => undoMarkPaid(debt)} title="Undo the last mark-paid click">↩️ Undo ({debt.monthsPaid})</button>
+                            )}
                             {debt.emiDue && (
                               <button className="btn-ghost btn-sm" onClick={() => downloadIcsReminder({
                                 uid: `debt-emi-${debt.id}`,
@@ -2872,7 +2891,7 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt, defaultRateM
 
                           <div className="sub-section-title" style={{ marginTop: '0.75rem' }}>💰 Make a part-payment</div>
                           <div className="trip-form-grid">
-                            <label className="form-label">Extra payment (₹, one-time)
+                            <label className="form-label">Extra payment (₹, one-time — goes straight to principal)
                               <input type="number" min="0" className="form-input" placeholder="e.g. 20000"
                                 value={extraFormByDebt[debt.id]?.amount || ''}
                                 onChange={e => setExtraFormByDebt(prev => ({ ...prev, [debt.id]: { ...prev[debt.id], amount: e.target.value } }))} />

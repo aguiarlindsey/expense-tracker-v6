@@ -17,6 +17,7 @@ create table if not exists debts (
   rate_changes     jsonb       not null default '[]'::jsonb, -- [{atMonth, newRate, mode: 'tenure'|'emi'}]
   rate_method      text        not null default 'monthly',  -- 'monthly' (US) | 'daily' (India/UK, 365-day reducing balance) | 'canadian' (semi-annual compounding)
   emi_due_day      integer,    -- day of month (1-28), recurring EMI due-date reminder — same pattern as credit_cards.due_day
+  last_marked_month text,      -- 'YYYY-MM' of the last successful "mark paid" click — gates it to once per real calendar month
   row_version      integer     not null default 1,
   updated_at       timestamptz default now(),
   created_at       timestamptz default now()
@@ -28,6 +29,7 @@ alter table debts add column if not exists extra_payments jsonb not null default
 alter table debts add column if not exists rate_changes jsonb not null default '[]'::jsonb;
 alter table debts add column if not exists rate_method text not null default 'monthly';
 alter table debts add column if not exists emi_due_day integer;
+alter table debts add column if not exists last_marked_month text;
 
 alter table debts enable row level security;
 alter table debts replica identity full;
