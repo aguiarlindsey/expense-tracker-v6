@@ -352,6 +352,39 @@ function debtFromDb(row) {
   }
 }
 
+// ── Categorization rule mappers ────────────────────────────
+
+function ruleToDb(r, userId) {
+  return {
+    id:              r.id,
+    user_id:         userId,
+    field:           r.field || 'description',
+    operator:        r.operator || 'contains',
+    value:           r.value || '',
+    set_category:    r.setCategory,
+    set_subcategory: r.setSubcategory || null,
+    set_tags:        r.setTags || [],
+    priority:        parseInt(r.priority, 10) || 0,
+    enabled:         r.enabled !== false,
+  }
+}
+
+function ruleFromDb(row) {
+  return {
+    id:             row.id,
+    field:          row.field || 'description',
+    operator:       row.operator || 'contains',
+    value:          row.value || '',
+    setCategory:    row.set_category,
+    setSubcategory: row.set_subcategory || '',
+    setTags:        row.set_tags || [],
+    priority:       row.priority || 0,
+    enabled:        row.enabled !== false,
+    createdAt:      row.created_at || '',
+    _rowVersion:    row.row_version || 1,
+  }
+}
+
 // ── Hook ─────────────────────────────────────────────────
 
 export function useStorage(userId) {
@@ -366,6 +399,7 @@ export function useStorage(userId) {
   const [houses,        setHouses]        = useState([])
   const [otherAssets,   setOtherAssets]   = useState([])
   const [debts,         setDebts]         = useState([])
+  const [rules,         setRules]         = useState([])
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState(null)
   const [syncing,         setSyncing]         = useState(false)
@@ -414,7 +448,8 @@ export function useStorage(userId) {
       supabase.from('houses').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
       supabase.from('other_assets').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
       supabase.from('debts').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-    ]).then(([expRes, incRes, budRes, gRes, cRes, tRes, vRes, ccRes, hRes, oaRes, dRes]) => {
+      supabase.from('categorization_rules').select('*').eq('user_id', userId).order('priority', { ascending: true }),
+    ]).then(([expRes, incRes, budRes, gRes, cRes, tRes, vRes, ccRes, hRes, oaRes, dRes, ruRes]) => {
       if (!mounted) return
       if (expRes.error) setError(expRes.error.message)
       if (incRes.error) setError(incRes.error.message)
@@ -448,6 +483,8 @@ export function useStorage(userId) {
       setOtherAssets((oaRes.data || []).map(otherAssetFromDb))
       if (dRes.error) setError(dRes.error.message)
       setDebts((dRes.data || []).map(debtFromDb))
+      if (ruRes.error) setError(ruRes.error.message)
+      setRules((ruRes.data || []).map(ruleFromDb))
       setLoading(false)
     })
     return () => { mounted = false }
@@ -643,6 +680,22 @@ export function useStorage(userId) {
     }
   }
 
+  function handleRuleEvent(payload) {
+    if (payload.eventType === 'INSERT') {
+      const incoming = ruleFromDb(payload.new)
+      setRules(prev => {
+        if (prev.some(r => r.id === incoming.id && !r._pending)) return prev
+        const hasPending = prev.some(r => r.id === incoming.id && r._pending)
+        if (hasPending) return prev.map(r => r.id === incoming.id ? incoming : r)
+        return [incoming, ...prev]
+      })
+    } else if (payload.eventType === 'UPDATE') {
+      setRules(prev => prev.map(r => r.id === payload.new.id ? ruleFromDb(payload.new) : r))
+    } else if (payload.eventType === 'DELETE') {
+      setRules(prev => prev.filter(r => r.id !== payload.old.id))
+    }
+  }
+
   // ── Realtime subscription ─────────────────────────────────
   useEffect(() => {
     if (!userId) return
@@ -665,6 +718,7 @@ export function useStorage(userId) {
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'houses',              filter: `user_id=eq.${userId}` }, p => handleHouseEvent(p))
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'other_assets',        filter: `user_id=eq.${userId}` }, p => handleOtherAssetEvent(p))
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'debts',                filter: `user_id=eq.${userId}` }, p => handleDebtEvent(p))
+      .on('postgres_changes', { event: '*',      schema: 'public', table: 'categorization_rules',  filter: `user_id=eq.${userId}` }, p => handleRuleEvent(p))
       .subscribe(status => {
         if (status === 'SUBSCRIBED')    setRealtimeStatus('live')
         else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setRealtimeStatus('error')
@@ -856,6 +910,32 @@ export function useStorage(userId) {
       }
       case 'deleteDebt': {
         const { error: err } = await supabase.from('debts').delete().eq('id', payload.id)
+        if (err) throw new Error(err.message)
+        break
+      }
+      case 'addRule': {
+        const { data, error: err } = await supabase.from('categorization_rules').insert(ruleToDb(payload, userId)).select().single()
+        if (err) throw new Error(err.message)
+        setRules(prev => prev.map(r => r.id === payload.id ? ruleFromDb(data) : r))
+        break
+      }
+      case 'editRule': {
+        const rowVersion = payload._rowVersion || 1
+        const { data, error: err } = await supabase
+          .from('categorization_rules').update(ruleToDb(payload, userId))
+          .eq('id', payload.id).eq('row_version', rowVersion).select()
+        if (err) throw new Error(err.message)
+        if (!data || data.length === 0) {
+          const { data: dbRow } = await supabase.from('categorization_rules').select('*').eq('id', payload.id).single()
+          if (dbRow) addConflict('categorization_rules', payload, ruleFromDb(dbRow))
+          else setError('This rule was deleted on another device.')
+          break
+        }
+        setRules(prev => prev.map(r => r.id === payload.id ? ruleFromDb(data[0]) : r))
+        break
+      }
+      case 'deleteRule': {
+        const { error: err } = await supabase.from('categorization_rules').delete().eq('id', payload.id)
         if (err) throw new Error(err.message)
         break
       }
@@ -1389,6 +1469,54 @@ export function useStorage(userId) {
     else if (err) setError(err.message)
   }, [userId, enqueue])
 
+  // ── Categorization Rules ─────────────────────────────────
+  const addRule = useCallback(async (rule) => {
+    setRules(prev => [{ ...rule, _pending: true }, ...prev])
+    if (!navigator.onLine) { enqueue('addRule', rule); return }
+    const { data, error: err } = await supabase.from('categorization_rules').insert(ruleToDb(rule, userId)).select().single()
+    if (err) {
+      if (isNetworkError(err)) { enqueue('addRule', rule) }
+      else { setError(err.message); setRules(prev => prev.filter(r => r.id !== rule.id)) }
+      return
+    }
+    setRules(prev => prev.map(r => r.id === rule.id ? ruleFromDb(data) : r))
+  }, [userId, enqueue])
+
+  const editRule = useCallback(async (rule) => {
+    setRules(prev => prev.map(r => r.id === rule.id ? { ...rule, _pending: true } : r))
+    const deps = () => loadQueueSnapshot().filter(i => i.op === 'addRule' && i.payload.id === rule.id).map(i => i.id)
+    if (!navigator.onLine) { enqueue('editRule', rule, deps()); return }
+    const rowVersion = rule._rowVersion || 1
+    const { data, error: err } = await supabase
+      .from('categorization_rules')
+      .update(ruleToDb(rule, userId))
+      .eq('id', rule.id)
+      .eq('row_version', rowVersion)
+      .select()
+    if (err) {
+      if (isNetworkError(err)) { enqueue('editRule', rule, deps()) }
+      else { setError(err.message) }
+      return
+    }
+    if (!data || data.length === 0) {
+      const { data: dbRow } = await supabase.from('categorization_rules').select('*').eq('id', rule.id).single()
+      if (dbRow) addConflict('categorization_rules', rule, ruleFromDb(dbRow))
+      else setError('This rule was deleted on another device.')
+      setRules(prev => prev.map(r => r.id === rule.id ? { ...r, _pending: false } : r))
+      return
+    }
+    setRules(prev => prev.map(r => r.id === rule.id ? ruleFromDb(data[0]) : r))
+  }, [userId, enqueue]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const deleteRule = useCallback(async (id) => {
+    setRules(prev => prev.filter(r => r.id !== id))
+    const deps = () => loadQueueSnapshot().filter(i => ['addRule','editRule'].includes(i.op) && i.payload.id === id).map(i => i.id)
+    if (!navigator.onLine) { enqueue('deleteRule', { id }, deps()); return }
+    const { error: err } = await supabase.from('categorization_rules').delete().eq('id', id)
+    if (err && isNetworkError(err)) enqueue('deleteRule', { id }, deps())
+    else if (err) setError(err.message)
+  }, [userId, enqueue])
+
   // ── Bulk import ──────────────────────────────────────────
   const bulkAddExpenses = useCallback(async (exps) => {
     if (!exps.length) return { added: 0, errors: 0 }
@@ -1427,6 +1555,7 @@ export function useStorage(userId) {
       if (conflict.table === 'houses') setHouses(hs => hs.map(h => h.id === conflict.remote.id ? conflict.remote : h))
       if (conflict.table === 'other_assets') setOtherAssets(oas => oas.map(o => o.id === conflict.remote.id ? conflict.remote : o))
       if (conflict.table === 'debts') setDebts(ds => ds.map(d => d.id === conflict.remote.id ? conflict.remote : d))
+      if (conflict.table === 'categorization_rules') setRules(rs => rs.map(r => r.id === conflict.remote.id ? conflict.remote : r))
     } else {
       // 'mine' or 'merge' — re-attempt write using remote's current row_version
       const base = resolution === 'merge' && mergedData ? mergedData : conflict.local
@@ -1439,8 +1568,9 @@ export function useStorage(userId) {
       if (conflict.table === 'houses') await editHouse(forceWrite)
       if (conflict.table === 'other_assets') await editOtherAsset(forceWrite)
       if (conflict.table === 'debts') await editDebt(forceWrite)
+      if (conflict.table === 'categorization_rules') await editRule(forceWrite)
     }
-  }, [editExpense, editIncome, editTrip, editVehicle, editCreditCard, editHouse, editOtherAsset, editDebt]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [editExpense, editIncome, editTrip, editVehicle, editCreditCard, editHouse, editOtherAsset, editDebt, editRule]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const dismissConflict = useCallback((conflictId) => {
     setConflicts(prev => prev.filter(c => c.id !== conflictId))
@@ -1481,6 +1611,7 @@ export function useStorage(userId) {
       supabase.from('houses').delete().eq('user_id', userId),
       supabase.from('other_assets').delete().eq('user_id', userId),
       supabase.from('debts').delete().eq('user_id', userId),
+      supabase.from('categorization_rules').delete().eq('user_id', userId),
     ])
     setExpenses([])
     setIncome([])
@@ -1493,13 +1624,14 @@ export function useStorage(userId) {
     setHouses([])
     setOtherAssets([])
     setDebts([])
+    setRules([])
     try {
       ['et_v6_rates', 'et_v6_dark', 'et_v6_cb', 'et_v6_base', 'et_v6_retry_queue'].forEach(k => localStorage.removeItem(k))
     } catch {}
   }, [userId])
 
   return {
-    expenses, income, budgets, goals, contributions, trips, vehicles, creditCards, houses, otherAssets, debts,
+    expenses, income, budgets, goals, contributions, trips, vehicles, creditCards, houses, otherAssets, debts, rules,
     loading, error,
     pendingCount: queue.length,
     syncing,
@@ -1516,6 +1648,7 @@ export function useStorage(userId) {
     addHouse, editHouse, deleteHouse,
     addOtherAsset, editOtherAsset, deleteOtherAsset,
     addDebt, editDebt, deleteDebt,
+    addRule, editRule, deleteRule,
     bulkAddExpenses, bulkAddIncome,
     clearExpenses, clearIncome, clearAll, factoryReset,
   }

@@ -18,6 +18,7 @@ import ReceiptScanner from './ReceiptScanner'
 import { generateMonthlyPDF } from '../utils/generatePDF'
 import { parseNLQuery } from '../utils/parseNLQuery'
 import { calcMonthlyPayment, generateSchedule, totalInterest, previewExtraPayment, previewRateChange } from '../utils/debtHelpers'
+import { applyRules } from '../utils/ruleHelpers'
 
 // ─── Currency icon map ───────────────────────────────────
 const CURRENCY_ICON_MAP = {
@@ -794,7 +795,7 @@ function useBottomSheet(onClose) {
 
 // ─── Expense Form ─────────────────────────────────────────
 
-function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], creditCards = [], houses = [], otherAssets = [] }) {
+function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], creditCards = [], houses = [], otherAssets = [], rules = [] }) {
   const today = new Date().toISOString().split('T')[0]
   const [form, setForm] = useState(initialData ? {
     useCatAlloc: !!(initialData.categoryAllocations && Object.keys(initialData.categoryAllocations || {}).length),
@@ -836,7 +837,28 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
     localStorage.setItem('et_v6_email_receipt_pref', emailReceipt ? '1' : '0')
   }, [emailReceipt])
 
+  // Smart Rules (V8 Epic C3) — suggest, never silently override. Once the user
+  // picks a category themselves (click, subcategory select, or template), their
+  // choice wins for the rest of this form session.
+  const [categoryOverridden, setCategoryOverridden] = useState(!!initialData)
+  const [appliedRuleHint, setAppliedRuleHint] = useState(null)
+  useEffect(() => {
+    if (categoryOverridden) return
+    const match = applyRules({ description: form.description, amount: form.amount, paymentMethod: form.paymentMethod }, rules)
+    if (match && CATS[match.category]) {
+      s('category', match.category)
+      if (match.subcategory) s('subcategory', match.subcategory)
+      if (match.tags.length) s('tags', match.tags)
+      setAppliedRuleHint(match.rule)
+    } else {
+      setAppliedRuleHint(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.description, form.amount, form.paymentMethod, categoryOverridden, rules])
+
   function applyTemplate(t) {
+    setCategoryOverridden(true)
+    setAppliedRuleHint(null)
     setForm(p => ({ ...p,
       description: t.desc, amount: t.amount ? String(t.amount) : '',
       currency: t.currency || 'INR', category: t.category || 'Food',
@@ -1113,7 +1135,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
                     aria-checked={active}
                     className={`cat-icon-btn${active ? ' active' : ''}`}
                     style={active ? { borderColor: CATS[c].color, background: `color-mix(in srgb, ${CATS[c].color} 14%, var(--surface))` } : {}}
-                    onClick={() => { s('category', c); s('subcategory', ''); s('diningApp', '') }}
+                    onClick={() => { setCategoryOverridden(true); setAppliedRuleHint(null); s('category', c); s('subcategory', ''); s('diningApp', '') }}
                     title={c}
                   >
                     <span className="cat-icon-btn-ico" style={{ background: `color-mix(in srgb, ${CATS[c].color} 16%, transparent)` }}>
@@ -1124,10 +1146,15 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
                 )
               })}
             </div>
+            {appliedRuleHint && !categoryOverridden && (
+              <span className="fx-conv-label" style={{ marginTop: 4, display: 'block' }}>
+                ✨ Auto-applied by rule: {appliedRuleHint.field === 'amount' ? 'amount' : appliedRuleHint.field === 'paymentMethod' ? 'payment method' : 'description'} {appliedRuleHint.operator} "{appliedRuleHint.value}"
+              </span>
+            )}
           </div>
           <div className="form-group">
             <label htmlFor="ef-subcat">Subcategory</label>
-            <select id="ef-subcat" value={form.subcategory} onChange={e => s('subcategory', e.target.value)}>
+            <select id="ef-subcat" value={form.subcategory} onChange={e => { setCategoryOverridden(true); setAppliedRuleHint(null); s('subcategory', e.target.value) }}>
               <option value="">—</option>
               {catSubs.map(sub => <option key={sub}>{sub}</option>)}
             </select>
@@ -2989,6 +3016,134 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt, defaultRateM
   )
 }
 
+const RULE_FIELD_LABEL = { description: 'Description', amount: 'Amount', paymentMethod: 'Payment Method' }
+const RULE_OPERATOR_LABEL = { contains: 'contains', equals: 'equals', gt: 'is greater than', lt: 'is less than' }
+const EMPTY_RFORM = { field: 'description', operator: 'contains', value: '', setCategory: 'Food', setSubcategory: '', priority: 0, enabled: true }
+
+function RulesModal({ onClose, rules, addRule, editRule, deleteRule }) {
+  const [showForm, setShowForm] = useState(false)
+  const [editingRule, setEditingRule] = useState(null)
+  const [rForm, setRForm] = useState(EMPTY_RFORM)
+  const rs = (k, v) => setRForm(f => ({ ...f, [k]: v }))
+  const ruleSubs = CATS[rForm.setCategory]?.subs || []
+
+  const sortedRules = useMemo(() => [...rules].sort((a, b) => (a.priority || 0) - (b.priority || 0)), [rules])
+
+  const openAdd = () => { setEditingRule(null); setRForm(EMPTY_RFORM); setShowForm(true) }
+  const openEdit = (rule) => {
+    setEditingRule(rule)
+    setRForm({
+      field: rule.field, operator: rule.operator, value: rule.value,
+      setCategory: rule.setCategory, setSubcategory: rule.setSubcategory || '',
+      priority: rule.priority || 0, enabled: rule.enabled !== false,
+    })
+    setShowForm(true)
+  }
+  const submitForm = () => {
+    if (!rForm.value.trim() || !rForm.setCategory) return
+    const clean = { ...rForm, value: rForm.value.trim() }
+    if (editingRule) editRule({ ...editingRule, ...clean })
+    else addRule({ id: stableId({}), ...clean })
+    setShowForm(false)
+    setEditingRule(null)
+  }
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <h2>✨ Smart Rules</h2>
+          <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+
+        <div className="settings-row" style={{ marginBottom: '0.75rem' }}>
+          <div className="settings-row-label">
+            <strong>Auto-categorization rules</strong>
+            <span>When a new expense's description, amount, or payment method matches, its category is suggested automatically — checked in priority order (lowest number first), first match wins. Manually picking a category always wins over a rule.</span>
+          </div>
+          <button className="btn-primary" onClick={openAdd}>+ Add Rule</button>
+        </div>
+
+        {showForm && (
+          <div className="card trip-form-card" style={{ marginBottom: '0.75rem' }}>
+            <div className="card-title">{editingRule ? '✏️ Edit Rule' : '✨ New Rule'}</div>
+            <div className="trip-form-grid">
+              <label className="form-label">If
+                <select className="form-input" value={rForm.field} onChange={e => rs('field', e.target.value)}>
+                  {Object.entries(RULE_FIELD_LABEL).map(([f, label]) => <option key={f} value={f}>{label}</option>)}
+                </select>
+              </label>
+              <label className="form-label">Operator
+                <select className="form-input" value={rForm.operator} onChange={e => rs('operator', e.target.value)}>
+                  {Object.entries(RULE_OPERATOR_LABEL).map(([op, label]) => <option key={op} value={op}>{label}</option>)}
+                </select>
+              </label>
+              <label className="form-label">Value
+                <input className="form-input" placeholder={rForm.field === 'amount' ? 'e.g. 5000' : 'e.g. Starbucks'} value={rForm.value} onChange={e => rs('value', e.target.value)} />
+              </label>
+              <label className="form-label">Set Category
+                <select className="form-input" value={rForm.setCategory} onChange={e => { rs('setCategory', e.target.value); rs('setSubcategory', '') }}>
+                  {Object.keys(CATS).map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </label>
+              <label className="form-label">Set Subcategory (optional)
+                <select className="form-input" value={rForm.setSubcategory} onChange={e => rs('setSubcategory', e.target.value)}>
+                  <option value="">—</option>
+                  {ruleSubs.map(sub => <option key={sub}>{sub}</option>)}
+                </select>
+              </label>
+              <label className="form-label">Priority (lower checked first)
+                <input type="number" className="form-input" value={rForm.priority} onChange={e => rs('priority', e.target.value)} />
+              </label>
+              <label className="form-label" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
+                <input type="checkbox" checked={rForm.enabled} onChange={e => rs('enabled', e.target.checked)} />
+                Enabled
+              </label>
+            </div>
+            <div className="trip-form-actions">
+              <button className="btn-primary" onClick={submitForm} disabled={!rForm.value.trim() || !rForm.setCategory}>
+                {editingRule ? 'Save changes' : 'Add rule'}
+              </button>
+              <button className="btn-ghost" onClick={() => { setShowForm(false); setEditingRule(null) }}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {sortedRules.length === 0 ? (
+          <div className="empty-state empty-state-sm">
+            <div className="empty-icon">✨</div>
+            <h3>No rules yet</h3>
+            <p>Add a rule, e.g. "Description contains 'Starbucks' → Food/Coffee", to auto-suggest categories on new expenses.</p>
+          </div>
+        ) : (
+          <div className="trips-grid">
+            {sortedRules.map(rule => (
+              <div key={rule.id} className="trip-card">
+                <div className="trip-card-top">
+                  <div className="trip-card-title-row">
+                    <span className="trip-card-name">✨ {CATS[rule.setCategory]?.icon || ''} {rule.setCategory}{rule.setSubcategory ? ` / ${rule.setSubcategory}` : ''}</span>
+                    <span className={'trip-status-badge ' + (rule.enabled !== false ? 'trip-badge-upcoming' : 'trip-badge-done')}>
+                      {rule.enabled !== false ? `priority ${rule.priority || 0}` : 'disabled'}
+                    </span>
+                  </div>
+                  <div className="trip-card-meta">
+                    <span>{RULE_FIELD_LABEL[rule.field]} {RULE_OPERATOR_LABEL[rule.operator]} "{rule.value}"</span>
+                  </div>
+                </div>
+                <div className="trip-card-actions">
+                  <button className="btn-ghost btn-sm" onClick={() => editRule({ ...rule, enabled: !(rule.enabled !== false) })}>{rule.enabled !== false ? '⏸️ Disable' : '▶️ Enable'}</button>
+                  <button className="btn-ghost btn-sm" onClick={() => openEdit(rule)}>✏️ Edit</button>
+                  <button className="btn-danger btn-sm" style={{ marginLeft: 'auto' }} onClick={() => deleteRule(rule.id)}>🗑️</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Expense / Income Items ───────────────────────────────
 
 const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSelected, onToggleSelect }) {
@@ -3263,7 +3418,7 @@ function CommandPalette({ open, onClose, commands }) {
 export default function Tracker({ session }) {
   const userId = session.user.id
   const {
-    expenses, income, budgets, goals, contributions, trips, vehicles, creditCards, houses, otherAssets, debts,
+    expenses, income, budgets, goals, contributions, trips, vehicles, creditCards, houses, otherAssets, debts, rules,
     loading, error,
     pendingCount, syncing, online, realtimeStatus,
     conflicts, resolveConflict, dismissConflict,
@@ -3277,6 +3432,7 @@ export default function Tracker({ session }) {
     addHouse, editHouse, deleteHouse,
     addOtherAsset, editOtherAsset, deleteOtherAsset,
     addDebt, editDebt, deleteDebt,
+    addRule, editRule, deleteRule,
     bulkAddExpenses, bulkAddIncome,
     clearExpenses, clearIncome, clearAll, factoryReset,
   } = useStorage(userId)
@@ -3309,6 +3465,7 @@ export default function Tracker({ session }) {
     return p === 'goals' ? 'goals' : p === 'debt' ? 'debt' : 'budgets'
   })
   const [showPersonalize, setShowPersonalize] = useState(false)
+  const [showRules, setShowRules] = useState(false)
   const [budgetDraft, setBudgetDraft]     = useState(null)
   const [focusedBudget, setFocusedBudget] = useState(null)
   const [dark, setDark]                   = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s !== null ? s === '1' : window.matchMedia('(prefers-color-scheme: dark)').matches })
@@ -6978,6 +7135,18 @@ export default function Tracker({ session }) {
             </div>
           </div>
 
+          {/* Smart Rules */}
+          <div className="settings-section">
+            <h3><span aria-hidden="true">✨</span> Smart Rules</h3>
+            <div className="settings-row">
+              <div className="settings-row-label">
+                <strong>Auto-categorize new expenses</strong>
+                <span>Set rules like "description contains 'Starbucks' → Food/Coffee" to auto-suggest categories as you type.</span>
+              </div>
+              <button className="btn-primary" onClick={() => setShowRules(true)}>Open Rules</button>
+            </div>
+          </div>
+
           {/* Appearance */}
           <div className="settings-section">
             <h3><span aria-hidden="true">🎨</span> Appearance</h3>
@@ -7497,8 +7666,9 @@ export default function Tracker({ session }) {
 
       {/* ── Modals ── */}
       <CommandPalette open={showCmd} onClose={() => setShowCmd(false)} commands={cmdCommands} />
-      {showEF && <ExpenseForm initialData={editExpTarget} onSubmit={editExpTarget ? handleEditExpense : handleAddExpense} onClose={() => { setShowEF(false); setEditExpTarget(null) }} rateData={rateData} vehicles={vehicles} creditCards={creditCards} houses={houses} otherAssets={otherAssets} />}
+      {showEF && <ExpenseForm initialData={editExpTarget} onSubmit={editExpTarget ? handleEditExpense : handleAddExpense} onClose={() => { setShowEF(false); setEditExpTarget(null) }} rateData={rateData} vehicles={vehicles} creditCards={creditCards} houses={houses} otherAssets={otherAssets} rules={rules} />}
       {showPersonalize && <PersonalizeModal onClose={() => setShowPersonalize(false)} vehicles={vehicles} creditCards={creditCards} houses={houses} otherAssets={otherAssets} expenses={expenses} addVehicle={addVehicle} editVehicle={editVehicle} deleteVehicle={deleteVehicle} addCreditCard={addCreditCard} editCreditCard={editCreditCard} deleteCreditCard={deleteCreditCard} addHouse={addHouse} editHouse={editHouse} deleteHouse={deleteHouse} addOtherAsset={addOtherAsset} editOtherAsset={editOtherAsset} deleteOtherAsset={deleteOtherAsset} editExpense={editExpense} />}
+      {showRules && <RulesModal onClose={() => setShowRules(false)} rules={rules} addRule={addRule} editRule={editRule} deleteRule={deleteRule} />}
       {showIF && <IncomeForm  initialData={editIncTarget} onSubmit={editIncTarget ? handleEditIncome  : handleAddIncome}  onClose={() => { setShowIF(false); setEditIncTarget(null) }} rateData={rateData} />}
       {delTarget && <ConfirmDialog message={delTarget.many ? `Permanently delete ${Object.keys(delTarget.ids).length} expenses?` : `Delete this ${delTarget.type}? Cannot be undone.`} onConfirm={handleDelete} onCancel={() => setDelTarget(null)} />}
       {confirmAction && (
