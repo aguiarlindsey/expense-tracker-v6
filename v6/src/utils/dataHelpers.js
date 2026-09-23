@@ -94,6 +94,7 @@ export function makeExpense(partial = {}, source = 'manual') {
     budgetCategory:     partial.budgetCategory || null,
     isRecurring:        partial.isRecurring || false,
     recurringPeriod:    partial.recurringPeriod || 'monthly',
+    recurringDays:      partial.recurringDays ? parseInt(partial.recurringDays, 10) : null,
     nextDueDate:        partial.nextDueDate || '',
     splitWith:          partial.splitWith || '',
     splitParts:         parseInt(partial.splitParts || 1) || 1,

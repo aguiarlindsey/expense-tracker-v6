@@ -11,12 +11,20 @@ create table if not exists categorization_rules (
   set_category     text        not null,
   set_subcategory  text,
   set_tags         text[]      not null default '{}',
+  set_is_recurring boolean     not null default false,
+  set_recurring_period text,   -- daily|weekly|biweekly|monthly|quarterly|halfyearly|yearly|custom
+  set_recurring_days   integer, -- only used when set_recurring_period = 'custom', e.g. 84 for a recharge plan
   priority         integer     not null default 0,   -- lower number = checked first
   enabled          boolean     not null default true,
   row_version      integer     not null default 1,
   updated_at       timestamptz default now(),
   created_at       timestamptz default now()
 );
+
+-- In case an earlier run already created the table before these columns existed.
+alter table categorization_rules add column if not exists set_is_recurring boolean not null default false;
+alter table categorization_rules add column if not exists set_recurring_period text;
+alter table categorization_rules add column if not exists set_recurring_days integer;
 
 alter table categorization_rules enable row level security;
 alter table categorization_rules replica identity full;

@@ -266,3 +266,10 @@ export const RECURRING_PERIODS = [
   { val: 'quarterly', label: 'Quarterly' },
   { val: 'yearly',    label: 'Yearly' },
 ]
+// Expenses get two more options Income doesn't need: half-yearly, and an
+// arbitrary day count for things like telecom recharge plans (28/56/84 days).
+export const EXPENSE_RECURRING_PERIODS = [
+  ...RECURRING_PERIODS,
+  { val: 'halfyearly', label: 'Half-Yearly' },
+  { val: 'custom',     label: 'Custom (days)' },
+]

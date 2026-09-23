@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef, memo, Fragment } fro
 import { Zap, LayoutDashboard, DollarSign, TrendingUp, ClipboardList, RefreshCw, Settings, Home, Menu, Plane, ArrowLeftRight, Euro, PoundSterling, JapaneseYen, IndianRupee, RussianRuble, SwissFranc, PhilippinePeso, Bitcoin, Lightbulb, Store, Calendar, Wallet, Target, PlusCircle, Sun, Moon, EyeOff, Eye, Command, Search, FileDown, Mail, Car } from 'lucide-react'
 import { useStorage } from '../hooks/useStorage'
 import { useDebounce } from '../hooks/useDebounce'
-import { CATS, CM, CG, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS, FALLBACK_RATES, IncomePhIcon } from '../utils/constants'
+import { CATS, CM, CG, PAY_METHODS, UPI_APPS, WALLET_APPS, INC_SOURCES, EXP_TYPES, CURRENCIES, RECURRING_PERIODS, EXPENSE_RECURRING_PERIODS, CC, DINING_APPS, GROCERY_TAGS, FALLBACK_RATES, IncomePhIcon } from '../utils/constants'
 import GlowingEffect from './GlowingEffect'
 import AirplaneIcon from './AirplaneIcon'
 import ZapIcon from './ZapIcon'
@@ -93,14 +93,21 @@ function toINR(e) {
   if (!e.currency || e.currency === 'INR') return parseFloat(e.amount || 0)
   return parseFloat(e.amountINR || e.amount || 0)
 }
-function monthlyEquiv(amountINR, period) {
+function recurringLabel(period, days) {
+  if (period === 'custom') return days > 0 ? `every ${days}d` : 'custom'
+  if (period === 'halfyearly') return 'half-yearly'
+  return period || 'monthly'
+}
+function monthlyEquiv(amountINR, period, days) {
   switch (period) {
-    case 'daily':     return amountINR * 30.44
-    case 'weekly':    return amountINR * 4.33
-    case 'monthly':   return amountINR
-    case 'quarterly': return amountINR / 3
-    case 'yearly':    return amountINR / 12
-    default:          return amountINR
+    case 'daily':      return amountINR * 30.44
+    case 'weekly':     return amountINR * 4.33
+    case 'monthly':    return amountINR
+    case 'quarterly':  return amountINR / 3
+    case 'halfyearly': return amountINR / 6
+    case 'yearly':     return amountINR / 12
+    case 'custom':     return days > 0 ? amountINR * 30.44 / days : amountINR
+    default:           return amountINR
   }
 }
 function byDate(list) {
@@ -811,7 +818,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
     expenseType: 'variable', paymentMethod: 'UPI/QR',
     paymentDescription: '', diningApp: '', notes: '',
     tags: [], customColor: null, isRecurring: false,
-    recurringPeriod: 'monthly', nextDueDate: '',
+    recurringPeriod: 'monthly', recurringDays: '', nextDueDate: '',
     splitWith: '', splitParts: 1, receiptRef: '',
     taxAmount: 0, taxBreakdown: {},
     fuelRate: '', fuelQuantity: '', fuelType: '', odoReading: '', tripA: '', tripB: '', tripSelected: '',
@@ -849,6 +856,12 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
       s('category', match.category)
       if (match.subcategory) s('subcategory', match.subcategory)
       if (match.tags.length) s('tags', match.tags)
+      if (match.isRecurring) {
+        s('isRecurring', true)
+        s('recurringPeriod', match.recurringPeriod)
+        s('recurringDays', match.recurringDays || '')
+        s('nextDueDate', calcNextDue(form.date, match.recurringPeriod, match.recurringDays))
+      }
       setAppliedRuleHint(match.rule)
     } else {
       setAppliedRuleHint(null)
@@ -960,7 +973,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
     return () => ctrl.abort()
   }, [form.date, form.currency])
 
-  const calcNextDue = (fromDate, period) => {
+  const calcNextDue = (fromDate, period, days) => {
     const d = new Date((fromDate || today) + 'T12:00:00')
     const origDay = d.getDate()
     if (period === 'daily')      d.setDate(origDay + 1)
@@ -972,7 +985,11 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
     } else if (period === 'quarterly') {
       const nm = d.getMonth() + 3, ny = d.getFullYear() + Math.floor((d.getMonth() + 3) / 12)
       d.setFullYear(ny, nm % 12, Math.min(origDay, new Date(ny, nm % 12 + 1, 0).getDate()))
+    } else if (period === 'halfyearly') {
+      const nm = d.getMonth() + 6, ny = d.getFullYear() + Math.floor((d.getMonth() + 6) / 12)
+      d.setFullYear(ny, nm % 12, Math.min(origDay, new Date(ny, nm % 12 + 1, 0).getDate()))
     } else if (period === 'yearly') d.setFullYear(d.getFullYear() + 1)
+    else if (period === 'custom') d.setDate(origDay + (parseInt(days, 10) || 30))
     return d.toISOString().split('T')[0]
   }
 
@@ -1002,7 +1019,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
       ...form, amount: amt, splitParts: parseInt(form.splitParts) || 1,
       conversionRate: rate,
       amountINR: form.currency === 'INR' ? amt : amt * rate,
-      nextDueDate: form.isRecurring ? (form.nextDueDate || calcNextDue(form.date, form.recurringPeriod)) : '',
+      nextDueDate: form.isRecurring ? (form.nextDueDate || calcNextDue(form.date, form.recurringPeriod, form.recurringDays)) : '',
       category: primaryCat,
       categoryAllocations: catAlloc,
       vehicleCurrentKm:    form.vehicleCurrentKm    ? parseInt(form.vehicleCurrentKm, 10)    || null : null,
@@ -1149,6 +1166,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
             {appliedRuleHint && !categoryOverridden && (
               <span className="fx-conv-label" style={{ marginTop: 4, display: 'block' }}>
                 ✨ Auto-applied by rule: {appliedRuleHint.field === 'amount' ? 'amount' : appliedRuleHint.field === 'paymentMethod' ? 'payment method' : 'description'} {appliedRuleHint.operator} "{appliedRuleHint.value}"
+                {appliedRuleHint.setIsRecurring && ` — also marked recurring (${recurringLabel(appliedRuleHint.setRecurringPeriod, appliedRuleHint.setRecurringDays)})`}
               </span>
             )}
           </div>
@@ -1479,16 +1497,22 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
             <label htmlFor="exp-recurring">Recurring</label>
             {form.isRecurring && (
               <select value={form.recurringPeriod}
-                onChange={e => { s('recurringPeriod', e.target.value); s('nextDueDate', calcNextDue(form.date, e.target.value)) }}
+                onChange={e => { s('recurringPeriod', e.target.value); s('nextDueDate', calcNextDue(form.date, e.target.value, form.recurringDays)) }}
                 style={{ marginLeft: 8 }}>
-                {RECURRING_PERIODS.map(p => <option key={p.val} value={p.val}>{p.label}</option>)}
+                {EXPENSE_RECURRING_PERIODS.map(p => <option key={p.val} value={p.val}>{p.label}</option>)}
               </select>
             )}
+            {form.isRecurring && form.recurringPeriod === 'custom' && (
+              <input type="number" min="1" placeholder="e.g. 84" value={form.recurringDays || ''}
+                onChange={e => { s('recurringDays', e.target.value); s('nextDueDate', calcNextDue(form.date, 'custom', e.target.value)) }}
+                style={{ marginLeft: 8, width: 70 }} />
+            )}
+            {form.isRecurring && form.recurringPeriod === 'custom' && <span style={{ marginLeft: 4, fontSize: '0.8rem', color: 'var(--text-muted)' }}>days</span>}
           </div>
           {form.isRecurring && (
             <div className="form-group" style={{ marginTop: 8 }}>
               <label htmlFor="ef-nextdue">Next Due Date</label>
-              <input id="ef-nextdue" type="date" value={form.nextDueDate || calcNextDue(form.date, form.recurringPeriod)}
+              <input id="ef-nextdue" type="date" value={form.nextDueDate || calcNextDue(form.date, form.recurringPeriod, form.recurringDays)}
                 onChange={e => s('nextDueDate', e.target.value)} />
             </div>
           )}
@@ -3018,7 +3042,7 @@ function DebtPlannerSection({ debts, addDebt, editDebt, deleteDebt, defaultRateM
 
 const RULE_FIELD_LABEL = { description: 'Description', amount: 'Amount', paymentMethod: 'Payment Method' }
 const RULE_OPERATOR_LABEL = { contains: 'contains', equals: 'equals', gt: 'is greater than', lt: 'is less than' }
-const EMPTY_RFORM = { field: 'description', operator: 'contains', value: '', setCategory: 'Food', setSubcategory: '', priority: 0, enabled: true }
+const EMPTY_RFORM = { field: 'description', operator: 'contains', value: '', setCategory: 'Food', setSubcategory: '', priority: 0, enabled: true, setIsRecurring: false, setRecurringPeriod: 'monthly', setRecurringDays: '' }
 
 function RulesModal({ onClose, rules, addRule, editRule, deleteRule }) {
   const [showForm, setShowForm] = useState(false)
@@ -3036,6 +3060,9 @@ function RulesModal({ onClose, rules, addRule, editRule, deleteRule }) {
       field: rule.field, operator: rule.operator, value: rule.value,
       setCategory: rule.setCategory, setSubcategory: rule.setSubcategory || '',
       priority: rule.priority || 0, enabled: rule.enabled !== false,
+      setIsRecurring: rule.setIsRecurring || false,
+      setRecurringPeriod: rule.setRecurringPeriod || 'monthly',
+      setRecurringDays: rule.setRecurringDays || '',
     })
     setShowForm(true)
   }
@@ -3099,6 +3126,24 @@ function RulesModal({ onClose, rules, addRule, editRule, deleteRule }) {
                 <input type="checkbox" checked={rForm.enabled} onChange={e => rs('enabled', e.target.checked)} />
                 Enabled
               </label>
+              <label className="form-label" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
+                <input type="checkbox" checked={rForm.setIsRecurring} onChange={e => rs('setIsRecurring', e.target.checked)} />
+                Also mark matching expenses as recurring
+              </label>
+              {rForm.setIsRecurring && (
+                <>
+                  <label className="form-label">Recurring Period
+                    <select className="form-input" value={rForm.setRecurringPeriod} onChange={e => rs('setRecurringPeriod', e.target.value)}>
+                      {EXPENSE_RECURRING_PERIODS.map(p => <option key={p.val} value={p.val}>{p.label}</option>)}
+                    </select>
+                  </label>
+                  {rForm.setRecurringPeriod === 'custom' && (
+                    <label className="form-label">Every N Days
+                      <input type="number" min="1" className="form-input" placeholder="e.g. 84" value={rForm.setRecurringDays} onChange={e => rs('setRecurringDays', e.target.value)} />
+                    </label>
+                  )}
+                </>
+              )}
             </div>
             <div className="trip-form-actions">
               <button className="btn-primary" onClick={submitForm} disabled={!rForm.value.trim() || !rForm.setCategory}>
@@ -3128,6 +3173,7 @@ function RulesModal({ onClose, rules, addRule, editRule, deleteRule }) {
                   </div>
                   <div className="trip-card-meta">
                     <span>{RULE_FIELD_LABEL[rule.field]} {RULE_OPERATOR_LABEL[rule.operator]} "{rule.value}"</span>
+                    {rule.setIsRecurring && <><span className="trip-meta-dot">·</span><span>🔄 {recurringLabel(rule.setRecurringPeriod, rule.setRecurringDays)}</span></>}
                   </div>
                 </div>
                 <div className="trip-card-actions">
@@ -4843,7 +4889,7 @@ export default function Tracker({ session }) {
 
     // Recurring expense monthly equiv → daily rate
     const recExpMonthly = expenses.filter(e => e.isRecurring)
-      .reduce((s, e) => s + monthlyEquiv(toINR(e), e.recurringPeriod || 'monthly'), 0)
+      .reduce((s, e) => s + monthlyEquiv(toINR(e), e.recurringPeriod || 'monthly', e.recurringDays), 0)
     const recDailyRate = recExpMonthly / 30.44
 
     const totalDailyRate = varDailyRate + recDailyRate
@@ -7495,8 +7541,8 @@ export default function Tracker({ session }) {
         const subExp   = recurExp.filter(e => isSubType(e))
         const otherExp = recurExp.filter(e => !isSubType(e))
 
-        const subMonthlyTotal  = subExp.reduce((s, e)   => s + monthlyEquiv(toINR(e), e.recurringPeriod), 0)
-        const otherMonthlyTotal = otherExp.reduce((s, e) => s + monthlyEquiv(toINR(e), e.recurringPeriod), 0)
+        const subMonthlyTotal  = subExp.reduce((s, e)   => s + monthlyEquiv(toINR(e), e.recurringPeriod, e.recurringDays), 0)
+        const otherMonthlyTotal = otherExp.reduce((s, e) => s + monthlyEquiv(toINR(e), e.recurringPeriod, e.recurringDays), 0)
         const totalMonthly     = subMonthlyTotal + otherMonthlyTotal
 
         // Cancel-risk = recurring but no charge in 45+ days (reuse zombie data)
@@ -7520,7 +7566,7 @@ export default function Tracker({ session }) {
 
         function renderSubCard(e) {
           const amtINR   = toINR(e)
-          const moAmt    = monthlyEquiv(amtINR, e.recurringPeriod)
+          const moAmt    = monthlyEquiv(amtINR, e.recurringPeriod, e.recurringDays)
           const due      = dueBadge(e.nextDueDate)
           const key      = (e.description || '').toLowerCase().trim()
           const isZombie = zombieSet.has(key)
@@ -7535,7 +7581,7 @@ export default function Tracker({ session }) {
                 </div>
                 <div className="sub-card-meta">
                   <span>{CATS[e.category]?.icon || '📦'} {e.subcategory || e.category || 'Other'}</span>
-                  <span className="rec-period-badge">{e.recurringPeriod || 'monthly'}</span>
+                  <span className="rec-period-badge">{recurringLabel(e.recurringPeriod, e.recurringDays)}</span>
                 </div>
               </div>
               <div className="sub-card-right">
@@ -7558,7 +7604,7 @@ export default function Tracker({ session }) {
                 <div className="rec-meta">
                   {CATS[e.category]?.icon || ''} {e.category || 'Other'}
                   {e.subcategory && <span>· {e.subcategory}</span>}
-                  {e.recurringPeriod && <span className="rec-period-badge">{e.recurringPeriod}</span>}
+                  {e.recurringPeriod && <span className="rec-period-badge">{recurringLabel(e.recurringPeriod, e.recurringDays)}</span>}
                 </div>
               </div>
               <div className="rec-item-right">
