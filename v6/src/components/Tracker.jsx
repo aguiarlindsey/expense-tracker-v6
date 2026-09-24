@@ -4810,8 +4810,22 @@ export default function Tracker({ session }) {
     const topCats = Object.entries(catTotals)
       .map(([cat, amt]) => ({ cat, amt, pct: totalExp > 0 ? Math.round(amt / totalExp * 100) : 0 }))
       .sort((a, b) => b.amt - a.amt).slice(0, 5)
-    return { household: hh, expenses: hhExp, income: hhInc, totalExp, totalInc, topCats }
-  }, [householdView, households, householdExpenses, householdIncome, monthStr])
+    // Entries can come from household members with different base currencies
+    // (everything's stored in INR internally regardless of who entered it, or
+    // in what currency). Convert the INR totals to the viewing user's own
+    // base currency for display -- same INR-per-1-foreign rate table
+    // onCurrencyChange already uses. rate stays null if it can't be looked
+    // up yet (rates still loading), in which case totals fall back to
+    // showing the raw INR figure rather than a wrong conversion.
+    const rate = baseCurrency !== 'INR' ? (rateData?.rates?.[baseCurrency] || null) : 1
+    const conv = inrAmt => rate ? inrAmt / rate : inrAmt
+    return {
+      household: hh, expenses: hhExp, income: hhInc, totalExp, totalInc,
+      totalExpDisplay: conv(totalExp), totalIncDisplay: conv(totalInc),
+      topCats: topCats.map(c => ({ ...c, displayAmt: conv(c.amt) })),
+      rate,
+    }
+  }, [householdView, households, householdExpenses, householdIncome, monthStr, baseCurrency, rateData])
 
   const tripsWithData = useMemo(() => {
     return trips.map(trip => {
@@ -5547,15 +5561,20 @@ export default function Tracker({ session }) {
                     </p>
                   ) : (
                     <>
-                      <div className="trip-card-meta" style={{ marginBottom: 8 }}>
-                        <span style={{ color: 'var(--color-exp)' }}>Spent: {fmtINR(householdViewData.totalExp)}</span>
+                      <div className="trip-card-meta" style={{ marginBottom: 4 }}>
+                        <span style={{ color: 'var(--color-exp)' }}>Spent: {fmtINR(householdViewData.totalExpDisplay)}</span>
                         <span className="trip-meta-dot">·</span>
-                        <span style={{ color: 'var(--color-inc)' }}>Income: {fmtINR(householdViewData.totalInc)}</span>
+                        <span style={{ color: 'var(--color-inc)' }}>Income: {fmtINR(householdViewData.totalIncDisplay)}</span>
                       </div>
+                      {baseCurrency !== 'INR' && householdViewData.rate && (
+                        <p style={{ margin: '0 0 8px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          Entries may be in different currencies — ≈ ₹{householdViewData.totalExp.toLocaleString('en-IN')} total spend at source (1 {baseCurrency} ≈ ₹{householdViewData.rate.toFixed(2)})
+                        </p>
+                      )}
                       {householdViewData.topCats.map(c => (
                         <div key={c.cat} className="settings-row" style={{ padding: '0.25rem 0' }}>
                           <span>{CATS[c.cat]?.icon || ''} {c.cat}</span>
-                          <span>{fmtINR(c.amt)} ({c.pct}%)</span>
+                          <span>{fmtINR(c.displayAmt)} ({c.pct}%)</span>
                         </div>
                       ))}
                     </>
