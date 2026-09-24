@@ -43,13 +43,24 @@ const FUEL_ICON = { petrol: '⛽', diesel: '⛽', cng: '⛽', hydrogen: '💧', 
 // South-Asian currencies use the lakh/crore grouping (1,00,000); everything else uses standard (100,000)
 const _SA = new Set(['INR','NPR','LKR','BDT','PKR'])
 function _localeFor(code) { return _SA.has(code) ? 'en-IN' : 'en-US' }
-// Mutable — updated by Tracker when baseCurrency changes so sub-components inherit the right locale
+// Mutable — updated by Tracker when baseCurrency/rateData change so sub-components inherit the right locale/rate
 let _appCurrency = 'INR'
+// INR per 1 unit of _appCurrency (matches rateData.rates' normalization) --
+// divide an INR figure by this to get _appCurrency terms. 1 when base is INR
+// or rates haven't loaded yet.
+let _appRate = 1
 
+// Every caller passes an INR-denominated figure (via toINR()/amountINR/other
+// INR-aggregated sums, matching this codebase's universal convention) -- so
+// this converts to the user's base currency before formatting, not just the
+// symbol. A raw, not-yet-INR amount (e.g. a form's live currency input)
+// needs its own conversion before reaching this function, same as toINR()
+// would apply.
 function _fmtINR(n) {
   if (isNaN(n) || n == null) n = 0
   const c = CM[_appCurrency] || CM['INR']
-  return c.symbol + parseFloat(n).toLocaleString(_localeFor(_appCurrency), { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+  const converted = _appCurrency === 'INR' ? n : n / (_appRate || 1)
+  return c.symbol + parseFloat(converted).toLocaleString(_localeFor(_appCurrency), { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
 // Module-level alias — sub-components use this; Tracker shadows it with incognito-aware version
 const fmtINR = _fmtINR
@@ -1139,7 +1150,8 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
               </div>
               {inrPreview !== null && (
                 <div className="form-group">
-                  <label>INR Equivalent</label>
+                  {/* fmtINR converts to baseCurrency now, not literal INR -- label reflects that */}
+                  <label>{baseCurrency} Equivalent</label>
                   <div className="currency-preview">{rateFetching ? '⏳' : fmtINR(inrPreview)}</div>
                 </div>
               )}
@@ -1480,7 +1492,9 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
               <div className="form-group">
                 <label htmlFor="ef-splitparts">Total Parts (your share = 1/{form.splitParts || 2})</label>
                 <input id="ef-splitparts" type="number" min="2" max="20" value={form.splitParts || 2} onChange={e => s('splitParts', parseInt(e.target.value) || 2)} />
-                {form.amount && <div className="currency-preview">Your share: {fmtINR(parseFloat(form.amount) / (parseInt(form.splitParts) || 2))}</div>}
+                {form.amount && <div className="currency-preview">Your share: {fmtINR(
+                  (parseFloat(form.amount) * (form.currency === 'INR' ? 1 : (parseFloat(form.conversionRate) || 1))) / (parseInt(form.splitParts) || 2)
+                )}</div>}
               </div>
             )}
           </div>
@@ -1736,7 +1750,8 @@ function IncomeForm({ onSubmit, onClose, initialData, rateData, households = [],
               </div>
               {inrPreview !== null && (
                 <div className="form-group">
-                  <label>INR Equivalent</label>
+                  {/* fmtINR converts to baseCurrency now, not literal INR -- label reflects that */}
+                  <label>{baseCurrency} Equivalent</label>
                   <div className="currency-preview">{rateFetching ? '⏳' : fmtINR(inrPreview)}</div>
                 </div>
               )}
@@ -4162,6 +4177,11 @@ export default function Tracker({ session }) {
   }, [])
 
   useEffect(() => { localStorage.setItem('et_v6_base', baseCurrency); _appCurrency = baseCurrency }, [baseCurrency])
+  // rateData.rates is INR-per-1-foreign (see the fetch effect below) -- keep
+  // _appRate in sync so _fmtINR converts correctly for every caller app-wide.
+  useEffect(() => {
+    _appRate = baseCurrency !== 'INR' ? (rateData?.rates?.[baseCurrency] || 1) : 1
+  }, [baseCurrency, rateData])
   // Clear budget draft when leaving the budgets sub-tab so inputs re-sync from Supabase on return
   useEffect(() => {
     if (!(tab === 'planning' && planningTab === 'budgets')) setBudgetDraft(null)
@@ -4845,21 +4865,12 @@ export default function Tracker({ session }) {
     const topCats = Object.entries(catTotals)
       .map(([cat, amt]) => ({ cat, amt, pct: totalExp > 0 ? Math.round(amt / totalExp * 100) : 0 }))
       .sort((a, b) => b.amt - a.amt).slice(0, 5)
-    // Entries can come from household members with different base currencies
-    // (everything's stored in INR internally regardless of who entered it, or
-    // in what currency). Convert the INR totals to the viewing user's own
-    // base currency for display -- same INR-per-1-foreign rate table
-    // onCurrencyChange already uses. rate stays null if it can't be looked
-    // up yet (rates still loading), in which case totals fall back to
-    // showing the raw INR figure rather than a wrong conversion.
+    // fmtINR() now converts INR figures to the viewer's base currency itself
+    // (see _fmtINR at the top of the file), so totalExp/totalInc/topCats stay
+    // as plain INR sums here -- no separate display-conversion needed. rate
+    // is kept only for the "at source" caption below.
     const rate = baseCurrency !== 'INR' ? (rateData?.rates?.[baseCurrency] || null) : 1
-    const conv = inrAmt => rate ? inrAmt / rate : inrAmt
-    return {
-      household: hh, expenses: hhExp, income: hhInc, totalExp, totalInc,
-      totalExpDisplay: conv(totalExp), totalIncDisplay: conv(totalInc),
-      topCats: topCats.map(c => ({ ...c, displayAmt: conv(c.amt) })),
-      rate,
-    }
+    return { household: hh, expenses: hhExp, income: hhInc, totalExp, totalInc, topCats, rate }
   }, [householdView, households, householdExpenses, householdIncome, monthStr, baseCurrency, rateData])
 
   // Other members' household-tagged expenses, browsable the same way as the
@@ -5627,9 +5638,9 @@ export default function Tracker({ session }) {
                   ) : (
                     <>
                       <div className="trip-card-meta" style={{ marginBottom: 4 }}>
-                        <span style={{ color: 'var(--color-exp)' }}>Spent: {fmtINR(householdViewData.totalExpDisplay)}</span>
+                        <span style={{ color: 'var(--color-exp)' }}>Spent: {fmtINR(householdViewData.totalExp)}</span>
                         <span className="trip-meta-dot">·</span>
-                        <span style={{ color: 'var(--color-inc)' }}>Income: {fmtINR(householdViewData.totalIncDisplay)}</span>
+                        <span style={{ color: 'var(--color-inc)' }}>Income: {fmtINR(householdViewData.totalInc)}</span>
                       </div>
                       {baseCurrency !== 'INR' && householdViewData.rate && (
                         <p style={{ margin: '0 0 8px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -5639,7 +5650,7 @@ export default function Tracker({ session }) {
                       {householdViewData.topCats.map(c => (
                         <div key={c.cat} className="settings-row" style={{ padding: '0.25rem 0' }}>
                           <span>{CATS[c.cat]?.icon || ''} {c.cat}</span>
-                          <span>{fmtINR(c.displayAmt)} ({c.pct}%)</span>
+                          <span>{fmtINR(c.amt)} ({c.pct}%)</span>
                         </div>
                       ))}
                     </>
