@@ -3760,6 +3760,7 @@ export default function Tracker({ session }) {
     addRule, editRule, deleteRule,
     connections, invites, profiles, createInvite, redeemInvite,
     households, householdMembers, createHousehold, deleteHousehold, addHouseholdMember, setMemberRole, removeMember,
+    householdExpenses, householdIncome,
     bulkAddExpenses, bulkAddIncome,
     clearExpenses, clearIncome, clearAll, factoryReset,
   } = useStorage(userId)
@@ -4793,8 +4794,11 @@ export default function Tracker({ session }) {
     if (!householdView) return null
     const hh = households.find(h => h.id === householdView)
     if (!hh) return null
-    const hhExp = expenses.filter(e => e.householdId === householdView && (e.date || '').startsWith(monthStr))
-    const hhInc = income.filter(i => i.householdId === householdView && (i.date || '').startsWith(monthStr))
+    // householdExpenses/householdIncome, not expenses/income — that pair is
+    // "my own rows only" (feeds Monthly/Yearly/Insights/budgets elsewhere),
+    // while this combined view needs everyone's household-tagged rows.
+    const hhExp = householdExpenses.filter(e => e.householdId === householdView && (e.date || '').startsWith(monthStr))
+    const hhInc = householdIncome.filter(i => i.householdId === householdView && (i.date || '').startsWith(monthStr))
     const totalExp = hhExp.reduce((sum, e) => sum + toINR(e), 0)
     const totalInc = hhInc.reduce((sum, i) => sum + toINR(i), 0)
     const catTotals = {}
@@ -4803,7 +4807,7 @@ export default function Tracker({ session }) {
       .map(([cat, amt]) => ({ cat, amt, pct: totalExp > 0 ? Math.round(amt / totalExp * 100) : 0 }))
       .sort((a, b) => b.amt - a.amt).slice(0, 5)
     return { household: hh, expenses: hhExp, income: hhInc, totalExp, totalInc, topCats }
-  }, [householdView, households, expenses, income, monthStr])
+  }, [householdView, households, householdExpenses, householdIncome, monthStr])
 
   const tripsWithData = useMemo(() => {
     return trips.map(trip => {

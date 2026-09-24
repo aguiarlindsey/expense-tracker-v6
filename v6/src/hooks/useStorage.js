@@ -458,6 +458,13 @@ export function useStorage(userId) {
   const [invites,       setInvites]       = useState([])
   const [households,       setHouseholds]       = useState([])
   const [householdMembers, setHouseholdMembers] = useState([])
+  // Separate from expenses/income (which stay "my own rows only" -- those
+  // feed Monthly/Yearly/Insights/budgets everywhere else in the app, and
+  // widening them directly would leak other household members' spending
+  // into everyone's personal totals). This is only for the combined
+  // household view, which wants everyone's household-tagged rows.
+  const [householdExpenses, setHouseholdExpenses] = useState([])
+  const [householdIncome,   setHouseholdIncome]   = useState([])
   const [profiles,      setProfiles]      = useState({}) // { [userId]: { displayName, email } }
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState(null)
@@ -512,7 +519,9 @@ export function useStorage(userId) {
       supabase.from('connections').select('*').or(`user_a.eq.${userId},user_b.eq.${userId}`).order('created_at', { ascending: false }),
       supabase.from('households').select('*').order('created_at', { ascending: false }),
       supabase.from('household_members').select('*'),
-    ]).then(([expRes, incRes, budRes, gRes, cRes, tRes, vRes, ccRes, hRes, oaRes, dRes, ruRes, inRes, coRes, hhRes, hmRes]) => {
+      supabase.from('expenses').select('*').not('household_id', 'is', null).order('date', { ascending: false }),
+      supabase.from('income').select('*').not('household_id', 'is', null).order('date', { ascending: false }),
+    ]).then(([expRes, incRes, budRes, gRes, cRes, tRes, vRes, ccRes, hRes, oaRes, dRes, ruRes, inRes, coRes, hhRes, hmRes, hhExpRes, hhIncRes]) => {
       if (!mounted) return
       if (expRes.error) setError(expRes.error.message)
       if (incRes.error) setError(incRes.error.message)
@@ -556,6 +565,10 @@ export function useStorage(userId) {
       setHouseholds((hhRes.data || []).map(householdFromDb))
       if (hmRes.error) setError(hmRes.error.message)
       setHouseholdMembers((hmRes.data || []).map(householdMemberFromDb))
+      if (hhExpRes.error) setError(hhExpRes.error.message)
+      setHouseholdExpenses((hhExpRes.data || []).map(expenseFromDb))
+      if (hhIncRes.error) setError(hhIncRes.error.message)
+      setHouseholdIncome((hhIncRes.data || []).map(incomeFromDb))
       setLoading(false)
     })
     return () => { mounted = false }
@@ -1874,6 +1887,7 @@ export function useStorage(userId) {
     expenses, income, budgets, goals, contributions, trips, vehicles, creditCards, houses, otherAssets, debts, rules,
     connections, invites, profiles, createInvite, redeemInvite,
     households, householdMembers, createHousehold, deleteHousehold, addHouseholdMember, setMemberRole, removeMember,
+    householdExpenses, householdIncome,
     loading, error,
     pendingCount: queue.length,
     syncing,
