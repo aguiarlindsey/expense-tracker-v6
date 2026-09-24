@@ -3615,6 +3615,40 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
   )
 })
 
+// Star (private, only the author ever sees it) + note (visible to the
+// expense's owner too) on another household member's expense.
+function ExpenseAnnotationControls({ expenseId, myAnnotations, onToggleStar, onSaveNote }) {
+  const myStar = myAnnotations.some(a => a.kind === 'star')
+  const myNote = myAnnotations.find(a => a.kind === 'note')
+  const [editing, setEditing] = useState(false)
+  const [text, setText]       = useState('')
+
+  const startEdit = () => { setText(myNote?.note || ''); setEditing(true) }
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', padding: '0 12px 10px', fontSize: '0.8rem' }}>
+      <button className="btn-ghost btn-sm" onClick={() => onToggleStar(expenseId)}
+        title={myStar ? 'Unstar' : 'Star (private — only you see this)'}>
+        {myStar ? '⭐' : '☆'}
+      </button>
+      {editing ? (
+        <>
+          <input className="input-sm" value={text} onChange={e => setText(e.target.value)}
+            placeholder="Note for the owner…" style={{ flex: 1, minWidth: 120 }} autoFocus />
+          <button className="btn-primary-sm" onClick={() => { onSaveNote(expenseId, text); setEditing(false) }}>Save</button>
+          <button className="btn-ghost btn-sm" onClick={() => setEditing(false)}>✕</button>
+        </>
+      ) : myNote ? (
+        <span onClick={startEdit} style={{ cursor: 'pointer', color: 'var(--text-secondary)' }}>
+          🗨️ {myNote.note}
+        </span>
+      ) : (
+        <button className="btn-ghost btn-sm" onClick={startEdit}>🗨️ Add note</button>
+      )}
+    </div>
+  )
+}
+
 const IncItem = memo(function IncItem({ item, onDelete, onEdit }) {
   return (
     <div className="item" style={{ background: 'color-mix(in srgb, var(--color-inc) 5%, var(--surface))' }}>
@@ -3765,6 +3799,7 @@ export default function Tracker({ session }) {
     connections, invites, profiles, createInvite, redeemInvite,
     households, householdMembers, createHousehold, deleteHousehold, addHouseholdMember, setMemberRole, removeMember,
     householdExpenses, householdIncome,
+    expenseAnnotations, toggleStar, saveNote,
     bulkAddExpenses, bulkAddIncome,
     clearExpenses, clearIncome, clearAll, factoryReset,
   } = useStorage(userId)
@@ -4836,6 +4871,26 @@ export default function Tracker({ session }) {
     const others = householdExpenses.filter(e => e.householdId === householdView && e.userId !== userId && (e.date || '').startsWith(monthStr))
     return byDate(others)
   }, [householdView, householdExpenses, userId, monthStr])
+
+  // Notes left BY OTHERS on expenses I own (shown as a badge on my private list).
+  const notesByExpenseId = useMemo(() => {
+    const map = {}
+    expenseAnnotations.forEach(a => {
+      if (a.kind !== 'note') return
+      ;(map[a.expenseId] = map[a.expenseId] || []).push(a)
+    })
+    return map
+  }, [expenseAnnotations])
+
+  // My own star/note on expenses OTHERS own (shown as controls in the household list below).
+  const myAnnotationsByExpenseId = useMemo(() => {
+    const map = {}
+    expenseAnnotations.forEach(a => {
+      if (a.authorUserId !== userId) return
+      ;(map[a.expenseId] = map[a.expenseId] || []).push(a)
+    })
+    return map
+  }, [expenseAnnotations, userId])
 
   const tripsWithData = useMemo(() => {
     return trips.map(trip => {
@@ -6167,10 +6222,19 @@ export default function Tracker({ session }) {
                 <span>{fmtDate(date)}</span>
                 <span>{fmtINR(items.reduce((s, e) => s + toINR(e), 0))}</span>
               </div>
-              {items.map(e => <ExpItem key={e.id} item={e}
-                onDelete={id => setDelTarget({ id, type: 'expense' })}
-                onEdit={e => { setEditExpTarget(e); setShowEF(true) }}
-                bulkMode={bulkMode} isSelected={!!selectedIds[e.id]} onToggleSelect={toggleSelect} />)}
+              {items.map(e => (
+                <div key={e.id}>
+                  <ExpItem item={e}
+                    onDelete={id => setDelTarget({ id, type: 'expense' })}
+                    onEdit={e => { setEditExpTarget(e); setShowEF(true) }}
+                    bulkMode={bulkMode} isSelected={!!selectedIds[e.id]} onToggleSelect={toggleSelect} />
+                  {(notesByExpenseId[e.id] || []).map(a => (
+                    <div key={a.id} style={{ margin: '0 0 10px', padding: '4px 12px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                      🗨️ Note from {profiles[a.authorUserId]?.displayName || profiles[a.authorUserId]?.email || 'a household member'}: {a.note}
+                    </div>
+                  ))}
+                </div>
+              ))}
             </div>
           ))}
 
@@ -6187,9 +6251,15 @@ export default function Tracker({ session }) {
                     <span>{fmtDate(date)}</span>
                     <span>{fmtINR(items.reduce((s, e) => s + toINR(e), 0))}</span>
                   </div>
-                  {items.map(e => <ExpItem key={e.id} item={e}
-                    onDelete={() => {}} onEdit={() => {}}
-                    bulkMode={false} isSelected={false} onToggleSelect={() => {}} />)}
+                  {items.map(e => (
+                    <div key={e.id}>
+                      <ExpItem item={e}
+                        onDelete={() => {}} onEdit={() => {}}
+                        bulkMode={false} isSelected={false} onToggleSelect={() => {}} />
+                      <ExpenseAnnotationControls expenseId={e.id} myAnnotations={myAnnotationsByExpenseId[e.id] || []}
+                        onToggleStar={toggleStar} onSaveNote={saveNote} />
+                    </div>
+                  ))}
                 </div>
               ))}
             </>

@@ -441,6 +441,18 @@ function householdMemberFromDb(row) {
   }
 }
 
+function annotationFromDb(row) {
+  return {
+    id:           row.id,
+    expenseId:    row.expense_id,
+    authorUserId: row.author_user_id,
+    kind:         row.kind,
+    note:         row.note || '',
+    createdAt:    row.created_at || '',
+    updatedAt:    row.updated_at || '',
+  }
+}
+
 // ── Hook ─────────────────────────────────────────────────
 
 export function useStorage(userId) {
@@ -467,6 +479,7 @@ export function useStorage(userId) {
   // household view, which wants everyone's household-tagged rows.
   const [householdExpenses, setHouseholdExpenses] = useState([])
   const [householdIncome,   setHouseholdIncome]   = useState([])
+  const [expenseAnnotations, setExpenseAnnotations] = useState([])
   const [profiles,      setProfiles]      = useState({}) // { [userId]: { displayName, email } }
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState(null)
@@ -523,7 +536,8 @@ export function useStorage(userId) {
       supabase.from('household_members').select('*'),
       supabase.from('expenses').select('*').not('household_id', 'is', null).order('date', { ascending: false }),
       supabase.from('income').select('*').not('household_id', 'is', null).order('date', { ascending: false }),
-    ]).then(([expRes, incRes, budRes, gRes, cRes, tRes, vRes, ccRes, hRes, oaRes, dRes, ruRes, inRes, coRes, hhRes, hmRes, hhExpRes, hhIncRes]) => {
+      supabase.from('expense_annotations').select('*'),
+    ]).then(([expRes, incRes, budRes, gRes, cRes, tRes, vRes, ccRes, hRes, oaRes, dRes, ruRes, inRes, coRes, hhRes, hmRes, hhExpRes, hhIncRes, anRes]) => {
       if (!mounted) return
       if (expRes.error) setError(expRes.error.message)
       if (incRes.error) setError(incRes.error.message)
@@ -571,6 +585,8 @@ export function useStorage(userId) {
       setHouseholdExpenses((hhExpRes.data || []).map(expenseFromDb))
       if (hhIncRes.error) setError(hhIncRes.error.message)
       setHouseholdIncome((hhIncRes.data || []).map(incomeFromDb))
+      if (anRes.error) setError(anRes.error.message)
+      setExpenseAnnotations((anRes.data || []).map(annotationFromDb))
       setLoading(false)
     })
     return () => { mounted = false }
@@ -858,6 +874,20 @@ export function useStorage(userId) {
     }
   }
 
+  // Unfiltered, same as households/connections -- no single owning column
+  // (visible to the annotation's author OR the expense's owner), RLS gates delivery.
+  function handleAnnotationEvent(payload) {
+    if (payload.eventType === 'INSERT') {
+      const incoming = annotationFromDb(payload.new)
+      setExpenseAnnotations(prev => prev.some(a => a.id === incoming.id) ? prev : [incoming, ...prev])
+    } else if (payload.eventType === 'UPDATE') {
+      const incoming = annotationFromDb(payload.new)
+      setExpenseAnnotations(prev => prev.map(a => a.id === incoming.id ? incoming : a))
+    } else if (payload.eventType === 'DELETE') {
+      setExpenseAnnotations(prev => prev.filter(a => a.id !== payload.old.id))
+    }
+  }
+
   // ── Realtime subscription ─────────────────────────────────
   useEffect(() => {
     if (!userId) return
@@ -886,6 +916,7 @@ export function useStorage(userId) {
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'connections' }, p => handleConnectionEvent(p))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'households' }, p => handleHouseholdEvent(p))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'household_members' }, p => handleHouseholdMemberEvent(p))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expense_annotations' }, p => handleAnnotationEvent(p))
       .subscribe(status => {
         if (status === 'SUBSCRIBED')    setRealtimeStatus('live')
         else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setRealtimeStatus('error')
@@ -1772,6 +1803,46 @@ export function useStorage(userId) {
     return true
   }, [userId])
 
+  // ── Expense annotations (star/note on another member's expense) ────────
+  const toggleStar = useCallback(async (expenseId) => {
+    const existing = expenseAnnotations.find(a => a.expenseId === expenseId && a.authorUserId === userId && a.kind === 'star')
+    if (existing) {
+      const { error: err } = await supabase.from('expense_annotations').delete().eq('id', existing.id)
+      if (err) { setError(err.message); return }
+      setExpenseAnnotations(prev => prev.filter(a => a.id !== existing.id))
+      return
+    }
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
+    const { error: err } = await supabase.from('expense_annotations').insert({ id, expense_id: expenseId, author_user_id: userId, kind: 'star' })
+    if (err) { setError(err.message); return }
+    const now = new Date().toISOString()
+    setExpenseAnnotations(prev => [{ id, expenseId, authorUserId: userId, kind: 'star', note: '', createdAt: now, updatedAt: now }, ...prev])
+  }, [expenseAnnotations, userId])
+
+  // Empty text deletes the note (clearing it), matching the star's toggle-off behavior.
+  const saveNote = useCallback(async (expenseId, text) => {
+    const trimmed = (text || '').trim()
+    const existing = expenseAnnotations.find(a => a.expenseId === expenseId && a.authorUserId === userId && a.kind === 'note')
+    if (!trimmed) {
+      if (!existing) return
+      const { error: err } = await supabase.from('expense_annotations').delete().eq('id', existing.id)
+      if (err) { setError(err.message); return }
+      setExpenseAnnotations(prev => prev.filter(a => a.id !== existing.id))
+      return
+    }
+    if (existing) {
+      const { error: err } = await supabase.from('expense_annotations').update({ note: trimmed, updated_at: new Date().toISOString() }).eq('id', existing.id)
+      if (err) { setError(err.message); return }
+      setExpenseAnnotations(prev => prev.map(a => a.id === existing.id ? { ...a, note: trimmed } : a))
+      return
+    }
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
+    const { error: err } = await supabase.from('expense_annotations').insert({ id, expense_id: expenseId, author_user_id: userId, kind: 'note', note: trimmed })
+    if (err) { setError(err.message); return }
+    const now = new Date().toISOString()
+    setExpenseAnnotations(prev => [{ id, expenseId, authorUserId: userId, kind: 'note', note: trimmed, createdAt: now, updatedAt: now }, ...prev])
+  }, [expenseAnnotations, userId])
+
   // ── Bulk import ──────────────────────────────────────────
   const bulkAddExpenses = useCallback(async (exps) => {
     if (!exps.length) return { added: 0, errors: 0 }
@@ -1890,6 +1961,7 @@ export function useStorage(userId) {
     connections, invites, profiles, createInvite, redeemInvite,
     households, householdMembers, createHousehold, deleteHousehold, addHouseholdMember, setMemberRole, removeMember,
     householdExpenses, householdIncome,
+    expenseAnnotations, toggleStar, saveNote,
     loading, error,
     pendingCount: queue.length,
     syncing,
