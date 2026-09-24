@@ -41,7 +41,17 @@ export default async function handler(req, res) {
     supportedAlgorithmIDs: [-7, -257],
   })
 
-  await admin.from('registration_challenges').upsert({
+  // Delete-then-insert, not upsert(user_id) — upsert without an explicit
+  // onConflict target falls back to the table's primary key, and this table's
+  // PK is not known to be user_id from this codebase's tracked migrations.
+  // Every retry (cold-start fails, cancelled prompts, etc.) was silently
+  // inserting a new row instead of replacing the old one, so the completion
+  // step's .single() lookup below started failing once 2+ rows existed for a
+  // user — "No challenge found" — which sends them back to retry, adding yet
+  // another row. Explicit delete-then-insert guarantees exactly one row
+  // regardless of schema, and self-heals any rows already piled up.
+  await admin.from('registration_challenges').delete().eq('user_id', user.id)
+  await admin.from('registration_challenges').insert({
     user_id:    user.id,
     challenge:  options.challenge,
     expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
