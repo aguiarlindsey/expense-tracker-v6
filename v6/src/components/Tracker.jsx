@@ -5632,7 +5632,8 @@ export default function Tracker({ session }) {
               </div>
             </div>
           )}
-          {/* ── Household combined view ── */}
+          {/* ── Household selector (pills only -- the summary card + expense
+              list live together at the bottom, where the expense list starts) ── */}
           {households.length > 0 && (
             <div className="settings-section" style={{ marginBottom: 16 }}>
               <div className="theme-seg">
@@ -5641,40 +5642,6 @@ export default function Tracker({ session }) {
                   <button key={h.id} className={'theme-seg-btn' + (householdView === h.id ? ' active' : '')} onClick={() => setHouseholdView(h.id)}>🏡 {h.name}</button>
                 ))}
               </div>
-              {householdViewData && (
-                <div className="card" style={{ marginTop: 12 }}>
-                  <div className="card-title">
-                    🏡 {householdViewData.household.name} — {new Date(monthStr + '-01T12:00:00').toLocaleString('default', { month: 'long', year: 'numeric' })}
-                  </div>
-                  {householdViewData.expenses.length === 0 && householdViewData.income.length === 0 ? (
-                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                      No expenses or income tagged to this household this month yet — tag one when adding an expense/income.
-                    </p>
-                  ) : (
-                    <>
-                      <div className="trip-card-meta" style={{ marginBottom: 4 }}>
-                        <span style={{ color: 'var(--color-exp)' }}>Spent: {fmtINR(householdViewData.totalExp)}</span>
-                        <span className="trip-meta-dot">·</span>
-                        <span style={{ color: 'var(--color-inc)' }}>Income: {fmtINR(householdViewData.totalInc)}</span>
-                      </div>
-                      {baseCurrency !== 'INR' && householdViewData.rate && (
-                        <p style={{ margin: '0 0 8px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                          Entries may be in different currencies — ≈ ₹{householdViewData.totalExp.toLocaleString('en-IN')} total spend at source (1 {baseCurrency} ≈ ₹{householdViewData.rate.toFixed(2)})
-                        </p>
-                      )}
-                      {householdViewData.topCats.map(c => (
-                        <div key={c.cat} className="settings-row" style={{ padding: '0.25rem 0' }}>
-                          <span>{CATS[c.cat]?.icon || ''} {c.cat}</span>
-                          <span>{fmtINR(c.amt)} ({c.pct}%)</span>
-                        </div>
-                      ))}
-                    </>
-                  )}
-                  <p style={{ margin: '8px 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Read-only combined view — everyone's household-tagged expenses/income for this month. Edit/delete still belongs to whoever added each entry.
-                  </p>
-                </div>
-              )}
             </div>
           )}
           {/* ── Month Strip ── */}
@@ -6263,6 +6230,43 @@ export default function Tracker({ session }) {
               ))}
             </div>
           ))}
+
+          {/* ── Household combined view -- summary card, right where the
+              expense list starts, directly above the other members' list below ── */}
+          {householdViewData && (
+            <div className="card" style={{ marginTop: 20, marginBottom: 16 }}>
+              <div className="card-title">
+                🏡 {householdViewData.household.name} — {new Date(monthStr + '-01T12:00:00').toLocaleString('default', { month: 'long', year: 'numeric' })}
+              </div>
+              {householdViewData.expenses.length === 0 && householdViewData.income.length === 0 ? (
+                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  No expenses or income tagged to this household this month yet — tag one when adding an expense/income.
+                </p>
+              ) : (
+                <>
+                  <div className="trip-card-meta" style={{ marginBottom: 4 }}>
+                    <span style={{ color: 'var(--color-exp)' }}>Spent: {fmtINR(householdViewData.totalExp)}</span>
+                    <span className="trip-meta-dot">·</span>
+                    <span style={{ color: 'var(--color-inc)' }}>Income: {fmtINR(householdViewData.totalInc)}</span>
+                  </div>
+                  {baseCurrency !== 'INR' && householdViewData.rate && (
+                    <p style={{ margin: '0 0 8px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Entries may be in different currencies — ≈ ₹{householdViewData.totalExp.toLocaleString('en-IN')} total spend at source (1 {baseCurrency} ≈ ₹{householdViewData.rate.toFixed(2)})
+                    </p>
+                  )}
+                  {householdViewData.topCats.map(c => (
+                    <div key={c.cat} className="settings-row" style={{ padding: '0.25rem 0' }}>
+                      <span>{CATS[c.cat]?.icon || ''} {c.cat}</span>
+                      <span>{fmtINR(c.amt)} ({c.pct}%)</span>
+                    </div>
+                  ))}
+                </>
+              )}
+              <p style={{ margin: '8px 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                Read-only combined view — everyone's household-tagged expenses/income for this month. Edit/delete still belongs to whoever added each entry.
+              </p>
+            </div>
+          )}
 
           {/* Other household members' expenses -- same ExpItem styling/date-grouping as
               above, read-only (no-op handlers -- these aren't the viewer's own rows to edit/delete) */}
