@@ -48,8 +48,28 @@ as $$
   );
 $$;
 
-grant execute on function is_household_member(text, uuid) to authenticated;
-grant execute on function is_household_owner(text, uuid)  to authenticated;
+-- Same reasoning as the two functions above, for a third circular case: the
+-- household_members bootstrap insert policy needs to check "does this
+-- household exist and was it created by me," but a raw subquery against
+-- households would itself be subject to households' SELECT policy
+-- (is_household_member) -- which requires a household_members row that, for
+-- the founding owner, doesn't exist until THIS insert completes. Same fix,
+-- security definer bypasses that RLS internally.
+create or replace function is_household_creator(p_household_id text, p_user_id uuid)
+returns boolean
+language sql
+security definer set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from households
+    where id = p_household_id and created_by = p_user_id
+  );
+$$;
+
+grant execute on function is_household_member(text, uuid)  to authenticated;
+grant execute on function is_household_owner(text, uuid)   to authenticated;
+grant execute on function is_household_creator(text, uuid) to authenticated;
 
 -- households policies
 drop policy if exists "Members see their households"   on households;
@@ -73,7 +93,7 @@ create policy "Owners add members, or self as founding owner" on household_membe
   is_household_owner(household_id, auth.uid())
   or (
     user_id = auth.uid() and role = 'owner'
-    and exists (select 1 from households h where h.id = household_id and h.created_by = auth.uid())
+    and is_household_creator(household_id, auth.uid())
     and not exists (select 1 from household_members hm where hm.household_id = household_id)
   )
 );
