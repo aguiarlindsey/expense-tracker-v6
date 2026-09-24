@@ -1704,12 +1704,15 @@ export function useStorage(userId) {
     // otherwise correct.
     const { error: err1 } = await supabase.from('households').insert({ id, name, created_by: userId })
     if (err1) { setError(err1.message); return null }
-    const { data: mem, error: err2 } = await supabase.from('household_members')
-      .insert({ household_id: id, user_id: userId, role: 'owner' }).select().single()
+    // Same trap as above, one level deeper: this row IS the only thing that
+    // could satisfy is_household_member for the founding owner, so RETURNING
+    // it hits the identical chicken-and-egg. Skip .select() here too.
+    const { error: err2 } = await supabase.from('household_members')
+      .insert({ household_id: id, user_id: userId, role: 'owner' })
     if (err2) { setError(err2.message); return null }
     const household = { id, name, createdBy: userId, createdAt }
     setHouseholds(prev => [household, ...prev])
-    setHouseholdMembers(prev => [householdMemberFromDb(mem), ...prev])
+    setHouseholdMembers(prev => [{ householdId: id, userId, role: 'owner', createdAt }, ...prev])
     return household
   }, [userId])
 
