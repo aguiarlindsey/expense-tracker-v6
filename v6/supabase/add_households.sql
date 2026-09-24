@@ -131,10 +131,17 @@ begin
     end if;
     return new;
   elsif TG_OP = 'DELETE' then
-    if old.role = 'owner' and not exists (
-      select 1 from household_members
-      where household_id = old.household_id and role = 'owner' and user_id <> old.user_id
-    ) then
+    -- Only enforce this when the household itself still exists -- deleting
+    -- the whole household cascades into deleting the owner's own
+    -- household_members row too, which is a legitimate side effect, not a
+    -- "removed the last owner from an ongoing household" case. By the time
+    -- this cascaded delete fires, the households row is already gone.
+    if old.role = 'owner'
+       and exists (select 1 from households where id = old.household_id)
+       and not exists (
+         select 1 from household_members
+         where household_id = old.household_id and role = 'owner' and user_id <> old.user_id
+       ) then
       raise exception 'Cannot remove the last remaining owner';
     end if;
     return old;
