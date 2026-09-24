@@ -64,6 +64,18 @@ function _fmtINR(n) {
 }
 // Module-level alias — sub-components use this; Tracker shadows it with incognito-aware version
 const fmtINR = _fmtINR
+
+// Formats an amount using its OWN currency's symbol/locale, no conversion at
+// all -- for a single item whose currency already matches the viewer's base
+// currency, this is the correct display: the exact amount they entered.
+// Going through _fmtINR/toINR for that case would round-trip through INR at
+// today's rate even though nothing needs converting, silently drifting the
+// shown figure away from what was actually entered as exchange rates move
+// between entry and viewing.
+function fmtExact(amount, currencyCode) {
+  const c = CM[currencyCode] || CM['INR']
+  return c.symbol + parseFloat(amount || 0).toLocaleString(_localeFor(currencyCode), { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+}
 // Number-only formatter for budget inputs — no symbol, 2 decimal places, locale-aware grouping
 function fmtBudgetDisplay(val) {
   const n = parseFloat(val)
@@ -1079,7 +1091,9 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
 
   const toggleTag = tag => s('tags', form.tags.includes(tag) ? form.tags.filter(t => t !== tag) : [...form.tags, tag])
   const catSubs   = CATS[form.category]?.subs || []
-  const isForeign = form.currency !== 'INR'
+  // "Foreign" relative to the user's own base currency, not hardcoded INR --
+  // a CAD user entering CAD needs no rate/conversion UI at all.
+  const isForeign = form.currency !== baseCurrency
   const inrPreview = isForeign && form.amount ? parseFloat(form.amount) * (parseFloat(form.conversionRate) || 1) : null
 
   return (
@@ -1700,7 +1714,8 @@ function IncomeForm({ onSubmit, onClose, initialData, rateData, households = [],
     onClose()
   }
 
-  const isForeign  = form.currency !== 'INR'
+  // "Foreign" relative to the user's own base currency, not hardcoded INR.
+  const isForeign  = form.currency !== baseCurrency
   const inrPreview = isForeign && form.amount ? parseFloat(form.amount) * (parseFloat(form.conversionRate) || 1) : null
 
   return (
@@ -3615,9 +3630,9 @@ const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSele
       <div className="item-right">
         <div className="item-amount">
           {item._pending && <span className="item-pending" title="Pending sync">⏳</span>}
-          {fmtINR(toINR(item))}
+          {(item.currency || 'INR') === _appCurrency ? fmtExact(item.amount, item.currency) : fmtINR(toINR(item))}
         </div>
-        {item.currency !== 'INR' && <div className="item-foreign">{CM[item.currency]?.symbol || item.currency}{item.amount}</div>}
+        {item.currency !== _appCurrency && <div className="item-foreign">{CM[item.currency]?.symbol || item.currency}{item.amount}</div>}
         {!bulkMode && (
           <div className="item-actions">
             <button className="item-btn" onClick={() => onEdit(item)} aria-label="Edit expense">✏️</button>
@@ -3682,9 +3697,9 @@ const IncItem = memo(function IncItem({ item, onDelete, onEdit }) {
       <div className="item-right">
         <div className="item-amount" style={{ color: 'var(--color-inc)' }}>
           {item._pending && <span className="item-pending" title="Pending sync">⏳</span>}
-          +{fmtINR(toINR(item))}
+          +{(item.currency || 'INR') === _appCurrency ? fmtExact(item.amount, item.currency) : fmtINR(toINR(item))}
         </div>
-        {item.currency !== 'INR' && <div className="item-foreign">{CM[item.currency]?.symbol || item.currency}{item.amount}</div>}
+        {item.currency !== _appCurrency && <div className="item-foreign">{CM[item.currency]?.symbol || item.currency}{item.amount}</div>}
         <div className="item-actions">
           <button className="item-btn" onClick={() => onEdit(item)} aria-label="Edit income">✏️</button>
           <button className="item-btn item-btn-del" onClick={() => onDelete(item.id)} aria-label="Delete income">🗑️</button>
