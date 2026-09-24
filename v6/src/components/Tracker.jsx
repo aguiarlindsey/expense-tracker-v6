@@ -180,6 +180,14 @@ function BiometricSettings({ session }) {
   const [backupEmail, setBackupEmail] = useState(() => localStorage.getItem(BACKUP_EMAIL_KEY) || '')
   const [msg, setMsg]                 = useState(null)
 
+  // Warm the Lambda on mount so it's not cold when "Enable" is tapped — a slow
+  // first response here can push startRegistration() past iOS Safari's user-
+  // activation window, causing a silent NotAllowedError with no Face ID prompt
+  // ever shown. Same fix LockScreen.jsx already applies to the unlock flow.
+  useEffect(() => {
+    if (!enrolled) fetch('/api/biometric-register-options').catch(() => {})
+  }, [enrolled])
+
   async function handleEnroll() {
     setMsg(null); setError(null)
     if (backupEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(backupEmail)) {
