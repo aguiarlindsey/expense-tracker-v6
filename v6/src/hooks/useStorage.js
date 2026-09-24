@@ -415,6 +415,26 @@ function connectionFromDb(row, userId) {
   }
 }
 
+// ── Household mappers ──────────────────────────────────────
+
+function householdFromDb(row) {
+  return {
+    id:        row.id,
+    name:      row.name,
+    createdBy: row.created_by,
+    createdAt: row.created_at || '',
+  }
+}
+
+function householdMemberFromDb(row) {
+  return {
+    householdId: row.household_id,
+    userId:      row.user_id,
+    role:        row.role,
+    createdAt:   row.created_at || '',
+  }
+}
+
 // ── Hook ─────────────────────────────────────────────────
 
 export function useStorage(userId) {
@@ -432,6 +452,8 @@ export function useStorage(userId) {
   const [rules,         setRules]         = useState([])
   const [connections,   setConnections]   = useState([])
   const [invites,       setInvites]       = useState([])
+  const [households,       setHouseholds]       = useState([])
+  const [householdMembers, setHouseholdMembers] = useState([])
   const [profiles,      setProfiles]      = useState({}) // { [userId]: { displayName, email } }
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState(null)
@@ -484,7 +506,9 @@ export function useStorage(userId) {
       supabase.from('categorization_rules').select('*').eq('user_id', userId).order('priority', { ascending: true }),
       supabase.from('invites').select('*').eq('created_by', userId).order('created_at', { ascending: false }),
       supabase.from('connections').select('*').or(`user_a.eq.${userId},user_b.eq.${userId}`).order('created_at', { ascending: false }),
-    ]).then(([expRes, incRes, budRes, gRes, cRes, tRes, vRes, ccRes, hRes, oaRes, dRes, ruRes, inRes, coRes]) => {
+      supabase.from('households').select('*').order('created_at', { ascending: false }),
+      supabase.from('household_members').select('*'),
+    ]).then(([expRes, incRes, budRes, gRes, cRes, tRes, vRes, ccRes, hRes, oaRes, dRes, ruRes, inRes, coRes, hhRes, hmRes]) => {
       if (!mounted) return
       if (expRes.error) setError(expRes.error.message)
       if (incRes.error) setError(incRes.error.message)
@@ -524,15 +548,20 @@ export function useStorage(userId) {
       setInvites((inRes.data || []).map(inviteFromDb))
       if (coRes.error) setError(coRes.error.message)
       setConnections((coRes.data || []).map(row => connectionFromDb(row, userId)))
+      if (hhRes.error) setError(hhRes.error.message)
+      setHouseholds((hhRes.data || []).map(householdFromDb))
+      if (hmRes.error) setError(hmRes.error.message)
+      setHouseholdMembers((hmRes.data || []).map(householdMemberFromDb))
       setLoading(false)
     })
     return () => { mounted = false }
   }, [userId])
 
-  // ── Resolve connection/invite user_ids into display names ─
+  // ── Resolve connection/invite/household-member user_ids into display names ─
   useEffect(() => {
     const ids = new Set(connections.map(c => c.otherUserId))
     invites.forEach(i => { if (i.redeemedBy) ids.add(i.redeemedBy) })
+    householdMembers.forEach(m => ids.add(m.userId))
     const missing = [...ids].filter(id => !profiles[id])
     if (!missing.length) return
     supabase.from('profiles').select('id, display_name, email').in('id', missing).then(({ data }) => {
@@ -543,7 +572,7 @@ export function useStorage(userId) {
         return next
       })
     })
-  }, [connections, invites]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [connections, invites, householdMembers]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Realtime event handlers ───────────────────────────────
 
@@ -775,6 +804,34 @@ export function useStorage(userId) {
     }
   }
 
+  // households/household_members visibility spans multiple users (any member
+  // should see another member's changes), so — same as connections — these
+  // subscribe unfiltered; RLS gates which events each subscriber actually receives.
+  function handleHouseholdEvent(payload) {
+    if (payload.eventType === 'INSERT') {
+      const incoming = householdFromDb(payload.new)
+      setHouseholds(prev => prev.some(h => h.id === incoming.id) ? prev : [incoming, ...prev])
+    } else if (payload.eventType === 'UPDATE') {
+      setHouseholds(prev => prev.map(h => h.id === payload.new.id ? householdFromDb(payload.new) : h))
+    } else if (payload.eventType === 'DELETE') {
+      setHouseholds(prev => prev.filter(h => h.id !== payload.old.id))
+      setHouseholdMembers(prev => prev.filter(m => m.householdId !== payload.old.id))
+    }
+  }
+
+  function handleHouseholdMemberEvent(payload) {
+    if (payload.eventType === 'INSERT') {
+      const incoming = householdMemberFromDb(payload.new)
+      setHouseholdMembers(prev => prev.some(m => m.householdId === incoming.householdId && m.userId === incoming.userId) ? prev : [incoming, ...prev])
+    } else if (payload.eventType === 'UPDATE') {
+      const incoming = householdMemberFromDb(payload.new)
+      setHouseholdMembers(prev => prev.map(m => (m.householdId === incoming.householdId && m.userId === incoming.userId) ? incoming : m))
+    } else if (payload.eventType === 'DELETE') {
+      setHouseholdMembers(prev => prev.filter(m => !(m.householdId === payload.old.household_id && m.userId === payload.old.user_id)))
+      if (payload.old.user_id === userId) setHouseholds(prev => prev.filter(h => h.id !== payload.old.household_id))
+    }
+  }
+
   // ── Realtime subscription ─────────────────────────────────
   useEffect(() => {
     if (!userId) return
@@ -801,6 +858,8 @@ export function useStorage(userId) {
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'invites',              filter: `created_by=eq.${userId}` }, p => handleInviteEvent(p))
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'connections' }, p => handleConnectionEvent(p))
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'connections' }, p => handleConnectionEvent(p))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'households' }, p => handleHouseholdEvent(p))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'household_members' }, p => handleHouseholdMemberEvent(p))
       .subscribe(status => {
         if (status === 'SUBSCRIBED')    setRealtimeStatus('live')
         else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setRealtimeStatus('error')
@@ -1626,6 +1685,57 @@ export function useStorage(userId) {
     return { ok: true, otherUserId: row.other_user_id }
   }, [])
 
+  // ── Households ───────────────────────────────────────────
+  // Two sequential inserts, not Promise.all — the member-row insert's RLS
+  // policy checks that the household already exists.
+  const createHousehold = useCallback(async (name) => {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
+    const { data: hh, error: err1 } = await supabase.from('households')
+      .insert({ id, name, created_by: userId }).select().single()
+    if (err1) { setError(err1.message); return null }
+    const { data: mem, error: err2 } = await supabase.from('household_members')
+      .insert({ household_id: id, user_id: userId, role: 'owner' }).select().single()
+    if (err2) { setError(err2.message); return null }
+    const household = householdFromDb(hh)
+    setHouseholds(prev => [household, ...prev])
+    setHouseholdMembers(prev => [householdMemberFromDb(mem), ...prev])
+    return household
+  }, [userId])
+
+  const deleteHousehold = useCallback(async (id) => {
+    const { error: err } = await supabase.from('households').delete().eq('id', id)
+    if (err) { setError(err.message); return false }
+    setHouseholds(prev => prev.filter(h => h.id !== id))
+    setHouseholdMembers(prev => prev.filter(m => m.householdId !== id))
+    return true
+  }, [])
+
+  const addHouseholdMember = useCallback(async (householdId, otherUserId) => {
+    const { data, error: err } = await supabase.from('household_members')
+      .insert({ household_id: householdId, user_id: otherUserId, role: 'member' }).select().single()
+    if (err) { setError(err.message); return false }
+    setHouseholdMembers(prev => [householdMemberFromDb(data), ...prev])
+    return true
+  }, [])
+
+  const setMemberRole = useCallback(async (householdId, memberUserId, role) => {
+    const { data, error: err } = await supabase.from('household_members')
+      .update({ role }).eq('household_id', householdId).eq('user_id', memberUserId).select().single()
+    if (err) { setError(err.message); return false }
+    setHouseholdMembers(prev => prev.map(m => (m.householdId === householdId && m.userId === memberUserId) ? householdMemberFromDb(data) : m))
+    return true
+  }, [])
+
+  // Same underlying delete serves both "owner removes someone" and "self leaves" — RLS allows either.
+  const removeMember = useCallback(async (householdId, memberUserId) => {
+    const { error: err } = await supabase.from('household_members')
+      .delete().eq('household_id', householdId).eq('user_id', memberUserId)
+    if (err) { setError(err.message); return false }
+    setHouseholdMembers(prev => prev.filter(m => !(m.householdId === householdId && m.userId === memberUserId)))
+    if (memberUserId === userId) setHouseholds(prev => prev.filter(h => h.id !== householdId))
+    return true
+  }, [userId])
+
   // ── Bulk import ──────────────────────────────────────────
   const bulkAddExpenses = useCallback(async (exps) => {
     if (!exps.length) return { added: 0, errors: 0 }
@@ -1742,6 +1852,7 @@ export function useStorage(userId) {
   return {
     expenses, income, budgets, goals, contributions, trips, vehicles, creditCards, houses, otherAssets, debts, rules,
     connections, invites, profiles, createInvite, redeemInvite,
+    households, householdMembers, createHousehold, deleteHousehold, addHouseholdMember, setMemberRole, removeMember,
     loading, error,
     pendingCount: queue.length,
     syncing,

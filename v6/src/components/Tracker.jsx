@@ -3323,6 +3323,126 @@ function ConnectionsModal({ onClose, connections, invites, profiles, createInvit
   )
 }
 
+function HouseholdsModal({ onClose, userId, households, householdMembers, connections, profiles, createHousehold, deleteHousehold, addHouseholdMember, setMemberRole, removeMember }) {
+  const [newName, setNewName] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [expandedId, setExpandedId] = useState(null)
+
+  const nameFor = (uid) => profiles[uid]?.displayName || profiles[uid]?.email || 'Connected user'
+
+  const membersByHousehold = useMemo(() => {
+    const map = {}
+    householdMembers.forEach(m => { (map[m.householdId] = map[m.householdId] || []).push(m) })
+    return map
+  }, [householdMembers])
+
+  async function handleCreate() {
+    if (!newName.trim()) return
+    setCreating(true)
+    const hh = await createHousehold(newName.trim())
+    setCreating(false)
+    if (hh) { setNewName(''); setExpandedId(hh.id) }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <h2>🏡 Households</h2>
+          <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+
+        <div className="card trip-form-card" style={{ marginBottom: '0.75rem' }}>
+          <div className="card-title">Create a household</div>
+          <div className="trip-form-grid">
+            <label className="form-label">Name
+              <input className="form-input" placeholder="e.g. Sharma Family" value={newName} onChange={e => setNewName(e.target.value)} />
+            </label>
+          </div>
+          <div className="trip-form-actions">
+            <button className="btn-primary" onClick={handleCreate} disabled={creating || !newName.trim()}>
+              {creating ? 'Creating…' : '+ Create household'}
+            </button>
+          </div>
+        </div>
+
+        {households.length === 0 ? (
+          <div className="empty-state empty-state-sm">
+            <div className="empty-icon">🏡</div>
+            <h3>No households yet</h3>
+            <p>Create one, then add members from your connections.</p>
+          </div>
+        ) : (
+          <div className="trips-grid">
+            {households.map(hh => {
+              const members = membersByHousehold[hh.id] || []
+              const mine = members.find(m => m.userId === userId)
+              const isOwner = mine?.role === 'owner'
+              const soleOwner = isOwner && members.filter(m => m.role === 'owner').length === 1
+              const expanded = expandedId === hh.id
+              const availableConnections = connections.filter(c => !members.some(m => m.userId === c.otherUserId))
+              return (
+                <div key={hh.id} className="trip-card">
+                  <div className="trip-card-top" style={{ cursor: 'pointer' }} onClick={() => setExpandedId(expanded ? null : hh.id)}>
+                    <div className="trip-card-title-row">
+                      <span className="trip-card-name">🏡 {hh.name}</span>
+                      <span className={'trip-status-badge ' + (isOwner ? 'trip-badge-upcoming' : 'trip-badge-done')}>{mine?.role || 'member'}</span>
+                    </div>
+                    <div className="trip-card-meta">
+                      <span>{members.length} member{members.length === 1 ? '' : 's'}</span>
+                    </div>
+                  </div>
+
+                  {expanded && (
+                    <>
+                      <div style={{ margin: '0.5rem 0', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        {members.map(m => (
+                          <div key={m.userId} className="settings-row" style={{ padding: '0.35rem 0' }}>
+                            <div className="settings-row-label">
+                              <strong>{nameFor(m.userId)}{m.userId === userId ? ' (you)' : ''}</strong>
+                              <span>{m.role}</span>
+                            </div>
+                            {isOwner && m.userId !== userId && (
+                              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                <button className="btn-ghost btn-sm" onClick={() => setMemberRole(hh.id, m.userId, m.role === 'owner' ? 'member' : 'owner')}>
+                                  {m.role === 'owner' ? 'Demote' : 'Promote'}
+                                </button>
+                                <button className="btn-danger btn-sm" onClick={() => removeMember(hh.id, m.userId)}>Remove</button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {isOwner && availableConnections.length > 0 && (
+                        <div className="trip-form-actions" style={{ marginBottom: '0.5rem' }}>
+                          <select className="form-input" value="" onChange={e => { if (e.target.value) addHouseholdMember(hh.id, e.target.value) }}>
+                            <option value="">+ Add a connection…</option>
+                            {availableConnections.map(c => <option key={c.otherUserId} value={c.otherUserId}>{nameFor(c.otherUserId)}</option>)}
+                          </select>
+                        </div>
+                      )}
+
+                      <div className="trip-card-actions">
+                        {!soleOwner && (
+                          <button className="btn-ghost btn-sm" onClick={() => removeMember(hh.id, userId)}>🚪 Leave household</button>
+                        )}
+                        {isOwner && (
+                          <button className="btn-danger btn-sm" style={{ marginLeft: 'auto' }} onClick={() => deleteHousehold(hh.id)}>🗑️ Delete household</button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Expense / Income Items ───────────────────────────────
 
 const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSelected, onToggleSelect }) {
@@ -3613,6 +3733,7 @@ export default function Tracker({ session }) {
     addDebt, editDebt, deleteDebt,
     addRule, editRule, deleteRule,
     connections, invites, profiles, createInvite, redeemInvite,
+    households, householdMembers, createHousehold, deleteHousehold, addHouseholdMember, setMemberRole, removeMember,
     bulkAddExpenses, bulkAddIncome,
     clearExpenses, clearIncome, clearAll, factoryReset,
   } = useStorage(userId)
@@ -3657,6 +3778,7 @@ export default function Tracker({ session }) {
   const [showPersonalize, setShowPersonalize] = useState(false)
   const [showRules, setShowRules] = useState(false)
   const [showConnections, setShowConnections] = useState(false)
+  const [showHouseholds, setShowHouseholds] = useState(false)
   const [budgetDraft, setBudgetDraft]     = useState(null)
   const [focusedBudget, setFocusedBudget] = useState(null)
   const [dark, setDark]                   = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s !== null ? s === '1' : window.matchMedia('(prefers-color-scheme: dark)').matches })
@@ -7348,6 +7470,13 @@ export default function Tracker({ session }) {
               </div>
               <button className="btn-primary" onClick={() => setShowConnections(true)}>Open Connections</button>
             </div>
+            <div className="settings-row">
+              <div className="settings-row-label">
+                <strong>Households</strong>
+                <span>Group connections into a named household with owner/member roles — the basis for a combined view and real splits, coming next.</span>
+              </div>
+              <button className="btn-primary" onClick={() => setShowHouseholds(true)}>Open Households</button>
+            </div>
           </div>
 
           {/* Appearance */}
@@ -7873,6 +8002,7 @@ export default function Tracker({ session }) {
       {showPersonalize && <PersonalizeModal onClose={() => setShowPersonalize(false)} vehicles={vehicles} creditCards={creditCards} houses={houses} otherAssets={otherAssets} expenses={expenses} addVehicle={addVehicle} editVehicle={editVehicle} deleteVehicle={deleteVehicle} addCreditCard={addCreditCard} editCreditCard={editCreditCard} deleteCreditCard={deleteCreditCard} addHouse={addHouse} editHouse={editHouse} deleteHouse={deleteHouse} addOtherAsset={addOtherAsset} editOtherAsset={editOtherAsset} deleteOtherAsset={deleteOtherAsset} editExpense={editExpense} />}
       {showRules && <RulesModal onClose={() => setShowRules(false)} rules={rules} addRule={addRule} editRule={editRule} deleteRule={deleteRule} />}
       {showConnections && <ConnectionsModal onClose={() => setShowConnections(false)} connections={connections} invites={invites} profiles={profiles} createInvite={createInvite} redeemInvite={redeemInvite} />}
+      {showHouseholds && <HouseholdsModal onClose={() => setShowHouseholds(false)} userId={userId} households={households} householdMembers={householdMembers} connections={connections} profiles={profiles} createHousehold={createHousehold} deleteHousehold={deleteHousehold} addHouseholdMember={addHouseholdMember} setMemberRole={setMemberRole} removeMember={removeMember} />}
       {showIF && <IncomeForm  initialData={editIncTarget} onSubmit={editIncTarget ? handleEditIncome  : handleAddIncome}  onClose={() => { setShowIF(false); setEditIncTarget(null) }} rateData={rateData} />}
       {delTarget && <ConfirmDialog message={delTarget.many ? `Permanently delete ${Object.keys(delTarget.ids).length} expenses?` : `Delete this ${delTarget.type}? Cannot be undone.`} onConfirm={handleDelete} onCancel={() => setDelTarget(null)} />}
       {confirmAction && (
