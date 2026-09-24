@@ -4827,6 +4827,16 @@ export default function Tracker({ session }) {
     }
   }, [householdView, households, householdExpenses, householdIncome, monthStr, baseCurrency, rateData])
 
+  // Other members' household-tagged expenses, browsable the same way as the
+  // private list below (grouped by date, rendered via ExpItem) -- my own
+  // household-tagged rows are already in the private list via `expenses`,
+  // so this only needs whoever else's.
+  const othersHouseholdExpGrouped = useMemo(() => {
+    if (!householdView) return []
+    const others = householdExpenses.filter(e => e.householdId === householdView && e.userId !== userId && (e.date || '').startsWith(monthStr))
+    return byDate(others)
+  }, [householdView, householdExpenses, userId, monthStr])
+
   const tripsWithData = useMemo(() => {
     return trips.map(trip => {
       const matched = expenses.filter(e => e.date >= trip.startDate && e.date <= trip.endDate && (e.currency || 'INR') === (trip.currency || 'INR'))
@@ -6163,6 +6173,27 @@ export default function Tracker({ session }) {
                 bulkMode={bulkMode} isSelected={!!selectedIds[e.id]} onToggleSelect={toggleSelect} />)}
             </div>
           ))}
+
+          {/* Other household members' expenses -- same ExpItem styling/date-grouping as
+              above, read-only (no-op handlers -- these aren't the viewer's own rows to edit/delete) */}
+          {householdView && othersHouseholdExpGrouped.length > 0 && (
+            <>
+              <div className="date-group-header" style={{ marginTop: 20 }}>
+                <span>🏡 {households.find(h => h.id === householdView)?.name} — other members, this month</span>
+              </div>
+              {othersHouseholdExpGrouped.map(([date, items]) => (
+                <div key={date} className="date-group">
+                  <div className="date-group-header">
+                    <span>{fmtDate(date)}</span>
+                    <span>{fmtINR(items.reduce((s, e) => s + toINR(e), 0))}</span>
+                  </div>
+                  {items.map(e => <ExpItem key={e.id} item={e}
+                    onDelete={() => {}} onEdit={() => {}}
+                    bulkMode={false} isSelected={false} onToggleSelect={() => {}} />)}
+                </div>
+              ))}
+            </>
+          )}
         </section>
       )}
 
