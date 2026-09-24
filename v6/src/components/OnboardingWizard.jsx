@@ -41,6 +41,11 @@ export default function OnboardingWizard({ session, onComplete }) {
     if (form.displayName.trim()) meta.display_name = form.displayName.trim()
     meta.base_currency = form.baseCurrency
     await supabase.auth.updateUser({ data: meta })
+    if (form.displayName.trim()) {
+      // user_metadata doesn't auto-propagate to profiles — keep it in sync
+      // so connections can resolve this user's name for other people.
+      await supabase.from('profiles').update({ display_name: form.displayName.trim() }).eq('id', session.user.id)
+    }
 
     localStorage.setItem('et_v6_base', form.baseCurrency)
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Zap, Mail } from 'lucide-react'
 import { supabase } from '../utils/supabase'
 
@@ -7,6 +7,13 @@ export default function Auth() {
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState(null)
+
+  // Stash ?invite=CODE now — the magic-link redirect can drop query params,
+  // but sessionStorage survives it. Redeemed once onboarding completes.
+  useEffect(() => {
+    const invite = new URLSearchParams(window.location.search).get('invite')
+    if (invite) sessionStorage.setItem('et_v6_pending_invite', invite)
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()

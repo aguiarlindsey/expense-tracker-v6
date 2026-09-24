@@ -393,6 +393,28 @@ function ruleFromDb(row) {
   }
 }
 
+// ── Connection / Invite mappers ────────────────────────────
+
+function inviteFromDb(row) {
+  return {
+    id:         row.id,
+    code:       row.code,
+    status:     row.status,
+    redeemedBy: row.redeemed_by || null,
+    redeemedAt: row.redeemed_at || '',
+    expiresAt:  row.expires_at,
+    createdAt:  row.created_at || '',
+  }
+}
+
+function connectionFromDb(row, userId) {
+  return {
+    id:          row.id,
+    otherUserId: row.user_a === userId ? row.user_b : row.user_a,
+    createdAt:   row.created_at || '',
+  }
+}
+
 // ── Hook ─────────────────────────────────────────────────
 
 export function useStorage(userId) {
@@ -408,6 +430,9 @@ export function useStorage(userId) {
   const [otherAssets,   setOtherAssets]   = useState([])
   const [debts,         setDebts]         = useState([])
   const [rules,         setRules]         = useState([])
+  const [connections,   setConnections]   = useState([])
+  const [invites,       setInvites]       = useState([])
+  const [profiles,      setProfiles]      = useState({}) // { [userId]: { displayName, email } }
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState(null)
   const [syncing,         setSyncing]         = useState(false)
@@ -457,7 +482,9 @@ export function useStorage(userId) {
       supabase.from('other_assets').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
       supabase.from('debts').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
       supabase.from('categorization_rules').select('*').eq('user_id', userId).order('priority', { ascending: true }),
-    ]).then(([expRes, incRes, budRes, gRes, cRes, tRes, vRes, ccRes, hRes, oaRes, dRes, ruRes]) => {
+      supabase.from('invites').select('*').eq('created_by', userId).order('created_at', { ascending: false }),
+      supabase.from('connections').select('*').or(`user_a.eq.${userId},user_b.eq.${userId}`).order('created_at', { ascending: false }),
+    ]).then(([expRes, incRes, budRes, gRes, cRes, tRes, vRes, ccRes, hRes, oaRes, dRes, ruRes, inRes, coRes]) => {
       if (!mounted) return
       if (expRes.error) setError(expRes.error.message)
       if (incRes.error) setError(incRes.error.message)
@@ -493,10 +520,30 @@ export function useStorage(userId) {
       setDebts((dRes.data || []).map(debtFromDb))
       if (ruRes.error) setError(ruRes.error.message)
       setRules((ruRes.data || []).map(ruleFromDb))
+      if (inRes.error) setError(inRes.error.message)
+      setInvites((inRes.data || []).map(inviteFromDb))
+      if (coRes.error) setError(coRes.error.message)
+      setConnections((coRes.data || []).map(row => connectionFromDb(row, userId)))
       setLoading(false)
     })
     return () => { mounted = false }
   }, [userId])
+
+  // ── Resolve connection/invite user_ids into display names ─
+  useEffect(() => {
+    const ids = new Set(connections.map(c => c.otherUserId))
+    invites.forEach(i => { if (i.redeemedBy) ids.add(i.redeemedBy) })
+    const missing = [...ids].filter(id => !profiles[id])
+    if (!missing.length) return
+    supabase.from('profiles').select('id, display_name, email').in('id', missing).then(({ data }) => {
+      if (!data || !data.length) return
+      setProfiles(prev => {
+        const next = { ...prev }
+        data.forEach(p => { next[p.id] = { displayName: p.display_name || '', email: p.email || '' } })
+        return next
+      })
+    })
+  }, [connections, invites]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Realtime event handlers ───────────────────────────────
 
@@ -704,6 +751,30 @@ export function useStorage(userId) {
     }
   }
 
+  function handleInviteEvent(payload) {
+    if (payload.eventType === 'INSERT') {
+      const incoming = inviteFromDb(payload.new)
+      setInvites(prev => prev.some(i => i.id === incoming.id) ? prev : [incoming, ...prev])
+    } else if (payload.eventType === 'UPDATE') {
+      setInvites(prev => prev.map(i => i.id === payload.new.id ? inviteFromDb(payload.new) : i))
+    } else if (payload.eventType === 'DELETE') {
+      setInvites(prev => prev.filter(i => i.id !== payload.old.id))
+    }
+  }
+
+  // connections has no single user_id column (user_a/user_b), so the
+  // subscription below is unfiltered — filter client-side here instead.
+  function handleConnectionEvent(payload) {
+    const row = payload.new || payload.old
+    if (row.user_a !== userId && row.user_b !== userId) return
+    if (payload.eventType === 'INSERT') {
+      const incoming = connectionFromDb(payload.new, userId)
+      setConnections(prev => prev.some(c => c.id === incoming.id) ? prev : [incoming, ...prev])
+    } else if (payload.eventType === 'DELETE') {
+      setConnections(prev => prev.filter(c => c.id !== payload.old.id))
+    }
+  }
+
   // ── Realtime subscription ─────────────────────────────────
   useEffect(() => {
     if (!userId) return
@@ -727,6 +798,9 @@ export function useStorage(userId) {
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'other_assets',        filter: `user_id=eq.${userId}` }, p => handleOtherAssetEvent(p))
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'debts',                filter: `user_id=eq.${userId}` }, p => handleDebtEvent(p))
       .on('postgres_changes', { event: '*',      schema: 'public', table: 'categorization_rules',  filter: `user_id=eq.${userId}` }, p => handleRuleEvent(p))
+      .on('postgres_changes', { event: '*',      schema: 'public', table: 'invites',              filter: `created_by=eq.${userId}` }, p => handleInviteEvent(p))
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'connections' }, p => handleConnectionEvent(p))
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'connections' }, p => handleConnectionEvent(p))
       .subscribe(status => {
         if (status === 'SUBSCRIBED')    setRealtimeStatus('live')
         else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setRealtimeStatus('error')
@@ -1525,6 +1599,33 @@ export function useStorage(userId) {
     else if (err) setError(err.message)
   }, [userId, enqueue])
 
+  // ── Connections / Invites ─────────────────────────────────
+  // No offline queue here — generating/redeeming a code is a rare, deliberate
+  // action (not a data-entry path like expenses), so a plain online-only call
+  // with an error message is enough.
+  const createInvite = useCallback(async () => {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
+    const code = Math.random().toString(36).slice(2, 8).toUpperCase()
+    const { data, error: err } = await supabase.from('invites')
+      .insert({ id, code, created_by: userId })
+      .select().single()
+    if (err) { setError(err.message); return null }
+    const invite = inviteFromDb(data)
+    setInvites(prev => [invite, ...prev])
+    return invite
+  }, [userId])
+
+  const redeemInvite = useCallback(async (code) => {
+    const { data, error: err } = await supabase.rpc('redeem_invite', { p_code: code.trim().toUpperCase() })
+    if (err) return { ok: false, error: err.message }
+    const row = Array.isArray(data) ? data[0] : data
+    if (!row) return { ok: false, error: 'Redemption failed' }
+    setConnections(prev => prev.some(c => c.id === row.connection_id)
+      ? prev
+      : [{ id: row.connection_id, otherUserId: row.other_user_id, createdAt: new Date().toISOString() }, ...prev])
+    return { ok: true, otherUserId: row.other_user_id }
+  }, [])
+
   // ── Bulk import ──────────────────────────────────────────
   const bulkAddExpenses = useCallback(async (exps) => {
     if (!exps.length) return { added: 0, errors: 0 }
@@ -1640,6 +1741,7 @@ export function useStorage(userId) {
 
   return {
     expenses, income, budgets, goals, contributions, trips, vehicles, creditCards, houses, otherAssets, debts, rules,
+    connections, invites, profiles, createInvite, redeemInvite,
     loading, error,
     pendingCount: queue.length,
     syncing,

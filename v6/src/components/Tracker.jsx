@@ -3190,6 +3190,139 @@ function RulesModal({ onClose, rules, addRule, editRule, deleteRule }) {
   )
 }
 
+function ConnectionsModal({ onClose, connections, invites, profiles, createInvite, redeemInvite }) {
+  const [generating, setGenerating] = useState(false)
+  const [lastInvite, setLastInvite] = useState(null)
+  const [redeemCode, setRedeemCode] = useState('')
+  const [redeeming, setRedeeming] = useState(false)
+  const [redeemMsg, setRedeemMsg] = useState(null) // { ok, text }
+
+  const nameFor = (uid) => profiles[uid]?.displayName || profiles[uid]?.email || 'Connected user'
+
+  async function handleGenerate() {
+    setGenerating(true)
+    const invite = await createInvite()
+    setGenerating(false)
+    if (invite) setLastInvite(invite)
+  }
+
+  async function handleShare(code) {
+    const url = `${window.location.origin}${window.location.pathname}?invite=${code}`
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Expense Tracker invite', text: `Join me on Expense Tracker — use code ${code}`, url }); return } catch { /* user cancelled */ }
+    }
+    try { await navigator.clipboard.writeText(url) } catch { /* clipboard unavailable */ }
+  }
+
+  async function handleRedeem() {
+    if (!redeemCode.trim()) return
+    setRedeeming(true)
+    const result = await redeemInvite(redeemCode)
+    setRedeeming(false)
+    if (result.ok) {
+      setRedeemMsg({ ok: true, text: `Connected with ${nameFor(result.otherUserId)}` })
+      setRedeemCode('')
+    } else {
+      setRedeemMsg({ ok: false, text: result.error })
+    }
+  }
+
+  const invitesToShow = useMemo(() => [...invites].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')), [invites])
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <h2>👥 Connections</h2>
+          <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+
+        <div className="card trip-form-card" style={{ marginBottom: '0.75rem' }}>
+          <div className="card-title">Invite someone</div>
+          <p style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            Generates a one-time code, valid 14 days. Once they redeem it, you're connected — you can decide later whether to add them to a household or split an expense with them.
+          </p>
+          <div className="trip-form-actions">
+            <button className="btn-primary" onClick={handleGenerate} disabled={generating}>
+              {generating ? 'Generating…' : '+ Generate invite code'}
+            </button>
+          </div>
+          {lastInvite && (
+            <div className="settings-row" style={{ marginTop: '0.75rem' }}>
+              <div className="settings-row-label">
+                <strong style={{ fontSize: '1.1rem', letterSpacing: '0.1em' }}>{lastInvite.code}</strong>
+                <span>Expires {new Date(lastInvite.expiresAt).toLocaleDateString()}</span>
+              </div>
+              <button className="btn-ghost btn-sm" onClick={() => handleShare(lastInvite.code)}>📤 Share</button>
+            </div>
+          )}
+        </div>
+
+        <div className="card trip-form-card" style={{ marginBottom: '0.75rem' }}>
+          <div className="card-title">Redeem a code</div>
+          <div className="trip-form-grid">
+            <label className="form-label">Invite code
+              <input className="form-input" placeholder="e.g. AB12CD" value={redeemCode}
+                onChange={e => { setRedeemCode(e.target.value); setRedeemMsg(null) }} />
+            </label>
+          </div>
+          <div className="trip-form-actions">
+            <button className="btn-primary" onClick={handleRedeem} disabled={redeeming || !redeemCode.trim()}>
+              {redeeming ? 'Redeeming…' : 'Redeem'}
+            </button>
+          </div>
+          {redeemMsg && (
+            <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', color: redeemMsg.ok ? 'var(--color-inc)' : 'var(--color-exp)' }}>
+              {redeemMsg.ok ? '✅' : '⚠️'} {redeemMsg.text}
+            </p>
+          )}
+        </div>
+
+        <div className="card-title" style={{ marginBottom: '0.5rem' }}>Your connections</div>
+        {connections.length === 0 ? (
+          <div className="empty-state empty-state-sm">
+            <div className="empty-icon">👥</div>
+            <h3>No connections yet</h3>
+            <p>Generate an invite code and share it, or redeem one someone sent you.</p>
+          </div>
+        ) : (
+          <div className="trips-grid" style={{ marginBottom: '0.75rem' }}>
+            {connections.map(c => (
+              <div key={c.id} className="trip-card">
+                <div className="trip-card-top">
+                  <div className="trip-card-title-row">
+                    <span className="trip-card-name">👤 {nameFor(c.otherUserId)}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {invitesToShow.length > 0 && (
+          <>
+            <div className="card-title" style={{ marginBottom: '0.5rem' }}>Codes you've generated</div>
+            <div className="trips-grid">
+              {invitesToShow.map(inv => (
+                <div key={inv.id} className="trip-card">
+                  <div className="trip-card-top">
+                    <div className="trip-card-title-row">
+                      <span className="trip-card-name">{inv.code}</span>
+                      <span className={'trip-status-badge ' + (inv.status === 'redeemed' ? 'trip-badge-done' : 'trip-badge-upcoming')}>
+                        {inv.status === 'redeemed' ? `redeemed by ${nameFor(inv.redeemedBy)}` : new Date(inv.expiresAt) < new Date() ? 'expired' : 'pending'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Expense / Income Items ───────────────────────────────
 
 const ExpItem = memo(function ExpItem({ item, onDelete, onEdit, bulkMode, isSelected, onToggleSelect }) {
@@ -3479,9 +3612,20 @@ export default function Tracker({ session }) {
     addOtherAsset, editOtherAsset, deleteOtherAsset,
     addDebt, editDebt, deleteDebt,
     addRule, editRule, deleteRule,
+    connections, invites, profiles, createInvite, redeemInvite,
     bulkAddExpenses, bulkAddIncome,
     clearExpenses, clearIncome, clearAll, factoryReset,
   } = useStorage(userId)
+
+  // Redeem an invite code Auth.jsx stashed before the magic-link redirect, if
+  // any — covers both a just-onboarded user and an already-onboarded one
+  // clicking an invite link. Best-effort; Settings → Connections has a manual fallback.
+  useEffect(() => {
+    const pendingInvite = sessionStorage.getItem('et_v6_pending_invite')
+    if (!pendingInvite) return
+    sessionStorage.removeItem('et_v6_pending_invite')
+    redeemInvite(pendingInvite)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const {
     permission:          notifPermission,
@@ -3512,6 +3656,7 @@ export default function Tracker({ session }) {
   })
   const [showPersonalize, setShowPersonalize] = useState(false)
   const [showRules, setShowRules] = useState(false)
+  const [showConnections, setShowConnections] = useState(false)
   const [budgetDraft, setBudgetDraft]     = useState(null)
   const [focusedBudget, setFocusedBudget] = useState(null)
   const [dark, setDark]                   = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s !== null ? s === '1' : window.matchMedia('(prefers-color-scheme: dark)').matches })
@@ -7193,6 +7338,18 @@ export default function Tracker({ session }) {
             </div>
           </div>
 
+          {/* Household — Connections & Invites */}
+          <div className="settings-section">
+            <h3><span aria-hidden="true">👥</span> Household</h3>
+            <div className="settings-row">
+              <div className="settings-row-label">
+                <strong>Connections</strong>
+                <span>Generate an invite code to share with family or friends, or redeem a code someone shared with you. Redeeming just connects you two — nothing is shared automatically.</span>
+              </div>
+              <button className="btn-primary" onClick={() => setShowConnections(true)}>Open Connections</button>
+            </div>
+          </div>
+
           {/* Appearance */}
           <div className="settings-section">
             <h3><span aria-hidden="true">🎨</span> Appearance</h3>
@@ -7715,6 +7872,7 @@ export default function Tracker({ session }) {
       {showEF && <ExpenseForm initialData={editExpTarget} onSubmit={editExpTarget ? handleEditExpense : handleAddExpense} onClose={() => { setShowEF(false); setEditExpTarget(null) }} rateData={rateData} vehicles={vehicles} creditCards={creditCards} houses={houses} otherAssets={otherAssets} rules={rules} />}
       {showPersonalize && <PersonalizeModal onClose={() => setShowPersonalize(false)} vehicles={vehicles} creditCards={creditCards} houses={houses} otherAssets={otherAssets} expenses={expenses} addVehicle={addVehicle} editVehicle={editVehicle} deleteVehicle={deleteVehicle} addCreditCard={addCreditCard} editCreditCard={editCreditCard} deleteCreditCard={deleteCreditCard} addHouse={addHouse} editHouse={editHouse} deleteHouse={deleteHouse} addOtherAsset={addOtherAsset} editOtherAsset={editOtherAsset} deleteOtherAsset={deleteOtherAsset} editExpense={editExpense} />}
       {showRules && <RulesModal onClose={() => setShowRules(false)} rules={rules} addRule={addRule} editRule={editRule} deleteRule={deleteRule} />}
+      {showConnections && <ConnectionsModal onClose={() => setShowConnections(false)} connections={connections} invites={invites} profiles={profiles} createInvite={createInvite} redeemInvite={redeemInvite} />}
       {showIF && <IncomeForm  initialData={editIncTarget} onSubmit={editIncTarget ? handleEditIncome  : handleAddIncome}  onClose={() => { setShowIF(false); setEditIncTarget(null) }} rateData={rateData} />}
       {delTarget && <ConfirmDialog message={delTarget.many ? `Permanently delete ${Object.keys(delTarget.ids).length} expenses?` : `Delete this ${delTarget.type}? Cannot be undone.`} onConfirm={handleDelete} onCancel={() => setDelTarget(null)} />}
       {confirmAction && (
