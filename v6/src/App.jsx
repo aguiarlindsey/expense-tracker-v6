@@ -8,9 +8,11 @@ import Tracker from './components/Tracker'
 import LockScreen from './components/LockScreen'
 import OnboardingWizard from './components/OnboardingWizard'
 
-const ENROLLED_KEY = 'et_v6_biometric_enrolled'
-const USER_ID_KEY  = 'et_v6_user_id'
-const EMAIL_KEY    = 'et_v6_user_email'
+const ENROLLED_KEY      = 'et_v6_biometric_enrolled'
+const USER_ID_KEY       = 'et_v6_user_id'
+const EMAIL_KEY         = 'et_v6_user_email'
+const BACKUP_EMAIL_KEY  = 'et_v6_backup_email'
+const CREDENTIAL_ID_KEY = 'et_v6_credential_id'
 
 export default function App() {
   const { session, loading } = useAuth()
@@ -42,7 +44,20 @@ export default function App() {
     requestAnimationFrame(() => localStorage.removeItem('et_v6_unlocking'))
   }
 
-  async function handleSignOut() { await supabase.auth.signOut() }
+  async function handleSignOut() {
+    // These keys are singular, not per-account — on a browser used for more
+    // than one account (e.g. testing Connections), leaving them set after
+    // sign-out means the next sign-in inherits a stale et_v6_user_id, and a
+    // future biometric unlock can silently restore the WRONG account's
+    // session via verifyOtp(). Clear them here, same list as useBiometric's
+    // removeEnrollment(), so every sign-out starts the next session clean.
+    localStorage.removeItem(ENROLLED_KEY)
+    localStorage.removeItem(USER_ID_KEY)
+    localStorage.removeItem(EMAIL_KEY)
+    localStorage.removeItem(BACKUP_EMAIL_KEY)
+    localStorage.removeItem(CREDENTIAL_ID_KEY)
+    await supabase.auth.signOut()
+  }
 
   if (loading || signingOut) {
     return <div className="app-loading"><div className="spinner" /></div>
