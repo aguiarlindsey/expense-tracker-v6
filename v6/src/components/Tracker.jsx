@@ -810,8 +810,11 @@ function useBottomSheet(onClose) {
 
 // ─── Expense Form ─────────────────────────────────────────
 
-function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], creditCards = [], houses = [], otherAssets = [], rules = [], households = [] }) {
+function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], creditCards = [], houses = [], otherAssets = [], rules = [], households = [], baseCurrency = 'INR' }) {
   const today = new Date().toISOString().split('T')[0]
+  // New entries default to the user's base currency, not a hardcoded INR --
+  // rateData.rates is INR-relative (see onCurrencyChange below), same lookup.
+  const defaultRate = baseCurrency !== 'INR' && rateData?.rates?.[baseCurrency] ? parseFloat(rateData.rates[baseCurrency].toFixed(6)) : 1
   const [form, setForm] = useState(initialData ? {
     useCatAlloc: !!(initialData.categoryAllocations && Object.keys(initialData.categoryAllocations || {}).length),
     categoryAllocations: initialData.categoryAllocations || {},
@@ -821,8 +824,8 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
     serviceParts: Array.isArray(initialData.serviceParts) ? initialData.serviceParts : [],
     ...initialData,
   } : {
-    date: today, description: '', amount: '', currency: 'INR',
-    conversionRate: 1, category: 'Food', subcategory: '',
+    date: today, description: '', amount: '', currency: baseCurrency,
+    conversionRate: defaultRate, category: 'Food', subcategory: '',
     expenseType: 'variable', paymentMethod: 'UPI/QR',
     paymentDescription: '', diningApp: '', notes: '',
     tags: [], customColor: null, isRecurring: false,
@@ -1622,11 +1625,12 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
 
 // ─── Income Form ──────────────────────────────────────────
 
-function IncomeForm({ onSubmit, onClose, initialData, rateData, households = [] }) {
+function IncomeForm({ onSubmit, onClose, initialData, rateData, households = [], baseCurrency = 'INR' }) {
   const today = new Date().toISOString().split('T')[0]
+  const defaultRate = baseCurrency !== 'INR' && rateData?.rates?.[baseCurrency] ? parseFloat(rateData.rates[baseCurrency].toFixed(6)) : 1
   const [form, setForm] = useState(initialData ? { ...initialData } : {
-    date: today, description: '', amount: '', currency: 'INR',
-    conversionRate: 1, source: 'Salary', paymentMethod: 'Net Banking', notes: '',
+    date: today, description: '', amount: '', currency: baseCurrency,
+    conversionRate: defaultRate, source: 'Salary', paymentMethod: 'Net Banking', notes: '',
     isRecurring: false, recurringPeriod: 'monthly', householdId: '',
   })
   const [rateFetching, setRateFetching] = useState(false)
@@ -8085,12 +8089,12 @@ export default function Tracker({ session }) {
 
       {/* ── Modals ── */}
       <CommandPalette open={showCmd} onClose={() => setShowCmd(false)} commands={cmdCommands} />
-      {showEF && <ExpenseForm initialData={editExpTarget} onSubmit={editExpTarget ? handleEditExpense : handleAddExpense} onClose={() => { setShowEF(false); setEditExpTarget(null) }} rateData={rateData} vehicles={vehicles} creditCards={creditCards} houses={houses} otherAssets={otherAssets} rules={rules} households={households} />}
+      {showEF && <ExpenseForm initialData={editExpTarget} onSubmit={editExpTarget ? handleEditExpense : handleAddExpense} onClose={() => { setShowEF(false); setEditExpTarget(null) }} rateData={rateData} vehicles={vehicles} creditCards={creditCards} houses={houses} otherAssets={otherAssets} rules={rules} households={households} baseCurrency={baseCurrency} />}
       {showPersonalize && <PersonalizeModal onClose={() => setShowPersonalize(false)} vehicles={vehicles} creditCards={creditCards} houses={houses} otherAssets={otherAssets} expenses={expenses} addVehicle={addVehicle} editVehicle={editVehicle} deleteVehicle={deleteVehicle} addCreditCard={addCreditCard} editCreditCard={editCreditCard} deleteCreditCard={deleteCreditCard} addHouse={addHouse} editHouse={editHouse} deleteHouse={deleteHouse} addOtherAsset={addOtherAsset} editOtherAsset={editOtherAsset} deleteOtherAsset={deleteOtherAsset} editExpense={editExpense} />}
       {showRules && <RulesModal onClose={() => setShowRules(false)} rules={rules} addRule={addRule} editRule={editRule} deleteRule={deleteRule} />}
       {showConnections && <ConnectionsModal onClose={() => setShowConnections(false)} connections={connections} invites={invites} profiles={profiles} createInvite={createInvite} redeemInvite={redeemInvite} />}
       {showHouseholds && <HouseholdsModal onClose={() => setShowHouseholds(false)} userId={userId} households={households} householdMembers={householdMembers} connections={connections} profiles={profiles} createHousehold={createHousehold} deleteHousehold={deleteHousehold} addHouseholdMember={addHouseholdMember} setMemberRole={setMemberRole} removeMember={removeMember} />}
-      {showIF && <IncomeForm  initialData={editIncTarget} onSubmit={editIncTarget ? handleEditIncome  : handleAddIncome}  onClose={() => { setShowIF(false); setEditIncTarget(null) }} rateData={rateData} households={households} />}
+      {showIF && <IncomeForm  initialData={editIncTarget} onSubmit={editIncTarget ? handleEditIncome  : handleAddIncome}  onClose={() => { setShowIF(false); setEditIncTarget(null) }} rateData={rateData} households={households} baseCurrency={baseCurrency} />}
       {delTarget && <ConfirmDialog message={delTarget.many ? `Permanently delete ${Object.keys(delTarget.ids).length} expenses?` : `Delete this ${delTarget.type}? Cannot be undone.`} onConfirm={handleDelete} onCancel={() => setDelTarget(null)} />}
       {confirmAction && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmAction(null)}>
