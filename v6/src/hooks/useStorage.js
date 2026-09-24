@@ -827,6 +827,13 @@ export function useStorage(userId) {
     if (payload.eventType === 'INSERT') {
       const incoming = householdMemberFromDb(payload.new)
       setHouseholdMembers(prev => prev.some(m => m.householdId === incoming.householdId && m.userId === incoming.userId) ? prev : [incoming, ...prev])
+      // Being newly added to a household you had no prior visibility into
+      // arrives as a household_members row with no matching households row
+      // locally (its INSERT event predates your membership, so RLS correctly
+      // never delivered it to you). Backfill it. Harmless no-op if already present.
+      supabase.from('households').select('*').eq('id', incoming.householdId).maybeSingle().then(({ data }) => {
+        if (data) setHouseholds(prev => prev.some(h => h.id === data.id) ? prev : [householdFromDb(data), ...prev])
+      })
     } else if (payload.eventType === 'UPDATE') {
       const incoming = householdMemberFromDb(payload.new)
       setHouseholdMembers(prev => prev.map(m => (m.householdId === incoming.householdId && m.userId === incoming.userId) ? incoming : m))
