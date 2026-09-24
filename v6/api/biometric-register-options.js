@@ -30,7 +30,13 @@ export default async function handler(req, res) {
     authenticatorSelection: {
       authenticatorAttachment: 'platform',
       userVerification: 'required',
-      residentKey: 'preferred',
+      // 'discouraged', not 'preferred' — a discoverable/resident key is what
+      // makes iOS treat this as a system passkey and show the "choose how to
+      // manage passkeys" iCloud-Keychain-or-Brave picker. The app never needs
+      // discoverable lookup anyway: biometric-auth-options.js always passes an
+      // explicit allowCredentials list, so a plain device-bound credential
+      // (straight to Face ID/Touch ID/passcode, no picker) is the right fit.
+      residentKey: 'discouraged',
     },
     supportedAlgorithmIDs: [-7, -257],
   })
