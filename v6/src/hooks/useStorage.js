@@ -1694,13 +1694,20 @@ export function useStorage(userId) {
   // policy checks that the household already exists.
   const createHousehold = useCallback(async (name) => {
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
-    const { data: hh, error: err1 } = await supabase.from('households')
-      .insert({ id, name, created_by: userId }).select().single()
+    const createdAt = new Date().toISOString()
+    // No .select() on this insert -- RETURNING requires the row to also pass
+    // the SELECT policy (is_household_member), which depends on the owner's
+    // household_members row below that doesn't exist yet at this point.
+    // We already know the full row client-side, so there's nothing to gain
+    // from asking Postgres to return it, and doing so was the actual cause
+    // of "new row violates row-level security policy" on a policy that was
+    // otherwise correct.
+    const { error: err1 } = await supabase.from('households').insert({ id, name, created_by: userId })
     if (err1) { setError(err1.message); return null }
     const { data: mem, error: err2 } = await supabase.from('household_members')
       .insert({ household_id: id, user_id: userId, role: 'owner' }).select().single()
     if (err2) { setError(err2.message); return null }
-    const household = householdFromDb(hh)
+    const household = { id, name, createdBy: userId, createdAt }
     setHouseholds(prev => [household, ...prev])
     setHouseholdMembers(prev => [householdMemberFromDb(mem), ...prev])
     return household
