@@ -810,7 +810,7 @@ function useBottomSheet(onClose) {
 
 // ─── Expense Form ─────────────────────────────────────────
 
-function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], creditCards = [], houses = [], otherAssets = [], rules = [] }) {
+function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], creditCards = [], houses = [], otherAssets = [], rules = [], households = [] }) {
   const today = new Date().toISOString().split('T')[0]
   const [form, setForm] = useState(initialData ? {
     useCatAlloc: !!(initialData.categoryAllocations && Object.keys(initialData.categoryAllocations || {}).length),
@@ -832,7 +832,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
     fuelRate: '', fuelQuantity: '', fuelType: '', odoReading: '', tripA: '', tripB: '', tripSelected: '',
     vehicleCurrentKm: '', vehicleNextServiceKm: '',
     vehicleId: '', houseId: '', otherAssetId: '', serviceParts: [], cardId: '',
-    useCatAlloc: false, categoryAllocations: {},
+    useCatAlloc: false, categoryAllocations: {}, householdId: '',
   })
   const [showPalette, setShowPalette] = useState(false)
   const [rateFetching, setRateFetching] = useState(false)
@@ -1481,6 +1481,15 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
               </div>
             )}
           </div>
+          {households.length > 0 && (
+            <div className="form-group">
+              <label htmlFor="ef-household">Household</label>
+              <select id="ef-household" value={form.householdId || ''} onChange={e => s('householdId', e.target.value)}>
+                <option value="">Private (just me)</option>
+                {households.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
+              </select>
+            </div>
+          )}
           <div className="form-group">
             <label>Item Colour</label>
             <div className="color-picker-trigger" onClick={() => setShowPalette(p => !p)}>
@@ -1613,12 +1622,12 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
 
 // ─── Income Form ──────────────────────────────────────────
 
-function IncomeForm({ onSubmit, onClose, initialData, rateData }) {
+function IncomeForm({ onSubmit, onClose, initialData, rateData, households = [] }) {
   const today = new Date().toISOString().split('T')[0]
   const [form, setForm] = useState(initialData ? { ...initialData } : {
     date: today, description: '', amount: '', currency: 'INR',
     conversionRate: 1, source: 'Salary', paymentMethod: 'Net Banking', notes: '',
-    isRecurring: false, recurringPeriod: 'monthly',
+    isRecurring: false, recurringPeriod: 'monthly', householdId: '',
   })
   const [rateFetching, setRateFetching] = useState(false)
   const { sheetStyle: incSheetStyle, onTouchStart: incTS, onTouchMove: incTM, onTouchEnd: incTE } = useBottomSheet(onClose)
@@ -1751,6 +1760,15 @@ function IncomeForm({ onSubmit, onClose, initialData, rateData }) {
             <label htmlFor="if-notes">Notes</label>
             <input id="if-notes" value={form.notes} onChange={e => s('notes', e.target.value)} placeholder="Optional note" />
           </div>
+          {households.length > 0 && (
+            <div className="form-group">
+              <label htmlFor="if-household">Household</label>
+              <select id="if-household" value={form.householdId || ''} onChange={e => s('householdId', e.target.value)}>
+                <option value="">Private (just me)</option>
+                {households.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
+              </select>
+            </div>
+          )}
           <div className="form-check">
             <input type="checkbox" id="inc-rec" checked={form.isRecurring} onChange={e => s('isRecurring', e.target.checked)} />
             <label htmlFor="inc-rec">Recurring</label>
@@ -3787,6 +3805,7 @@ export default function Tracker({ session }) {
   const [showRules, setShowRules] = useState(false)
   const [showConnections, setShowConnections] = useState(false)
   const [showHouseholds, setShowHouseholds] = useState(false)
+  const [householdView, setHouseholdView] = useState(null) // null = private, else a household id
   const [budgetDraft, setBudgetDraft]     = useState(null)
   const [focusedBudget, setFocusedBudget] = useState(null)
   const [dark, setDark]                   = useState(() => { const s = localStorage.getItem('et_v6_dark'); return s !== null ? s === '1' : window.matchMedia('(prefers-color-scheme: dark)').matches })
@@ -4770,6 +4789,22 @@ export default function Tracker({ session }) {
   }, [expenses, todayStr, monthStr, budgets])
 
   // ── Trips computed ───────────────────────────────────
+  const householdViewData = useMemo(() => {
+    if (!householdView) return null
+    const hh = households.find(h => h.id === householdView)
+    if (!hh) return null
+    const hhExp = expenses.filter(e => e.householdId === householdView && (e.date || '').startsWith(monthStr))
+    const hhInc = income.filter(i => i.householdId === householdView && (i.date || '').startsWith(monthStr))
+    const totalExp = hhExp.reduce((sum, e) => sum + toINR(e), 0)
+    const totalInc = hhInc.reduce((sum, i) => sum + toINR(i), 0)
+    const catTotals = {}
+    hhExp.forEach(e => { const c = e.category || 'Other'; catTotals[c] = (catTotals[c] || 0) + toINR(e) })
+    const topCats = Object.entries(catTotals)
+      .map(([cat, amt]) => ({ cat, amt, pct: totalExp > 0 ? Math.round(amt / totalExp * 100) : 0 }))
+      .sort((a, b) => b.amt - a.amt).slice(0, 5)
+    return { household: hh, expenses: hhExp, income: hhInc, totalExp, totalInc, topCats }
+  }, [householdView, households, expenses, income, monthStr])
+
   const tripsWithData = useMemo(() => {
     return trips.map(trip => {
       const matched = expenses.filter(e => e.date >= trip.startDate && e.date <= trip.endDate && (e.currency || 'INR') === (trip.currency || 'INR'))
@@ -5482,6 +5517,46 @@ export default function Tracker({ session }) {
                 <button className="btn-primary" onClick={() => setShowEF(true)}>➕ Add Expense</button>
                 <button className="btn-income"  onClick={() => setShowIF(true)}>💵 Add Income</button>
               </div>
+            </div>
+          )}
+          {/* ── Household combined view ── */}
+          {households.length > 0 && (
+            <div className="settings-section" style={{ marginBottom: 16 }}>
+              <div className="theme-seg">
+                <button className={'theme-seg-btn' + (!householdView ? ' active' : '')} onClick={() => setHouseholdView(null)}>👤 Private</button>
+                {households.map(h => (
+                  <button key={h.id} className={'theme-seg-btn' + (householdView === h.id ? ' active' : '')} onClick={() => setHouseholdView(h.id)}>🏡 {h.name}</button>
+                ))}
+              </div>
+              {householdViewData && (
+                <div className="card" style={{ marginTop: 12 }}>
+                  <div className="card-title">
+                    🏡 {householdViewData.household.name} — {new Date(monthStr + '-01T12:00:00').toLocaleString('default', { month: 'long', year: 'numeric' })}
+                  </div>
+                  {householdViewData.expenses.length === 0 && householdViewData.income.length === 0 ? (
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                      No expenses or income tagged to this household this month yet — tag one when adding an expense/income.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="trip-card-meta" style={{ marginBottom: 8 }}>
+                        <span style={{ color: 'var(--color-exp)' }}>Spent: {fmtINR(householdViewData.totalExp)}</span>
+                        <span className="trip-meta-dot">·</span>
+                        <span style={{ color: 'var(--color-inc)' }}>Income: {fmtINR(householdViewData.totalInc)}</span>
+                      </div>
+                      {householdViewData.topCats.map(c => (
+                        <div key={c.cat} className="settings-row" style={{ padding: '0.25rem 0' }}>
+                          <span>{CATS[c.cat]?.icon || ''} {c.cat}</span>
+                          <span>{fmtINR(c.amt)} ({c.pct}%)</span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  <p style={{ margin: '8px 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Read-only combined view — everyone's household-tagged expenses/income for this month. Edit/delete still belongs to whoever added each entry.
+                  </p>
+                </div>
+              )}
             </div>
           )}
           {/* ── Month Strip ── */}
@@ -8006,12 +8081,12 @@ export default function Tracker({ session }) {
 
       {/* ── Modals ── */}
       <CommandPalette open={showCmd} onClose={() => setShowCmd(false)} commands={cmdCommands} />
-      {showEF && <ExpenseForm initialData={editExpTarget} onSubmit={editExpTarget ? handleEditExpense : handleAddExpense} onClose={() => { setShowEF(false); setEditExpTarget(null) }} rateData={rateData} vehicles={vehicles} creditCards={creditCards} houses={houses} otherAssets={otherAssets} rules={rules} />}
+      {showEF && <ExpenseForm initialData={editExpTarget} onSubmit={editExpTarget ? handleEditExpense : handleAddExpense} onClose={() => { setShowEF(false); setEditExpTarget(null) }} rateData={rateData} vehicles={vehicles} creditCards={creditCards} houses={houses} otherAssets={otherAssets} rules={rules} households={households} />}
       {showPersonalize && <PersonalizeModal onClose={() => setShowPersonalize(false)} vehicles={vehicles} creditCards={creditCards} houses={houses} otherAssets={otherAssets} expenses={expenses} addVehicle={addVehicle} editVehicle={editVehicle} deleteVehicle={deleteVehicle} addCreditCard={addCreditCard} editCreditCard={editCreditCard} deleteCreditCard={deleteCreditCard} addHouse={addHouse} editHouse={editHouse} deleteHouse={deleteHouse} addOtherAsset={addOtherAsset} editOtherAsset={editOtherAsset} deleteOtherAsset={deleteOtherAsset} editExpense={editExpense} />}
       {showRules && <RulesModal onClose={() => setShowRules(false)} rules={rules} addRule={addRule} editRule={editRule} deleteRule={deleteRule} />}
       {showConnections && <ConnectionsModal onClose={() => setShowConnections(false)} connections={connections} invites={invites} profiles={profiles} createInvite={createInvite} redeemInvite={redeemInvite} />}
       {showHouseholds && <HouseholdsModal onClose={() => setShowHouseholds(false)} userId={userId} households={households} householdMembers={householdMembers} connections={connections} profiles={profiles} createHousehold={createHousehold} deleteHousehold={deleteHousehold} addHouseholdMember={addHouseholdMember} setMemberRole={setMemberRole} removeMember={removeMember} />}
-      {showIF && <IncomeForm  initialData={editIncTarget} onSubmit={editIncTarget ? handleEditIncome  : handleAddIncome}  onClose={() => { setShowIF(false); setEditIncTarget(null) }} rateData={rateData} />}
+      {showIF && <IncomeForm  initialData={editIncTarget} onSubmit={editIncTarget ? handleEditIncome  : handleAddIncome}  onClose={() => { setShowIF(false); setEditIncTarget(null) }} rateData={rateData} households={households} />}
       {delTarget && <ConfirmDialog message={delTarget.many ? `Permanently delete ${Object.keys(delTarget.ids).length} expenses?` : `Delete this ${delTarget.type}? Cannot be undone.`} onConfirm={handleDelete} onCancel={() => setDelTarget(null)} />}
       {confirmAction && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmAction(null)}>
