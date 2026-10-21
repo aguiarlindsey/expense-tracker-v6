@@ -1091,27 +1091,21 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
 
   const toggleTag = tag => s('tags', form.tags.includes(tag) ? form.tags.filter(t => t !== tag) : [...form.tags, tag])
   const catSubs   = CATS[form.category]?.subs || []
-  // "Tag to an item" shouldn't offer every registered Other Asset for every
-  // category. Most expense categories have no plausible link to a physical
-  // item at all (Food, Health, Education, Travel, Social, Administrative),
-  // so those get no picker rather than an unfiltered one -- default-deny,
-  // not default-allow. Categories below list which Other Asset categories
-  // are actually relevant; vehicles already have their own dedicated picker
-  // above, so Transport only needs the vehicle-like ones (a boat/aircraft
-  // also burns fuel). 'Other' (the open-ended catch-all) is always included
-  // once a category has any mapping at all, since it can't be known in
-  // advance what an ambiguous item actually is.
-  const RELEVANT_ASSET_CATEGORIES = {
-    Transport:     ['Boat', 'Aircraft'],
-    Shopping:      ['Laptop', 'Tablet', 'Camera', 'Watch', 'Appliance', 'Furniture', 'Jewelry', 'Instrument'],
-    Housing:       ['Appliance', 'Furniture'],
-    Utilities:     ['Appliance'],
-    Entertainment: ['Camera', 'Instrument'],
-    Personal:      ['Watch', 'Jewelry'],
-    Finance:       ['Boat', 'Aircraft', 'Jewelry', 'Watch'],
-  }
-  const relevantOtherAssets = RELEVANT_ASSET_CATEGORIES[form.category]
-    ? otherAssets.filter(o => RELEVANT_ASSET_CATEGORIES[form.category].includes(o.category) || o.category === 'Other')
+  // "Tag to an item" tightened further per feedback: Shopping and Other
+  // always make sense (both are explicitly about owning/acquiring a thing),
+  // so those show the full list unfiltered. Every other category ONLY
+  // shows the picker if the specific subcategory is actually about
+  // maintaining/repairing something -- Transport's Fuel/Vehicle Maintenance
+  // (a boat or aircraft also needs fuel/upkeep) or any category's own
+  // Maintenance/Repairs subcategory (e.g. Housing, for an appliance or
+  // piece of furniture in the house). No other category/subcategory shows
+  // a picker at all.
+  const subLower = (form.subcategory || '').toLowerCase()
+  const isMaintenanceSub = subLower.includes('maintenance') || subLower.includes('repair')
+  const relevantOtherAssets =
+    form.category === 'Shopping' || form.category === 'Other' ? otherAssets
+    : form.category === 'Transport' && (form.subcategory === 'Fuel' || isMaintenanceSub) ? otherAssets.filter(o => ['Boat', 'Aircraft', 'Other'].includes(o.category))
+    : isMaintenanceSub ? otherAssets.filter(o => ['Appliance', 'Furniture', 'Other'].includes(o.category))
     : []
   // "Foreign" relative to the user's own base currency, not hardcoded INR --
   // a CAD user entering CAD needs no rate/conversion UI at all.
