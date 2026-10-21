@@ -83,13 +83,16 @@ npm run dev      # Vite dev server
 ### Supabase migrations — every new table needs explicit GRANTs
 Supabase ended automatic Data API grants for new `public`-schema tables on existing projects, effective 2026-10-30. Any table created in `public` from then on needs explicit grants or every `supabase-js`/PostgREST/GraphQL call to it fails with "permission denied" — even with correct RLS, since GRANT is a separate privilege layer underneath RLS. Existing tables (everything created before this rule was added) are unaffected regardless of the date.
 
-**Every new `supabase/add_*.sql` migration that creates a table must include, right after enabling RLS:**
+**Already neutralized project-wide**: `supabase/add_default_grants.sql` (run once) sets `ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public` so any table created from now on — by any future migration, with or without its own explicit grants — automatically gets the Data API access it needs. This makes the Oct 30 deadline permanently irrelevant to this project; nothing will silently break even if a future migration forgets the explicit grants below.
+
+**Still do this in every new `supabase/add_*.sql` migration that creates a table, right after enabling RLS, as belt-and-suspenders** (makes the migration file self-contained and portable to a fresh project, not just reliant on this project's own default-privileges setup):
 ```sql
 grant select on public.your_table to anon;
 grant select, insert, update, delete on public.your_table to authenticated;
 grant select, insert, update, delete on public.your_table to service_role;
 ```
-This applies going forward for any new table, regardless of date — treat it as a standing requirement, not a one-time fix for a specific migration.
+
+**Do NOT extend the default-privileges safety net to functions.** RPC functions have always required explicit, per-function `grant execute` — that was never affected by the Oct 30 change. This project's security-definer functions are deliberately authenticated-only; a blanket default execute grant to `anon` would be a real security regression, not a convenience. Grant function execute by hand, one at a time, same as always.
 
 ---
 
