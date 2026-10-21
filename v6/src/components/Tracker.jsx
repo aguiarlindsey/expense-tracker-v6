@@ -1244,11 +1244,25 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
           {/* Fuel details — only for Transport / Fuel */}
           {form.category === 'Transport' && form.subcategory === 'Fuel' && (() => {
             const selectedVehicle = vehicles.find(v => v.id === form.vehicleId)
-            const effectiveFuelType = selectedVehicle ? selectedVehicle.fuelType : (form.fuelType || '').toLowerCase()
+            // The vehicle's registered fuelType (petrol/diesel/cng/...) only
+            // decides the UNIT (km/L vs km/kg vs km/kWh) -- it's a fixed
+            // vehicle attribute. The actual GRADE used at this specific
+            // fill-up (Regular E20, Premium 95, a mix of two grades, ...)
+            // is a per-entry choice and shouldn't be locked just because a
+            // vehicle is selected. Keyword-match the free-text entry for the
+            // few grades that actually need a different unit; everything
+            // else (including a custom "mix" description) falls back to the
+            // vehicle's own unit, or km/L if there's no vehicle either.
+            const ftLower = (form.fuelType || '').toLowerCase()
+            const effectiveFuelType = ftLower.includes('cng') ? 'cng'
+              : ftLower.includes('hydrogen') ? 'hydrogen'
+              : ftLower.includes('electric') ? 'electric'
+              : (selectedVehicle ? selectedVehicle.fuelType : 'petrol')
             const unit = FUEL_UNIT[effectiveFuelType] || 'km/L'
             const unitIcon = FUEL_ICON[effectiveFuelType] || '⛽'
             const qtyUnit = unit === 'km/kg' ? 'kg' : unit === 'km/kWh' ? 'kWh' : 'Litre'
             const VEHICLE_FUEL_LABEL = { petrol: 'Petrol', diesel: 'Diesel', cng: 'CNG', electric: 'Electric', hydrogen: 'Hydrogen' }
+            const FUEL_TYPE_CHIPS = ['Petrol','Diesel','Regular E20','Premium 100','Premium 95','CNG','LPG','Electric','Hydrogen']
             return (
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '0.75rem', marginBottom: '0.5rem' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{unitIcon} Fuel Details</div>
@@ -1259,7 +1273,9 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
                     const vId = e.target.value
                     s('vehicleId', vId)
                     const veh = vehicles.find(v => v.id === vId)
-                    if (veh) s('fuelType', VEHICLE_FUEL_LABEL[veh.fuelType] || '')
+                    // Prefill as a convenience, only if nothing's been typed
+                    // yet -- never clobber a grade the user already picked.
+                    if (veh && !form.fuelType) s('fuelType', VEHICLE_FUEL_LABEL[veh.fuelType] || '')
                   }}>
                     <option value="">Unassigned</option>
                     {vehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
@@ -1280,11 +1296,13 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
                     onChange={e => s('fuelQuantity', e.target.value)} />
                 </div>
                 <div className="form-group">
-                  <label>Fuel Type</label>
-                  <select value={form.fuelType || ''} onChange={e => s('fuelType', e.target.value)} disabled={!!form.vehicleId}>
-                    <option value="">—</option>
-                    {['Petrol','Diesel','Regular E20','Premium 100','Premium 95','CNG','LPG','Premium','Speed','Power','Electric','Hydrogen'].map(t => <option key={t}>{t}</option>)}
-                  </select>
+                  <label>Fuel Type / Grade</label>
+                  <input placeholder="e.g. Premium 95, or a mix" value={form.fuelType || ''} onChange={e => s('fuelType', e.target.value)} />
+                  <div className="tags-container" style={{ marginTop: 6 }}>
+                    {FUEL_TYPE_CHIPS.map(t => (
+                      <button type="button" key={t} className="tag-btn" onClick={() => s('fuelType', t)}>{t}</button>
+                    ))}
+                  </div>
                 </div>
               </div>
               <div className="form-row">
