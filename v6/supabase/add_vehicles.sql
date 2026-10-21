@@ -6,7 +6,7 @@ create table if not exists vehicles (
   user_id        uuid        not null references auth.users(id) on delete cascade,
   name           text        not null,
   type           text        not null default 'car',       -- car | bike | scooter
-  fuel_type      text        not null default 'petrol',     -- petrol | diesel | cng | electric | hydrogen
+  fuel_type      text        not null default 'petrol',     -- petrol | diesel | regular_e20 | premium_100 | premium_95 | cng | electric | hydrogen
   reg_number     text,
   purchase_date  date,
   next_puc_date  date,

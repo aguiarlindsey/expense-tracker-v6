@@ -35,8 +35,8 @@ const CURRENCY_ICON_MAP = {
 }
 
 // ─── Vehicle fuel-type unit/icon lookups ─────────────────
-const FUEL_UNIT = { petrol: 'km/L', diesel: 'km/L', cng: 'km/kg', hydrogen: 'km/kg', electric: 'km/kWh' }
-const FUEL_ICON = { petrol: '⛽', diesel: '⛽', cng: '⛽', hydrogen: '💧', electric: '🔌' }
+const FUEL_UNIT = { petrol: 'km/L', diesel: 'km/L', regular_e20: 'km/L', premium_100: 'km/L', premium_95: 'km/L', cng: 'km/kg', hydrogen: 'km/kg', electric: 'km/kWh' }
+const FUEL_ICON = { petrol: '⛽', diesel: '⛽', regular_e20: '⛽', premium_100: '⛽', premium_95: '⛽', cng: '⛽', hydrogen: '💧', electric: '🔌' }
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -1283,7 +1283,7 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
                   <label>Fuel Type</label>
                   <select value={form.fuelType || ''} onChange={e => s('fuelType', e.target.value)} disabled={!!form.vehicleId}>
                     <option value="">—</option>
-                    {['Petrol','Diesel','CNG','LPG','Premium','Speed','Power','Electric','Hydrogen'].map(t => <option key={t}>{t}</option>)}
+                    {['Petrol','Diesel','Regular E20','Premium 100','Premium 95','CNG','LPG','Premium','Speed','Power','Electric','Hydrogen'].map(t => <option key={t}>{t}</option>)}
                   </select>
                 </div>
               </div>
@@ -2235,6 +2235,9 @@ function PersonalizeModal({ onClose, vehicles, creditCards, houses, otherAssets,
                     <select className="form-input" value={vForm.fuelType} onChange={e => vs('fuelType', e.target.value)}>
                       <option value="petrol">Petrol</option>
                       <option value="diesel">Diesel</option>
+                      <option value="regular_e20">Regular E20</option>
+                      <option value="premium_100">Premium 100</option>
+                      <option value="premium_95">Premium 95</option>
                       <option value="cng">CNG</option>
                       <option value="electric">Electric</option>
                       <option value="hydrogen">Hydrogen</option>
