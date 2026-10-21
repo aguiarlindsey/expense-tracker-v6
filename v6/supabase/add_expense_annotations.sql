@@ -22,6 +22,12 @@ create table if not exists expense_annotations (
 
 alter table expense_annotations enable row level security;
 
+-- Supabase stops auto-granting Data API access to new public tables from
+-- 2026-10-30 -- explicit grants here, RLS still does the actual narrowing.
+grant select on public.expense_annotations to anon;
+grant select, insert, update, delete on public.expense_annotations to authenticated;
+grant select, insert, update, delete on public.expense_annotations to service_role;
+
 drop policy if exists "See own annotations, or notes on my own expenses" on expense_annotations;
 drop policy if exists "Insert own annotations"                          on expense_annotations;
 drop policy if exists "Update own annotations"                          on expense_annotations;

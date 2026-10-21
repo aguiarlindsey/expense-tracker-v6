@@ -80,6 +80,17 @@ npm run dev      # Vite dev server
 - Supabase tables: expenses, income, budgets, goals, settings
 - Exchange rates fetched server-side via `/api/rates`
 
+### Supabase migrations — every new table needs explicit GRANTs
+Supabase ended automatic Data API grants for new `public`-schema tables on existing projects, effective 2026-10-30. Any table created in `public` from then on needs explicit grants or every `supabase-js`/PostgREST/GraphQL call to it fails with "permission denied" — even with correct RLS, since GRANT is a separate privilege layer underneath RLS. Existing tables (everything created before this rule was added) are unaffected regardless of the date.
+
+**Every new `supabase/add_*.sql` migration that creates a table must include, right after enabling RLS:**
+```sql
+grant select on public.your_table to anon;
+grant select, insert, update, delete on public.your_table to authenticated;
+grant select, insert, update, delete on public.your_table to service_role;
+```
+This applies going forward for any new table, regardless of date — treat it as a standing requirement, not a one-time fix for a specific migration.
+
 ---
 
 ## Git Commit Style

@@ -21,6 +21,15 @@ create table if not exists household_members (
 alter table households        enable row level security;
 alter table household_members enable row level security;
 
+-- Supabase stops auto-granting Data API access to new public tables from
+-- 2026-10-30 -- explicit grants here, RLS still does the actual narrowing.
+grant select on public.households to anon;
+grant select, insert, update, delete on public.households to authenticated;
+grant select, insert, update, delete on public.households to service_role;
+grant select on public.household_members to anon;
+grant select, insert, update, delete on public.household_members to authenticated;
+grant select, insert, update, delete on public.household_members to service_role;
+
 -- security definer helper functions: household ↔ household_members policies
 -- would otherwise subquery each other and recurse. These read with RLS
 -- bypassed internally, so calling them from a policy never recurses.

@@ -11,6 +11,12 @@ create table if not exists profiles (
 
 alter table profiles enable row level security;
 
+-- Supabase stops auto-granting Data API access to new public tables from
+-- 2026-10-30 -- explicit grants here, RLS still does the actual narrowing.
+grant select on public.profiles to anon;
+grant select, insert, update, delete on public.profiles to authenticated;
+grant select, insert, update, delete on public.profiles to service_role;
+
 drop policy if exists "Any authenticated user can view profiles" on profiles;
 drop policy if exists "Users update own profile" on profiles;
 drop policy if exists "Users insert own profile" on profiles;

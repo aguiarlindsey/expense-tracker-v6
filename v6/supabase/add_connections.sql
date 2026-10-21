@@ -14,6 +14,12 @@ create table if not exists invites (
 
 alter table invites enable row level security;
 
+-- Supabase stops auto-granting Data API access to new public tables from
+-- 2026-10-30 -- explicit grants here, RLS still does the actual narrowing.
+grant select on public.invites to anon;
+grant select, insert, update, delete on public.invites to authenticated;
+grant select, insert, update, delete on public.invites to service_role;
+
 drop policy if exists "Users see own invites"   on invites;
 drop policy if exists "Users insert own invites" on invites;
 drop policy if exists "Users update own invites" on invites;
@@ -36,6 +42,15 @@ create table if not exists connections (
 );
 
 alter table connections enable row level security;
+
+-- Supabase stops auto-granting Data API access to new public tables from
+-- 2026-10-30 -- explicit grants here, RLS still does the actual narrowing
+-- (and the lack of any insert/update/delete policy below means those verbs
+-- are denied regardless of this grant -- writes only ever happen through
+-- the security-definer redeem_invite() function, which bypasses grants too).
+grant select on public.connections to anon;
+grant select, insert, update, delete on public.connections to authenticated;
+grant select, insert, update, delete on public.connections to service_role;
 
 drop policy if exists "Users see own connections" on connections;
 create policy "Users see own connections" on connections for select using (auth.uid() = user_a or auth.uid() = user_b);
