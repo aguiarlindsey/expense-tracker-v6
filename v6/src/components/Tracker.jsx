@@ -1091,6 +1091,15 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
 
   const toggleTag = tag => s('tags', form.tags.includes(tag) ? form.tags.filter(t => t !== tag) : [...form.tags, tag])
   const catSubs   = CATS[form.category]?.subs || []
+  // "Tag to an item" shouldn't offer every registered Other Asset for every
+  // category -- vehicles already have their own dedicated picker above, so
+  // Transport only makes sense for the vehicle-like Other Asset categories
+  // (a boat or aircraft also burns fuel) plus the free-text 'Other' catch-all.
+  // Every other expense category is unfiltered for now -- extend this map if
+  // another category/asset-type mismatch like this gets reported.
+  const relevantOtherAssets = form.category === 'Transport'
+    ? otherAssets.filter(o => ['Boat', 'Aircraft', 'Other'].includes(o.category))
+    : otherAssets
   // "Foreign" relative to the user's own base currency, not hardcoded INR --
   // a CAD user entering CAD needs no rate/conversion UI at all.
   const isForeign = form.currency !== baseCurrency
@@ -1223,12 +1232,12 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
               </select>
             </div>
           )}
-          {otherAssets.length > 0 && (
+          {relevantOtherAssets.length > 0 && (
             <div className="form-group">
               <label htmlFor="ef-other">Tag to an item</label>
               <select id="ef-other" value={form.otherAssetId || ''} onChange={e => s('otherAssetId', e.target.value)}>
                 <option value="">Unassigned</option>
-                {otherAssets.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                {relevantOtherAssets.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
               </select>
             </div>
           )}
