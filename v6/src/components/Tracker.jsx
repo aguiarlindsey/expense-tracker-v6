@@ -1092,14 +1092,27 @@ function ExpenseForm({ onSubmit, onClose, initialData, rateData, vehicles = [], 
   const toggleTag = tag => s('tags', form.tags.includes(tag) ? form.tags.filter(t => t !== tag) : [...form.tags, tag])
   const catSubs   = CATS[form.category]?.subs || []
   // "Tag to an item" shouldn't offer every registered Other Asset for every
-  // category -- vehicles already have their own dedicated picker above, so
-  // Transport only makes sense for the vehicle-like Other Asset categories
-  // (a boat or aircraft also burns fuel) plus the free-text 'Other' catch-all.
-  // Every other expense category is unfiltered for now -- extend this map if
-  // another category/asset-type mismatch like this gets reported.
-  const relevantOtherAssets = form.category === 'Transport'
-    ? otherAssets.filter(o => ['Boat', 'Aircraft', 'Other'].includes(o.category))
-    : otherAssets
+  // category. Most expense categories have no plausible link to a physical
+  // item at all (Food, Health, Education, Travel, Social, Administrative),
+  // so those get no picker rather than an unfiltered one -- default-deny,
+  // not default-allow. Categories below list which Other Asset categories
+  // are actually relevant; vehicles already have their own dedicated picker
+  // above, so Transport only needs the vehicle-like ones (a boat/aircraft
+  // also burns fuel). 'Other' (the open-ended catch-all) is always included
+  // once a category has any mapping at all, since it can't be known in
+  // advance what an ambiguous item actually is.
+  const RELEVANT_ASSET_CATEGORIES = {
+    Transport:     ['Boat', 'Aircraft'],
+    Shopping:      ['Laptop', 'Tablet', 'Camera', 'Watch', 'Appliance', 'Furniture', 'Jewelry', 'Instrument'],
+    Housing:       ['Appliance', 'Furniture'],
+    Utilities:     ['Appliance'],
+    Entertainment: ['Camera', 'Instrument'],
+    Personal:      ['Watch', 'Jewelry'],
+    Finance:       ['Boat', 'Aircraft', 'Jewelry', 'Watch'],
+  }
+  const relevantOtherAssets = RELEVANT_ASSET_CATEGORIES[form.category]
+    ? otherAssets.filter(o => RELEVANT_ASSET_CATEGORIES[form.category].includes(o.category) || o.category === 'Other')
+    : []
   // "Foreign" relative to the user's own base currency, not hardcoded INR --
   // a CAD user entering CAD needs no rate/conversion UI at all.
   const isForeign = form.currency !== baseCurrency
